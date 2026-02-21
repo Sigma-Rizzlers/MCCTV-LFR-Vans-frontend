@@ -1,0 +1,71 @@
+﻿@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 900px) {
+  .topbar,
+  .nav,
+  .page-main {
+    padding-left: 20px;
+    padding-right: 20px;
+  }
+
+  .history-grid,
+  .policy-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .field-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .section-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .nav {
+    flex-wrap: wrap;
+  }
+}
+
+@media (max-width: 640px) {
+  .phase-card .field-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 600px) {
+  .topbar {
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .brand-title {
+    font-size: 20px;
+  }
+
+  .hero-content h1 {
+    font-size: 26px;
+  }
+
+  .intro-seal {
+    width: 90px;
+    height: 90px;
+  }
+
+  .intro-title {
+    letter-spacing: 2px;
+  }
+}
+
+

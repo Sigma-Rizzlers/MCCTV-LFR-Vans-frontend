@@ -1,0 +1,151 @@
+﻿.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  margin: 10px 0 20px;
+}
+
+.section-header h2 {
+  margin: 0 0 6px;
+  font-family: "Noto Serif Khmer", serif;
+}
+
+.section-header p {
+  margin: 0;
+  color: var(--muted);
+}
+
+.summary-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.summary-card {
+  background: var(--card);
+  border-radius: var(--radius-md);
+  padding: 16px 18px;
+  box-shadow: var(--shadow);
+}
+
+.summary-value {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--navy-800);
+}
+
+.summary-label {
+  margin-top: 6px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.history-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(260px, 1fr);
+  gap: 24px;
+}
+
+.history-card,
+.detail-card,
+.policy-block {
+  background: var(--card);
+  border-radius: var(--radius-lg);
+  padding: 22px;
+  box-shadow: var(--shadow);
+}
+
+.list-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.list-header h3 {
+  margin: 0;
+  font-family: "Noto Serif Khmer", serif;
+}
+
+.pill.muted {
+  background: rgba(16, 42, 74, 0.08);
+  color: var(--navy-800);
+}
+
+.pill.outline {
+  background: transparent;
+  border: 1px solid rgba(16, 42, 74, 0.2);
+  color: var(--navy-800);
+}
+
+.tag-row {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  background: rgba(16, 42, 74, 0.08);
+  color: var(--navy-800);
+}
+
+.tag.pending {
+  background: rgba(212, 161, 42, 0.15);
+  color: #7a5a00;
+}
+
+.tag.approved {
+  background: rgba(31, 122, 106, 0.15);
+  color: var(--mint-500);
+}
+
+.tag.rejected {
+  background: rgba(179, 38, 30, 0.12);
+  color: #b3261e;
+}
+
+.empty {
+  padding: 16px;
+  border-radius: var(--radius-md);
+  background: rgba(16, 42, 74, 0.05);
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.policy-layout {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 24px;
+}
+
+.policy-block h2,
+.policy-block h3 {
+  margin-top: 0;
+  font-family: "Noto Serif Khmer", serif;
+}
+
+.policy-highlight {
+  margin-top: 16px;
+  padding: 12px 16px;
+  background: rgba(212, 161, 42, 0.12);
+  border-radius: var(--radius-md);
+  font-weight: 600;
+  color: #5c4100;
+}
+
+.policy-steps {
+  margin: 0;
+  padding-left: 18px;
+  color: var(--muted);
+  line-height: 1.7;
+}
