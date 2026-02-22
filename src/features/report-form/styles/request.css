@@ -1,0 +1,146 @@
+﻿.hero {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 30px;
+  align-items: center;
+  margin-bottom: 36px;
+}
+
+.hero-content h1 {
+  font-family: "Noto Serif Khmer", serif;
+  font-size: 32px;
+  margin: 10px 0;
+}
+
+.hero-content p {
+  color: var(--muted);
+  line-height: 1.7;
+}
+
+.kicker {
+  font-size: 14px;
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  color: var(--mint-500);
+  font-weight: 700;
+}
+
+.badge-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: rgba(31, 122, 106, 0.15);
+  color: var(--mint-500);
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.badge.ghost {
+  background: rgba(212, 161, 42, 0.12);
+  color: #7a5a00;
+}
+
+.hero-stats {
+  display: grid;
+  gap: 16px;
+}
+
+.stat-card {
+  background: var(--card);
+  border-radius: var(--radius-md);
+  padding: 18px 22px;
+  box-shadow: var(--shadow);
+}
+
+.stat-value {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--navy-800);
+}
+
+.stat-label {
+  color: var(--muted);
+  margin-top: 6px;
+  font-size: 14px;
+}
+
+.bundle-card {
+  background: var(--card);
+  border-radius: var(--radius-lg);
+  padding: 26px;
+  box-shadow: var(--shadow);
+  margin-bottom: 32px;
+}
+
+.bundle-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  align-items: center;
+}
+
+.bundle-header h2 {
+  font-family: "Noto Serif Khmer", serif;
+  margin: 0 0 8px;
+}
+
+.bundle-header p {
+  margin: 0;
+  color: var(--muted);
+}
+
+.pill {
+  background: var(--navy-800);
+  color: #fff;
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-size: 12px;
+  letter-spacing: 0.6px;
+}
+
+.van-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+  margin-top: 20px;
+}
+
+.van-item {
+  padding: 16px;
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(16, 42, 74, 0.08);
+  background: linear-gradient(135deg, rgba(16, 42, 74, 0.05), rgba(212, 161, 42, 0.08));
+}
+
+.van-item h3 {
+  margin: 0 0 6px;
+  font-size: 18px;
+}
+
+.van-sub {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.van-meta {
+  margin-top: 10px;
+  font-weight: 600;
+  color: var(--mint-500);
+}
+
+.bundle-note {
+  margin-top: 18px;
+  padding: 14px 18px;
+  background: rgba(212, 161, 42, 0.12);
+  border-radius: var(--radius-md);
+  color: #5c4100;
+  font-weight: 600;
+}
