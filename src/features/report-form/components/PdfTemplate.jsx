@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { exportElementToPdfBlob, exportReportToPdfBlob, requestPdfFileHandle, saveBlobToFile } from "../utils/pdfExport";
+import { useState } from "react";
+import { exportElementToPdfBlob, requestPdfFileHandle, saveBlobToFile } from "../utils/pdfExport";
 import { getRequestStatus, requestStatusLabelMap } from "../constants/requestStatus";
 
 function formatDate(value) {
@@ -51,25 +51,6 @@ function createPdfFileName(requestId) {
 
 export default function PdfTemplate({ report, onClose }) {
   const [isSavingFile, setIsSavingFile] = useState(false);
-  const [manualDownload, setManualDownload] = useState(null);
-
-  function clearManualDownload() {
-    setManualDownload((current) => {
-      if (current?.url) {
-        URL.revokeObjectURL(current.url);
-      }
-      return null;
-    });
-  }
-
-  useEffect(() => {
-    return () => {
-      if (manualDownload?.url) {
-        URL.revokeObjectURL(manualDownload.url);
-      }
-    };
-  }, [manualDownload]);
-
   if (!report) {
     return null;
   }
@@ -87,17 +68,6 @@ export default function PdfTemplate({ report, onClose }) {
         ? "បង្កាន់ដៃមិនអនុម័តសំណើរថយន្តបេសកកម្ម"
         : "បង្កាន់ដៃសំណើរថយន្តបេសកកម្ម";
 
-  function handlePrintPdf() {
-    const previousTitle = document.title;
-    document.title = `${pdfTitleText}-${requestId}`;
-    const restoreTitle = () => {
-      document.title = previousTitle;
-      window.removeEventListener("afterprint", restoreTitle);
-    };
-    window.addEventListener("afterprint", restoreTitle);
-    window.print();
-  }
-
   async function handleSavePdfFile() {
     if (isSavingFile) {
       return;
@@ -113,24 +83,11 @@ export default function PdfTemplate({ report, onClose }) {
       }
 
       const pdfElement = document.getElementById("pdfTemplate");
-      let pdfBlob;
-      try {
-        pdfBlob = await exportElementToPdfBlob(pdfElement);
-      } catch (renderError) {
-        console.error(renderError);
-        pdfBlob = await exportReportToPdfBlob(report);
-      }
-      const fallbackUrl = URL.createObjectURL(pdfBlob);
-      setManualDownload((current) => {
-        if (current?.url) {
-          URL.revokeObjectURL(current.url);
-        }
-        return { url: fallbackUrl, fileName };
-      });
+      const pdfBlob = await exportElementToPdfBlob(pdfElement);
       await saveBlobToFile(pdfBlob, fileName, saveTarget.handle);
     } catch (error) {
       console.error(error);
-      window.alert("មិនអាចរក្សាទុកឯកសារ PDF ទៅក្នុងកុំព្យូទ័របានទេ។ សូមព្យាយាមម្ដងទៀត។");
+      window.alert("Cannot save PDF right now. Please try again.");
     } finally {
       setIsSavingFile(false);
     }
@@ -143,24 +100,13 @@ export default function PdfTemplate({ report, onClose }) {
           <button
             className="ghost"
             type="button"
-            onClick={() => {
-              clearManualDownload();
-              onClose();
-            }}
+            onClick={onClose}
           >
             បិទ
-          </button>
-          <button className="ghost" type="button" onClick={handlePrintPdf}>
-            បោះពុម្ព
           </button>
           <button className="primary" type="button" onClick={handleSavePdfFile} disabled={isSavingFile}>
             {isSavingFile ? "កំពុងរក្សាទុក..." : "រក្សាទុកទៅកុំព្យូទ័រ"}
           </button>
-          {manualDownload ? (
-            <a className="ghost pdf-manual-download" href={manualDownload.url} download={manualDownload.fileName}>
-              ចុចទីនេះ បើមិនទាញយកស្វ័យប្រវត្តិ
-            </a>
-          ) : null}
         </div>
 
         <article id="pdfTemplate" className="pdf-document">
@@ -295,3 +241,12 @@ export default function PdfTemplate({ report, onClose }) {
     </div>
   );
 }
+
+
+
+
+
+
+
+
+

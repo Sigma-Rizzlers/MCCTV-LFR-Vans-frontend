@@ -107,15 +107,6 @@
     text-align: center;
   }
 
-  .member-modal-actions {
-    width: 100%;
-  }
-
-  .member-nav-button {
-    flex: 1;
-    min-width: 0;
-  }
-
   .brand {
     gap: 12px;
   }

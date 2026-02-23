@@ -126,27 +126,6 @@ export default function MissionRequestForm({
     }
   }
 
-  function goToPreviousMember() {
-    setMemberErrors(emptyMemberError);
-    setActiveMemberIndex((current) => Math.max(0, current - 1));
-  }
-
-  function goToNextMember() {
-    const errors = validateMember(activeMember);
-    if (hasMemberError(errors)) {
-      setMemberErrors(errors);
-      return;
-    }
-
-    setMemberErrors(emptyMemberError);
-    if (activeMemberIndex >= MEMBER_LIMIT - 1) {
-      setIsMemberModalOpen(false);
-      return;
-    }
-
-    setActiveMemberIndex((current) => current + 1);
-  }
-
   function handleFormReset(event) {
     onReset(event);
     setMembers(createMemberList());
@@ -167,7 +146,6 @@ export default function MissionRequestForm({
             <h2>បំពេញសំណើរថ្មី</h2>
             <p>សូមបំពេញព័ត៌មានខាងក្រោម ដើម្បីបង្កើតសំណើរថយន្តជាឯកសារ PDF។</p>
           </div>
-          <div className="priority-tag">អាទិភាពខ្ពស់</div>
         </div>
 
         <form id="missionForm" onSubmit={handleFormSubmit} onReset={handleFormReset}>
@@ -297,7 +275,6 @@ export default function MissionRequestForm({
                   </div>
                 ) : null}
               </div>
-
               <button className="member-add" type="button" onClick={openMemberModal}>
                 បន្ថែមសមាជិក
               </button>
@@ -325,11 +302,6 @@ export default function MissionRequestForm({
                 </label>
               </div>
             </section>
-          </div>
-
-          <div className="signature-preview">
-            <div className="signature-line" />
-            <div className="signature-label">ហត្ថលេខា លោកអគ្គនាយក (ប្រធានអនុម័ត)</div>
           </div>
 
           <div className="actions">
@@ -437,19 +409,6 @@ export default function MissionRequestForm({
                 </strong>
                 <div className="status">កំពុងបំពេញសមាជិកទី {activeMemberIndex + 1}</div>
               </div>
-              <div className="member-modal-actions">
-                <button
-                  className="ghost member-nav-button"
-                  type="button"
-                  onClick={goToPreviousMember}
-                  disabled={activeMemberIndex === 0}
-                >
-                  ថយក្រោយ
-                </button>
-                <button className="primary member-nav-button" type="button" onClick={goToNextMember}>
-                  {activeMemberIndex === MEMBER_LIMIT - 1 ? "បញ្ចប់" : "បន្ទាប់"}
-                </button>
-              </div>
             </div>
           </section>
         </div>
@@ -457,3 +416,8 @@ export default function MissionRequestForm({
     </section>
   );
 }
+
+
+
+
+

@@ -33,12 +33,6 @@
   cursor: not-allowed;
 }
 
-.pdf-manual-download {
-  text-decoration: none;
-  display: inline-flex;
-  align-items: center;
-}
-
 .pdf-document {
   width: 210mm;
   min-height: 297mm;
@@ -288,48 +282,3 @@
   }
 }
 
-@media print {
-  @page {
-    size: A4;
-    margin: 10mm;
-  }
-
-  body * {
-    visibility: hidden !important;
-  }
-
-  .pdf-preview-overlay,
-  .pdf-preview-overlay * {
-    visibility: visible !important;
-  }
-
-  .pdf-preview-overlay {
-    position: absolute !important;
-    inset: 0 !important;
-    background: #fff !important;
-    padding: 0 !important;
-  }
-
-  .pdf-preview-shell {
-    width: 100% !important;
-    max-height: none !important;
-    overflow: visible !important;
-    background: #fff !important;
-    border-radius: 0 !important;
-    box-shadow: none !important;
-    padding: 0 !important;
-  }
-
-  .pdf-preview-actions {
-    display: none !important;
-  }
-
-  .pdf-document {
-    width: 100% !important;
-    min-height: auto !important;
-    border: none !important;
-    box-shadow: none !important;
-    margin: 0 !important;
-    padding: 0 !important;
-  }
-}

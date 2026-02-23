@@ -336,21 +336,17 @@ async function createSimpleReportJpeg(report) {
       { label: "ទីកន្លែងបេសកកម្ម", value: normalizeText(formData.missionPlace), maxLines: 2 },
       { label: "គោលបំណង", value: normalizeText(formData.mission), maxLines: 2 }
     ]
-  });
-
-  drawDataCard(context, {
+  });  drawDataCard(context, {
     x: contentX + cardWidth + gridGap,
     y,
     width: cardWidth,
     height: cardHeight,
-    title: "ព័ត៌មានកញ្ចប់រថយន្ត",
-    rows: [
-      { label: "ប្រភេទកញ្ចប់", value: "កញ្ចប់ថេរ ៣ រថយន្ត", maxLines: 1 },
-      { label: "រថយន្តទី ១", value: "រថយន្តដឹកជញ្ជូន (៥ នាក់)", maxLines: 1 },
-      { label: "រថយន្តទី ២", value: "រថយន្តមេបញ្ជាការ (៥ នាក់)", maxLines: 1 },
-      { label: "រថយន្តទី ៣", value: "រថយន្តបច្ចេកទេស (៥ នាក់)", maxLines: 1 },
-      { label: "សមត្ថភាពសរុប", value: "១៥ នាក់/បេសកកម្ម", maxLines: 1 }
-    ]
+    title: "Member List",
+    rows: (members.length ? members : [{ name: "-", phone: "-", role: "-" }]).slice(0, 5).map((member, index) => ({
+      label: `Member ${index + 1}`,
+      value: `${normalizeText(member.name)} | ${normalizeText(member.phone)} | ${normalizeText(member.role)}`,
+      maxLines: 1
+    }))
   });
 
   y += cardHeight + 18;
@@ -367,25 +363,23 @@ async function createSimpleReportJpeg(report) {
       { label: "ឯកសារភ្ជាប់", value: normalizeText(reportData.supportFileName), maxLines: 2 },
       { label: "សមាជិកបន្ថែម", value: `${members.length} នាក់`, maxLines: 1 }
     ]
-  });
-
-  drawDataCard(context, {
+  });    drawDataCard(context, {
     x: contentX + cardWidth + gridGap,
     y,
     width: cardWidth,
     height: cardHeight,
-      title: "ព័ត៌មានការអនុម័ត",
-      rows: [
+    title: "Approval",
+    rows: [
       {
-        label: "ស្ថានភាពពិនិត្យ",
+        label: "Status",
         value: requestStatusLabelMap[requestStatus],
         valueColor: requestStatus === "approved" ? "#1e7d37" : requestStatus === "rejected" ? "#b3261e" : "#8e6b10",
         maxLines: 1
       },
-      { label: "ពិនិត្យដោយ", value: requestStatus === "pending" ? "-" : "ប្រព័ន្ធស្នើសុំរថយន្ត MCCTV", maxLines: 2 },
-      { label: "ពេលវេលាពិនិត្យ", value: formatSimpleDate(reportData.submittedAt, true), maxLines: 1 },
-      { label: "ហត្ថលេខា", value: "______________________________", maxLines: 1 }
-      ]
+      { label: "Reviewed by", value: requestStatus === "pending" ? "-" : "MCCTV Mission Request System", maxLines: 2 },
+      { label: "Reviewed at", value: formatSimpleDate(reportData.submittedAt, true), maxLines: 1 },
+      { label: "Signature", value: "______________________________", maxLines: 1 }
+    ]
   });
 
   y += cardHeight + 18;
@@ -397,24 +391,7 @@ async function createSimpleReportJpeg(report) {
     height: noteHeight,
     title: "សំណូមពរ និងតម្រូវការបន្ថែម",
     rows: [{ label: "មាតិកា", value: normalizeText(formData.requestNote), maxLines: 2 }]
-  });
-
-  y += noteHeight + 18;
-  const memberHeight = 220;
-  drawDataCard(context, {
-    x: contentX,
-    y,
-    width: contentWidth,
-    height: memberHeight,
-    title: "បញ្ជីសមាជិកចូលរួមបេសកកម្ម",
-    rows: (members.length ? members : [{ name: "-", phone: "-", role: "-" }]).slice(0, 7).map((member, index) => ({
-      label: `សមាជិក ${index + 1}`,
-      value: `${normalizeText(member.name)} | ${normalizeText(member.phone)} | ${normalizeText(member.role)}`,
-      maxLines: 1
-    }))
-  });
-
-  const dataUrl = canvas.toDataURL("image/jpeg", 0.95);
+  });  const dataUrl = canvas.toDataURL("image/jpeg", 0.95);
   return { dataUrl, width, height };
 }
 
@@ -675,3 +652,5 @@ export async function saveBlobToFile(blob, fileName, handle) {
     setTimeout(() => URL.revokeObjectURL(url), 60000);
   }
 }
+
+

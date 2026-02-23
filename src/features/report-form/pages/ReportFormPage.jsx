@@ -233,7 +233,7 @@ export default function ReportFormPage() {
         <PolicySection isActive={activeSection === "policy"} />
       </main>
 
-      <footer className="footer">© 2026 អង្គភាពប្រតិបត្តិការ MCCTV - ប្រព័ន្ធស្នើសុំរថយន្តបេសកកម្ម</footer>
+      <footer className="footer">© 2026 អគ្គនាយកដ្ឋានបច្ចេកវិទ្យាឌីជីថល និងផ្សព្វផ្សាយអប់រំ - ប្រព័ន្ធស្នើសុំរថយន្តបេសកកម្ម</footer>
       <PdfTemplate report={submittedReport} onClose={() => setSubmittedReport(null)} />
     </div>
   );

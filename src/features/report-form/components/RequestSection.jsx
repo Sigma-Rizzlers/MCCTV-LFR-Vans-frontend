@@ -10,7 +10,6 @@ export default function RequestSection({ isActive, formProps }) {
               <h2>ព័ត៌មានកញ្ចប់រថយន្ត</h2>
               <p>កញ្ចប់នេះរួមមាន ៣ រថយន្ត និងត្រូវស្នើសុំជាកញ្ចប់តែមួយជានិច្ច។</p>
             </div>
-            <span className="pill">បង្ខំស្នើ ៣ រថយន្ត</span>
           </div>
           <div className="van-grid">
             <div className="van-item">
@@ -31,7 +30,7 @@ export default function RequestSection({ isActive, formProps }) {
           </div>
           <div className="bundle-note">
             សូមចំណាំ៖ ការស្នើសុំរថយន្តមួយលើក គឺស្មើនឹងការស្នើសុំរថយន្តទាំង ៣ គ្រឿង និងមានសមត្ថភាពសរុប ១៥
-            នាក់/បេសកកម្ម (រួមអ្នកបើកបរ ៣ នាក់)។
+            នាក់/បេសកកម្ម។
           </div>
         </div>
       </section>
