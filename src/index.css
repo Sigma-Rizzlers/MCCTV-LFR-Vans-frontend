@@ -1,0 +1,48 @@
+@import url("https://fonts.googleapis.com/css2?family=Kantumruy+Pro:wght@400;500;600;700;800&family=Noto+Sans:wght@400;600;700;800&family=Noto+Sans+Khmer:wght@400;500;600;700;800&display=swap");
+
+:root {
+  --navy-900: #0b1f3a;
+  --navy-800: #102a4a;
+  --navy-700: #16345e;
+  --gold-500: #d4a12a;
+  --gold-300: #e8c76a;
+  --mint-500: #1f7a6a;
+  --ink: #1b2533;
+  --muted: #5a6b80;
+  --bg: #f4f7fb;
+  --card: #ffffff;
+  --shadow: 0 18px 40px rgba(11, 31, 58, 0.12);
+  --radius-lg: 20px;
+  --radius-md: 14px;
+  --font-kh-sans: "Kantumruy Pro", "Noto Sans Khmer", "Khmer OS Battambang", "Khmer OS", sans-serif;
+  --font-kh-heading: "Kantumruy Pro", "Noto Sans Khmer", "Khmer OS Muol Light", "Khmer OS", sans-serif;
+  --font-latin: "Noto Sans", "Segoe UI", "Arial", sans-serif;
+  font-family: var(--font-kh-sans);
+  line-height: 1.45;
+  font-weight: 400;
+  color: var(--ink);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: var(--font-kh-sans);
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background:
+    radial-gradient(circle at top left, rgba(212, 161, 42, 0.12), transparent 45%),
+    radial-gradient(circle at 20% 10%, rgba(31, 122, 106, 0.12), transparent 35%),
+    linear-gradient(180deg, #f7f9fc 0%, #eef3f9 40%, #f7f9fc 100%);
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
