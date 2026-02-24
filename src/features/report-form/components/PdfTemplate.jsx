@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { exportElementToPdfBlob, requestPdfFileHandle, saveBlobToFile } from "../utils/pdfExport";
+import { exportReportToPdfBlob, openPrintFallbackFromElement, saveBlobToFile } from "../utils/pdfExport";
 import { getRequestStatus, requestStatusLabelMap } from "../constants/requestStatus";
 
 function formatDate(value) {
@@ -77,17 +77,16 @@ export default function PdfTemplate({ report, onClose }) {
 
     try {
       const fileName = createPdfFileName(requestId);
-      const saveTarget = await requestPdfFileHandle(fileName);
-      if (saveTarget.cancelled) {
-        return;
-      }
-
       const pdfElement = document.getElementById("pdfTemplate");
-      const pdfBlob = await exportElementToPdfBlob(pdfElement);
-      await saveBlobToFile(pdfBlob, fileName, saveTarget.handle);
+      const pdfBlob = await exportReportToPdfBlob(report, { element: pdfElement });
+      await saveBlobToFile(pdfBlob, fileName, null);
     } catch (error) {
       console.error(error);
-      window.alert("Cannot save PDF right now. Please try again.");
+      const pdfElement = document.getElementById("pdfTemplate");
+      const opened = openPrintFallbackFromElement(pdfElement, createPdfFileName(requestId));
+      if (!opened) {
+        window.alert("Cannot save PDF right now. Please try again.");
+      }
     } finally {
       setIsSavingFile(false);
     }
@@ -241,6 +240,7 @@ export default function PdfTemplate({ report, onClose }) {
     </div>
   );
 }
+
 
 
 

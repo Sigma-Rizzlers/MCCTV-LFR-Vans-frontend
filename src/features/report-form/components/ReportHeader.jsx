@@ -1,4 +1,11 @@
-﻿export default function ReportHeader({ activeSection, navItems, onSectionChange }) {
+export default function ReportHeader({
+  activeSection,
+  navItems,
+  onSectionChange,
+  isAdmin = false,
+  onAdminLogin,
+  onAdminLogout
+}) {
   return (
     <>
       <header className="topbar">
@@ -30,6 +37,13 @@
             {item.label}
           </a>
         ))}
+        <button
+          type="button"
+          className={`admin-access-btn ${isAdmin ? "admin" : ""}`}
+          onClick={isAdmin ? onAdminLogout : onAdminLogin}
+        >
+          {isAdmin ? "Admin Logout" : "Admin Login"}
+        </button>
       </nav>
     </>
   );

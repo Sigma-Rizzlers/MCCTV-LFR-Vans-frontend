@@ -171,7 +171,9 @@
 }
 
 .nav {
+  position: relative;
   display: flex;
+  align-items: center;
   justify-content: center;
   gap: 24px;
   padding: 14px 48px;
@@ -190,6 +192,29 @@
 }
 
 .nav a.active {
+  color: var(--navy-800);
+  border-bottom-color: var(--gold-500);
+}
+
+.admin-access-btn {
+  position: absolute;
+  right: 48px;
+  top: 50%;
+  transform: translateY(-50%);
+  border: 0;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  padding: 0 0 8px;
+  font-family: var(--font-kh-sans);
+  font-weight: 600;
+  letter-spacing: 0.05px;
+  color: var(--muted);
+  background: transparent;
+  cursor: pointer;
+}
+
+.admin-access-btn:hover,
+.admin-access-btn.admin {
   color: var(--navy-800);
   border-bottom-color: var(--gold-500);
 }

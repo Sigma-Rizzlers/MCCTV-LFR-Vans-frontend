@@ -107,7 +107,7 @@ function loadHistoryFromStorage() {
   }
 }
 
-export default function ReportFormPage() {
+export default function ReportFormPage({ isAdmin = false, onAdminLogin, onAdminLogout }) {
   const [activeSection, setActiveSection] = useState("request");
   const [formData, setFormData] = useState(initialReportForm);
   const [supportFile, setSupportFile] = useState(null);
@@ -202,7 +202,14 @@ export default function ReportFormPage() {
 
   return (
     <div className="page notranslate" translate="no" lang="km">
-      <ReportHeader activeSection={activeSection} navItems={reportNavItems} onSectionChange={setActiveSection} />
+      <ReportHeader
+        activeSection={activeSection}
+        navItems={reportNavItems}
+        onSectionChange={setActiveSection}
+        isAdmin={isAdmin}
+        onAdminLogin={onAdminLogin}
+        onAdminLogout={onAdminLogout}
+      />
 
       <main className="page-main">
         <RequestSection
