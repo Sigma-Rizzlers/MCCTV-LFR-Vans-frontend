@@ -100,9 +100,9 @@ export default function HistorySection({ isActive, reports = [], onClearHistory,
                       <strong>{report.requestId}</strong>
                       <span className={`tag ${statusValue}`}>{requestStatusLabelMap[statusValue]}</span>
                     </div>
-                    <div className="history-item-title">{renderValue(report.formData?.missionTitle)}</div>
+                    <div className="history-item-title">{renderValue(report.formData?.mission_title)}</div>
                     <div className="history-item-meta">
-                      {formatDateTime(report.submittedAt)} | {renderValue(report.formData?.name)}
+                      {formatDateTime(report.submittedAt)} | {renderValue(report.formData?.fullname)}
                     </div>
                   </button>
                 );
@@ -132,15 +132,15 @@ export default function HistorySection({ isActive, reports = [], onClearHistory,
                 </div>
                 <div className="detail-row">
                   <span>ឈ្មោះបេសកកម្ម</span>
-                  <strong>{renderValue(selectedReport.formData?.missionTitle)}</strong>
+                  <strong>{renderValue(selectedReport.formData?.mission_title)}</strong>
                 </div>
                 <div className="detail-row">
                   <span>ទីកន្លែងបេសកកម្ម</span>
-                  <strong>{renderValue(selectedReport.formData?.missionPlace)}</strong>
+                  <strong>{renderValue(selectedReport.formData?.stops)}</strong>
                 </div>
                 <div className="detail-row">
                   <span>អ្នកស្នើសុំ</span>
-                  <strong>{renderValue(selectedReport.formData?.name)}</strong>
+                  <strong>{renderValue(selectedReport.formData?.fullname)}</strong>
                 </div>
                 <div className="detail-row">
                   <span>លេខទូរស័ព្ទ</span>
@@ -151,7 +151,7 @@ export default function HistorySection({ isActive, reports = [], onClearHistory,
                   <strong>{selectedReport.members?.length ?? 0} នាក់</strong>
                 </div>
               </div>
-              <div className="detail-note">{renderValue(selectedReport.formData?.requestNote)}</div>
+              <div className="detail-note">{renderValue(selectedReport.formData?.request_note)}</div>
               <div className="detail-actions">
                 <button className="primary" type="button" onClick={() => onOpenPdf?.(selectedReport.requestId)}>
                   បើក PDF

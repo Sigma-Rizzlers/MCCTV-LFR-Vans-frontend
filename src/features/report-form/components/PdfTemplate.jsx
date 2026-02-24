@@ -56,7 +56,7 @@ export default function PdfTemplate({ report, onClose }) {
   }
 
   const { formData, requestId, submittedAt, supportFileName, members } = report;
-  const requesterName = renderValue(formData.name);
+  const requesterName = renderValue(formData.fullname);
   const filledMembers = Array.isArray(members) ? members : [];
   const requestStatus = getRequestStatus(report.approvalStatus);
   const statusLabel = requestStatusLabelMap[requestStatus];
@@ -138,23 +138,23 @@ export default function PdfTemplate({ report, onClose }) {
               <h3>ព័ត៌មានបេសកកម្ម</h3>
               <div className="pdf-row">
                 <div className="pdf-label">ឈ្មោះបេសកកម្ម</div>
-                <div className="pdf-value">{renderValue(formData.missionTitle)}</div>
+                <div className="pdf-value">{renderValue(formData.mission_title)}</div>
               </div>
               <div className="pdf-row">
                 <div className="pdf-label">ថ្ងៃចេញ</div>
-                <div className="pdf-value">{formatDate(formData.departureDate)}</div>
+                <div className="pdf-value">{formatDate(formData.pickup_date)}</div>
               </div>
               <div className="pdf-row">
                 <div className="pdf-label">ថ្ងៃត្រឡប់</div>
-                <div className="pdf-value">{formatDate(formData.returnDate)}</div>
+                <div className="pdf-value">{formatDate(formData.return_date)}</div>
               </div>
               <div className="pdf-row">
                 <div className="pdf-label">ទីកន្លែងបេសកកម្ម</div>
-                <div className="pdf-value">{renderValue(formData.missionPlace)}</div>
+                <div className="pdf-value">{renderValue(formData.stops)}</div>
               </div>
               <div className="pdf-row">
                 <div className="pdf-label">គោលបំណង</div>
-                <div className="pdf-value">{renderValue(formData.mission)}</div>
+                <div className="pdf-value">{renderValue(formData.reason)}</div>
               </div>
             </section>
 
@@ -170,7 +170,7 @@ export default function PdfTemplate({ report, onClose }) {
               </div>
               <div className="pdf-row">
                 <div className="pdf-label">តួនាទី</div>
-                <div className="pdf-value">{renderValue(formData.role)}</div>
+                <div className="pdf-value">{renderValue(formData.job_position)}</div>
               </div>
               <div className="pdf-row">
                 <div className="pdf-label">ឯកសារភ្ជាប់</div>
@@ -193,11 +193,11 @@ export default function PdfTemplate({ report, onClose }) {
                 </thead>
                 <tbody>
                   {filledMembers.map((member, index) => (
-                    <tr key={`${member.name}-${index}`}>
+                    <tr key={`${member.full_name}-${index}`}>
                       <td>{index + 1}</td>
-                      <td>{renderValue(member.name)}</td>
-                      <td>{renderValue(member.phone)}</td>
-                      <td>{renderValue(member.role)}</td>
+                      <td>{renderValue(member.full_name)}</td>
+                      <td>{renderValue(member.phone_number)}</td>
+                      <td>{renderValue(member.job_position)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -209,7 +209,7 @@ export default function PdfTemplate({ report, onClose }) {
 
           <section className="pdf-panel pdf-panel-full">
             <h3>សំណូមពរ និងតម្រូវការបន្ថែម</h3>
-            <p className="pdf-request-note">{renderValue(formData.requestNote)}</p>
+            <p className="pdf-request-note">{renderValue(formData.request_note)}</p>
           </section>
           <section className="pdf-panel pdf-panel-full">
               <h3>ព័ត៌មានការអនុម័ត</h3>

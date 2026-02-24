@@ -1,13 +1,13 @@
 ﻿export const initialReportForm = {
-  missionTitle: "",
-  departureDate: "",
-  returnDate: "",
-  missionPlace: "",
-  mission: "",
-  name: "",
+  mission_title: "",
+  pickup_date: "",
+  return_date: "",
+  stops: "",
+  reason: "",
+  fullname: "",
   phone: "",
-  role: "",
-  requestNote: ""
+  job_position: "",
+  request_note: ""
 };
 
 export const reportNavItems = [

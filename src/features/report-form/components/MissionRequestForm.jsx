@@ -2,13 +2,13 @@ import { useRef, useState } from "react";
 
 const MEMBER_LIMIT = 14;
 const memberPhoneRegex = /^(?:0\d{8,9}|0\d{2}-\d{3}-\d{3,4})$/;
-const emptyMemberError = { name: "", phone: "", role: "" };
+const emptyMemberError = { full_name: "", phone_number: "", job_position: "" };
 
 function createEmptyMember() {
   return {
-    name: "",
-    phone: "",
-    role: "",
+    full_name: "",
+    phone_number: "",
+    job_position: "",
     supportFile: null
   };
 }
@@ -18,26 +18,26 @@ function createMemberList() {
 }
 
 function isMemberFilled(member) {
-  const normalizedPhone = member.phone.trim();
-  return Boolean(member.name.trim() && member.role.trim() && memberPhoneRegex.test(normalizedPhone));
+  const normalizedPhone = member.phone_number.trim();
+  return Boolean(member.full_name.trim() && member.job_position.trim() && memberPhoneRegex.test(normalizedPhone));
 }
 
 function validateMember(member) {
   const errors = { ...emptyMemberError };
-  const normalizedPhone = member.phone.trim();
+  const normalizedPhone = member.phone_number.trim();
 
-  if (!member.name.trim()) {
-    errors.name = "សូមបញ្ចូលគោត្តនាមសមាជិក។";
+  if (!member.full_name.trim()) {
+    errors.full_name = "សូមបញ្ចូលគោត្តនាមសមាជិក។";
   }
 
   if (!normalizedPhone) {
-    errors.phone = "សូមបញ្ចូលលេខទូរស័ព្ទសមាជិក។";
+    errors.phone_number = "សូមបញ្ចូលលេខទូរស័ព្ទសមាជិក។";
   } else if (!memberPhoneRegex.test(normalizedPhone)) {
-    errors.phone = "លេខទូរស័ព្ទមិនត្រឹមត្រូវ។ សូមប្រើ 012-345-678 ឬ 012-345-6789។";
+    errors.phone_number = "លេខទូរស័ព្ទមិនត្រឹមត្រូវ។ សូមប្រើ 012-345-678 ឬ 012-345-6789។";
   }
 
-  if (!member.role.trim()) {
-    errors.role = "សូមបញ្ចូលតួនាទីសមាជិក។";
+  if (!member.job_position.trim()) {
+    errors.job_position = "សូមបញ្ចូលតួនាទីសមាជិក។";
   }
 
   return errors;
@@ -87,11 +87,11 @@ export default function MissionRequestForm({
       return next;
     });
 
-    if (name === "phone") {
+    if (name === "phone_number") {
       const trimmedPhone = value.trim();
       setMemberErrors((current) => ({
         ...current,
-        phone: !trimmedPhone || memberPhoneRegex.test(trimmedPhone) ? "" : "លេខទូរស័ព្ទមិនត្រឹមត្រូវ។"
+        phone_number: !trimmedPhone || memberPhoneRegex.test(trimmedPhone) ? "" : "លេខទូរស័ព្ទមិនត្រឹមត្រូវ។"
       }));
       return;
     }
@@ -160,28 +160,28 @@ export default function MissionRequestForm({
                   <span>បេសកកម្ម</span>
                   <input
                     type="text"
-                    name="missionTitle"
+                    name="mission_title"
                     placeholder="បញ្ចូលឈ្មោះបេសកកម្ម"
-                    value={formData.missionTitle}
+                    value={formData.mission_title}
                     onChange={onChange}
                     required
                   />
                 </label>
                 <label className="field">
                   <span>ថ្ងៃចេញ</span>
-                  <input type="date" name="departureDate" value={formData.departureDate} onChange={onChange} required />
+                  <input type="date" name="pickup_date" value={formData.pickup_date} onChange={onChange} required />
                 </label>
                 <label className="field">
                   <span>ថ្ងៃត្រឡប់</span>
-                  <input type="date" name="returnDate" value={formData.returnDate} onChange={onChange} required />
+                  <input type="date" name="return_date" value={formData.return_date} onChange={onChange} required />
                 </label>
                 <label className="field full">
                   <span>ទីកន្លែងបេសកកម្ម</span>
                   <input
                     type="text"
-                    name="missionPlace"
+                    name="stops"
                     placeholder="ឧ. ខេត្ត/រាជធានី, ភូមិ, ឃុំ/សង្កាត់, ស្រុក/ខណ្ឌ"
-                    value={formData.missionPlace}
+                    value={formData.stops}
                     onChange={onChange}
                     required
                   />
@@ -189,10 +189,10 @@ export default function MissionRequestForm({
                 <label className="field full">
                   <span>សេចក្ដីពណ៌នាបេសកកម្ម</span>
                   <textarea
-                    name="mission"
+                    name="reason"
                     rows="4"
                     placeholder="ពិពណ៌នាគោលបំណង កាលបរិច្ឆេទ និងតំបន់បេសកកម្ម"
-                    value={formData.mission}
+                    value={formData.reason}
                     onChange={onChange}
                     required
                   />
@@ -210,9 +210,9 @@ export default function MissionRequestForm({
                   <span>គោត្តនាម</span>
                   <input
                     type="text"
-                    name="name"
+                    name="fullname"
                     placeholder="បញ្ចូលឈ្មោះពេញ"
-                    value={formData.name}
+                    value={formData.fullname}
                     onChange={onChange}
                     required
                   />
@@ -242,9 +242,9 @@ export default function MissionRequestForm({
                   <span>តួនាទី</span>
                   <input
                     type="text"
-                    name="role"
+                    name="job_position"
                     placeholder="ឧ. ប្រធានក្រុម / សមាជិក"
-                    value={formData.role}
+                    value={formData.job_position}
                     onChange={onChange}
                     required
                   />
@@ -292,10 +292,10 @@ export default function MissionRequestForm({
                 <label className="field full request-field">
                   <span>ប្រអប់សំណើរ</span>
                   <textarea
-                    name="requestNote"
+                    name="request_note"
                     rows="5"
                     placeholder="សូមសរសេរតម្រូវការ ឬសម្ភារៈចាំបាច់សម្រាប់បេសកកម្ម"
-                    value={formData.requestNote}
+                    value={formData.request_note}
                     onChange={onChange}
                     required
                   />
@@ -337,42 +337,42 @@ export default function MissionRequestForm({
                   <span>គោត្តនាម</span>
                   <input
                     type="text"
-                    name="name"
+                    name="full_name"
                     placeholder="បញ្ចូលឈ្មោះពេញ"
-                    value={activeMember.name}
+                    value={activeMember.full_name}
                     onChange={handleMemberChange}
-                    className={memberErrors.name ? "input-error" : ""}
+                    className={memberErrors.full_name ? "input-error" : ""}
                     required
                   />
-                  {memberErrors.name ? <p className="field-error">{memberErrors.name}</p> : null}
+                  {memberErrors.full_name ? <p className="field-error">{memberErrors.full_name}</p> : null}
                 </label>
                 <label className="field">
                   <span>លេខទូរស័ព្ទ</span>
                   <input
                     type="tel"
-                    name="phone"
+                    name="phone_number"
                     placeholder="ឧ. 012-345-678"
-                    value={activeMember.phone}
+                    value={activeMember.phone_number}
                     onChange={handleMemberChange}
                     autoComplete="tel"
                     inputMode="numeric"
-                    className={memberErrors.phone ? "input-error" : ""}
+                    className={memberErrors.phone_number ? "input-error" : ""}
                     required
                   />
-                  {memberErrors.phone ? <p className="field-error">{memberErrors.phone}</p> : null}
+                  {memberErrors.phone_number ? <p className="field-error">{memberErrors.phone_number}</p> : null}
                 </label>
                 <label className="field">
                   <span>តួនាទី</span>
                   <input
                     type="text"
-                    name="role"
+                    name="job_position"
                     placeholder="ឧ. មន្រ្តីប្រតិបត្តិ / សមាជិក"
-                    value={activeMember.role}
+                    value={activeMember.job_position}
                     onChange={handleMemberChange}
-                    className={memberErrors.role ? "input-error" : ""}
+                    className={memberErrors.job_position ? "input-error" : ""}
                     required
                   />
-                  {memberErrors.role ? <p className="field-error">{memberErrors.role}</p> : null}
+                  {memberErrors.job_position ? <p className="field-error">{memberErrors.job_position}</p> : null}
                 </label>
               </div>
 

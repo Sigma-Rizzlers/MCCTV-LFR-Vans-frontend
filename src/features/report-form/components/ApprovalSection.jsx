@@ -109,9 +109,9 @@ export default function ApprovalSection({ isActive, reports = [], onUpdateStatus
                       <strong>{report.requestId}</strong>
                       <span className={`tag ${status}`}>{requestStatusLabelMap[status]}</span>
                     </div>
-                    <div className="history-item-title">{renderValue(report.formData?.missionTitle)}</div>
+                    <div className="history-item-title">{renderValue(report.formData?.mission_title)}</div>
                     <div className="history-item-meta">
-                      {renderValue(report.formData?.name)} | {formatDateTime(report.submittedAt)}
+                      {renderValue(report.formData?.fullname)} | {formatDateTime(report.submittedAt)}
                     </div>
                   </button>
                 );
@@ -141,7 +141,7 @@ export default function ApprovalSection({ isActive, reports = [], onUpdateStatus
                 </div>
                 <div className="detail-row">
                   <span>អ្នកស្នើសុំ</span>
-                  <strong>{renderValue(selectedReport.formData?.name)}</strong>
+                  <strong>{renderValue(selectedReport.formData?.fullname)}</strong>
                 </div>
                 <div className="detail-row">
                   <span>លេខទូរស័ព្ទ</span>
@@ -149,11 +149,11 @@ export default function ApprovalSection({ isActive, reports = [], onUpdateStatus
                 </div>
                 <div className="detail-row">
                   <span>ឈ្មោះបេសកកម្ម</span>
-                  <strong>{renderValue(selectedReport.formData?.missionTitle)}</strong>
+                  <strong>{renderValue(selectedReport.formData?.mission_title)}</strong>
                 </div>
                 <div className="detail-row">
                   <span>ទីកន្លែងបេសកកម្ម</span>
-                  <strong>{renderValue(selectedReport.formData?.missionPlace)}</strong>
+                  <strong>{renderValue(selectedReport.formData?.stops)}</strong>
                 </div>
                 <div className="detail-row">
                   <span>សមាជិកបន្ថែម</span>
@@ -161,7 +161,7 @@ export default function ApprovalSection({ isActive, reports = [], onUpdateStatus
                 </div>
               </div>
 
-              <div className="detail-note">{renderValue(selectedReport.formData?.requestNote)}</div>
+              <div className="detail-note">{renderValue(selectedReport.formData?.request_note)}</div>
 
               <div className="approval-actions">
                 <button

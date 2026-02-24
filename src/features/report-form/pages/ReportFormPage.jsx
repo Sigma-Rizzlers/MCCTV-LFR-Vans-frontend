@@ -54,13 +54,13 @@ function sanitizeMembers(members) {
 
   return members
     .map((member) => {
-      const name = toText(member?.name);
-      const phone = toText(member?.phone);
-      const role = toText(member?.role);
+      const full_name = toText(member?.full_name);
+      const phone_number = toText(member?.phone_number);
+      const job_position = toText(member?.job_position);
       const supportFileName = toText(member?.supportFileName || member?.supportFile?.name);
-      return { name, phone, role, supportFileName };
+      return { full_name, phone_number, job_position, supportFileName };
     })
-    .filter((member) => member.name || member.phone || member.role);
+    .filter((member) => member.full_name || member.phone_number || member.job_position);
 }
 
 function sanitizeReport(rawReport) {
