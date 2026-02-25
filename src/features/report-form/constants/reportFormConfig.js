@@ -4,8 +4,8 @@
   return_date: "",
   stops: "",
   reason: "",
-  fullname: "",
-  phone: "",
+  full_name: "",
+  phone_number: "",
   job_position: "",
   request_note: ""
 };

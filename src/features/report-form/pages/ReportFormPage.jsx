@@ -132,7 +132,7 @@ export default function ReportFormPage({ isAdmin = false, onAdminLogin, onAdminL
     const { name, value } = event.target;
     setFormData((current) => ({ ...current, [name]: value }));
 
-    if (name === "phone") {
+    if (name === "phone_number") {
       setPhoneError(validatePhone(value));
     }
   }
@@ -140,7 +140,7 @@ export default function ReportFormPage({ isAdmin = false, onAdminLogin, onAdminL
   function handleSubmit(event, payload = {}) {
     event.preventDefault();
 
-    const nextPhoneError = validatePhone(formData.phone);
+    const nextPhoneError = validatePhone(formData.phone_number);
     if (nextPhoneError) {
       setPhoneError(nextPhoneError);
       return;

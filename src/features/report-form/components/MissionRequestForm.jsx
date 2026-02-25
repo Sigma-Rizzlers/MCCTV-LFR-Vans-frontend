@@ -210,9 +210,9 @@ export default function MissionRequestForm({
                   <span>គោត្តនាម</span>
                   <input
                     type="text"
-                    name="fullname"
+                    name="full_name"
                     placeholder="បញ្ចូលឈ្មោះពេញ"
-                    value={formData.fullname}
+                    value={formData.full_name}
                     onChange={onChange}
                     required
                   />
@@ -221,9 +221,9 @@ export default function MissionRequestForm({
                   <span>លេខទូរស័ព្ទ</span>
                   <input
                     type="tel"
-                    name="phone"
+                    name="phone_number"
                     placeholder="ឧ. 012-345-678"
-                    value={formData.phone}
+                    value={formData.phone_number}
                     onChange={onChange}
                     autoComplete="tel"
                     inputMode="numeric"

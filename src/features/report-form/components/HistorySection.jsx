@@ -102,7 +102,7 @@ export default function HistorySection({ isActive, reports = [], onClearHistory,
                     </div>
                     <div className="history-item-title">{renderValue(report.formData?.mission_title)}</div>
                     <div className="history-item-meta">
-                      {formatDateTime(report.submittedAt)} | {renderValue(report.formData?.fullname)}
+                      {formatDateTime(report.submittedAt)} | {renderValue(report.formData?.full_name)}
                     </div>
                   </button>
                 );
@@ -140,11 +140,11 @@ export default function HistorySection({ isActive, reports = [], onClearHistory,
                 </div>
                 <div className="detail-row">
                   <span>អ្នកស្នើសុំ</span>
-                  <strong>{renderValue(selectedReport.formData?.fullname)}</strong>
+                  <strong>{renderValue(selectedReport.formData?.full_name)}</strong>
                 </div>
                 <div className="detail-row">
                   <span>លេខទូរស័ព្ទ</span>
-                  <strong>{renderValue(selectedReport.formData?.phone)}</strong>
+                  <strong>{renderValue(selectedReport.formData?.phone_number)}</strong>
                 </div>
                 <div className="detail-row">
                   <span>សមាជិកបន្ថែម</span>

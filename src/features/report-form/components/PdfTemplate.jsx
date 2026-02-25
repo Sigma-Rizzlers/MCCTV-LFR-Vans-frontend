@@ -56,7 +56,7 @@ export default function PdfTemplate({ report, onClose }) {
   }
 
   const { formData, requestId, submittedAt, supportFileName, members } = report;
-  const requesterName = renderValue(formData.fullname);
+  const requesterName = renderValue(formData.full_name);
   const filledMembers = Array.isArray(members) ? members : [];
   const requestStatus = getRequestStatus(report.approvalStatus);
   const statusLabel = requestStatusLabelMap[requestStatus];
@@ -166,7 +166,7 @@ export default function PdfTemplate({ report, onClose }) {
               </div>
               <div className="pdf-row">
                 <div className="pdf-label">លេខទូរស័ព្ទ</div>
-                <div className="pdf-value">{renderValue(formData.phone)}</div>
+                <div className="pdf-value">{renderValue(formData.phone_number)}</div>
               </div>
               <div className="pdf-row">
                 <div className="pdf-label">តួនាទី</div>
