@@ -4,6 +4,10 @@ import { ReportFormPage } from "./features/report-form";
 
 const sessionAuthKey = "mcctv:admin-session-auth";
 const rememberAuthKey = "mcctv:admin-remember-auth";
+const ADMIN_CREDENTIALS = {
+  username: "admin",
+  password: "123456"
+};
 
 function getInitialAuthState() {
   if (typeof window === "undefined") {
@@ -20,19 +24,29 @@ export default function App() {
   const [isAdmin, setIsAdmin] = useState(getInitialAuthState);
   const [showAdminLogin, setShowAdminLogin] = useState(false);
 
-  function handleAdminLogin({ keepSignedIn }) {
-    if (typeof window !== "undefined") {
-      window.sessionStorage.setItem(sessionAuthKey, "1");
-      if (keepSignedIn) {
-        window.localStorage.setItem(rememberAuthKey, "1");
-      } else {
-        window.localStorage.removeItem(rememberAuthKey);
-      }
-    }
-
-    setIsAdmin(true);
-    setShowAdminLogin(false);
+  function handleAdminLogin({ username, password, keepSignedIn }) {
+  if (
+    username !== ADMIN_CREDENTIALS.username ||
+    password !== ADMIN_CREDENTIALS.password
+  ) {
+    return false; // tell login page it failed
   }
+
+  if (typeof window !== "undefined") {
+    window.sessionStorage.setItem(sessionAuthKey, "1");
+
+    if (keepSignedIn) {
+      window.localStorage.setItem(rememberAuthKey, "1");
+    } else {
+      window.localStorage.removeItem(rememberAuthKey);
+    }
+  }
+
+  setIsAdmin(true);
+  setShowAdminLogin(false);
+
+  return true;
+}
 
   function handleAdminLogout() {
     if (typeof window !== "undefined") {

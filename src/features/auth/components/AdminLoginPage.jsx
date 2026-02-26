@@ -11,14 +11,23 @@ export default function AdminLoginPage({ onLogin, onCancel }) {
     event.preventDefault();
     const normalizedUsername = username.trim();
 
-    if (!normalizedUsername || !password) {
-      setError("Please enter username and password.");
-      return;
-    }
-
-    setError("");
-    onLogin({ username: normalizedUsername, keepSignedIn });
+  if (!normalizedUsername || !password) {
+    setError("Please enter username and password.");
+    return;
   }
+
+  const success = onLogin({
+    username: normalizedUsername,
+    password,
+    keepSignedIn
+  });
+
+  if (!success) {
+    setError("Invalid admin credentials.");
+  } else {
+    setError("");
+  }
+}
 
   return (
     <main className="login-page">
