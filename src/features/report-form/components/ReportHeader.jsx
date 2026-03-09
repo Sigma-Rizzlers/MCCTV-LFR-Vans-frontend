@@ -2,10 +2,14 @@ export default function ReportHeader({
   activeSection,
   navItems,
   onSectionChange,
-  isAdmin = false,
+  authRole = "guest",
   onAdminLogin,
-  onAdminLogout
+  onAdminLogout,
+  onOpenAdminDashboard
 }) {
+  const isAuthenticated = authRole === "admin" || authRole === "super_admin";
+  const dashboardLabel = authRole === "super_admin" ? "Super Admin Dashboard" : "Admin Dashboard";
+
   return (
     <>
       <header className="topbar">
@@ -37,13 +41,26 @@ export default function ReportHeader({
             {item.label}
           </a>
         ))}
-        <button
-          type="button"
-          className={`admin-access-btn ${isAdmin ? "admin" : ""}`}
-          onClick={isAdmin ? onAdminLogout : onAdminLogin}
-        >
-          {isAdmin ? "Admin Logout" : "Admin Login"}
-        </button>
+        <div className="admin-actions">
+          {isAuthenticated ? (
+            <>
+              <button
+                type="button"
+                className="admin-access-btn admin"
+                onClick={onOpenAdminDashboard}
+              >
+                {dashboardLabel}
+              </button>
+              <button type="button" className="admin-access-btn admin" onClick={onAdminLogout}>
+                Admin Logout
+              </button>
+            </>
+          ) : (
+            <button type="button" className="admin-access-btn" onClick={onAdminLogin}>
+              Admin Login
+            </button>
+          )}
+        </div>
       </nav>
     </>
   );

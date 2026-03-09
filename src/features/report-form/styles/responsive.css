@@ -35,6 +35,16 @@
 
   .nav {
     flex-wrap: wrap;
+    justify-content: center;
+    gap: 16px 24px;
+  }
+
+  .admin-actions {
+    position: static;
+    transform: none;
+    width: 100%;
+    justify-content: center;
+    gap: 12px;
   }
 
   .member-modal-overlay {
@@ -105,6 +115,15 @@
 
   .member-progress-wrap {
     text-align: center;
+  }
+
+  .admin-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .admin-access-btn {
+    padding: 8px 0;
   }
 
   .brand {

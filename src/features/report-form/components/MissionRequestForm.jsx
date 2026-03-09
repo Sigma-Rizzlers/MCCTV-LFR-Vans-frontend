@@ -1,13 +1,14 @@
 import { useRef, useState } from "react";
 
-const MEMBER_LIMIT = 14;
+const MEMBER_LIMIT = 49;
 const memberPhoneRegex = /^(?:0\d{8,9}|0\d{2}-\d{3}-\d{3,4})$/;
-const emptyMemberError = { name: "", phone: "", role: "" };
+const emptyMemberError = { name: "", phone: "", gender: "", role: "" };
 
 function createEmptyMember() {
   return {
     name: "",
     phone: "",
+    gender: "",
     role: "",
     supportFile: null
   };
@@ -19,7 +20,7 @@ function createMemberList() {
 
 function isMemberFilled(member) {
   const normalizedPhone = member.phone.trim();
-  return Boolean(member.name.trim() && member.role.trim() && memberPhoneRegex.test(normalizedPhone));
+  return Boolean(member.name.trim() && member.gender.trim() && member.role.trim() && memberPhoneRegex.test(normalizedPhone));
 }
 
 function validateMember(member) {
@@ -40,6 +41,10 @@ function validateMember(member) {
     errors.role = "សូមបញ្ចូលតួនាទីសមាជិក។";
   }
 
+  if (!member.gender.trim()) {
+    errors.gender = "Please select member gender.";
+  }
+
   return errors;
 }
 
@@ -55,7 +60,8 @@ export default function MissionRequestForm({
   onSubmit,
   onReset,
   onSupportFileChange,
-  phoneError
+  phoneError,
+  hideMissionSection = false
 }) {
   const [isMemberModalOpen, setIsMemberModalOpen] = useState(false);
   const [activeMemberIndex, setActiveMemberIndex] = useState(0);
@@ -150,7 +156,8 @@ export default function MissionRequestForm({
 
         <form id="missionForm" onSubmit={handleFormSubmit} onReset={handleFormReset}>
           <div className="phase-grid">
-            <section className="phase-card phase-mission">
+            {hideMissionSection ? null : (
+              <section className="phase-card phase-mission">
               <div className="phase-header">
                 <h3>ព័ត៌មានបេសកកម្ម</h3>
                 <p>សូមបំពេញព័ត៌មានបេសកកម្មឲ្យបានច្បាស់លាស់។</p>
@@ -198,7 +205,8 @@ export default function MissionRequestForm({
                   />
                 </label>
               </div>
-            </section>
+              </section>
+            )}
 
             <section className="phase-card phase-personal">
               <div className="phase-header">
@@ -222,7 +230,7 @@ export default function MissionRequestForm({
                   <input
                     type="tel"
                     name="phone"
-                    placeholder="ឧ. 012-345-678"
+                    placeholder="e.g. 012-345-678"
                     value={formData.phone}
                     onChange={onChange}
                     autoComplete="tel"
@@ -239,18 +247,27 @@ export default function MissionRequestForm({
                   ) : null}
                 </label>
                 <label className="field">
+                  <span>ភេទ</span>
+                  <select name="gender" value={formData.gender} onChange={onChange} required>
+                    <option value="" disabled>
+                      ជ្រើសរើសភេទ
+                    </option>
+                    <option value="male">ប្រុស</option>
+                    <option value="female">ស្រី</option>
+                  </select>
+                </label>
+                <label className="field">
                   <span>តួនាទី</span>
                   <input
                     type="text"
                     name="role"
-                    placeholder="ឧ. ប្រធានក្រុម / សមាជិក"
+                    placeholder="e.g. Team Lead / Member"
                     value={formData.role}
                     onChange={onChange}
                     required
                   />
                 </label>
               </div>
-
               <div className="upload-block">
                 <div className="upload-label">ឯកសារភ្ជាប់</div>
                 <label className="upload-area" htmlFor="supportFile">
@@ -283,21 +300,126 @@ export default function MissionRequestForm({
               </p>
             </section>
 
-            <section className="phase-card phase-request">
+	            <section className="phase-card">
+	              <div className="phase-header">
+	                <h3>មធ្យោបាយបច្ចេកទេស និងធ្វើដំណើរ</h3>
+	                <p>សូមបំពេញព័ត៌មានរថយន្តសម្រាប់បេសកកម្មនេះ។</p>
+	              </div>
+	              <div className="field-grid">
+	                <label className="field">
+	                  <span>ម៉ាករថយន្ត</span>
+	                  <input
+	                    type="text"
+	                    name="vehicleBrand"
+	                    placeholder="បញ្ចូលម៉ាករថយន្ត"
+	                    value={formData.vehicleBrand}
+	                    onChange={onChange}
+	                    required
+	                  />
+	                </label>
+	                <label className="field">
+	                  <span>ស្លាកលេខ</span>
+	                  <input
+	                    type="text"
+	                    name="vehiclePlate"
+	                    placeholder="បញ្ចូលស្លាកលេខ"
+	                    value={formData.vehiclePlate}
+	                    onChange={onChange}
+	                    required
+	                  />
+	                </label>
+	                <label className="field">
+	                  <span>ចំនួនរថយន្ត</span>
+	                  <input
+	                    type="number"
+	                    name="vehicleCount"
+	                    min="0"
+	                    max="50"
+	                    placeholder="អតិបរមា 50"
+	                    value={formData.vehicleCount}
+	                    onChange={onChange}
+	                    required
+	                  />
+	                </label>
+	              </div>
+	            </section>
+            <section className="phase-card">
               <div className="phase-header">
-                <h3>សំណូមពរ</h3>
-                <p>សូមបំពេញសំណើរតម្រូវការរបស់មន្រ្តីមុនចេញបេសកកម្ម។</p>
+                <h3>សម្ភារៈបច្ចេកទេស</h3>
+                <p>សូមបំពេញព័ត៌មានសម្ភារៈដែលត្រូវប្រើក្នុងបេសកកម្ម។</p>
               </div>
               <div className="field-grid">
-                <label className="field full request-field">
-                  <span>ប្រអប់សំណើរ</span>
-                  <textarea
-                    name="requestNote"
-                    rows="5"
-                    placeholder="សូមសរសេរតម្រូវការ ឬសម្ភារៈចាំបាច់សម្រាប់បេសកកម្ម"
-                    value={formData.requestNote}
+                <label className="field">
+                  <span>ប្រភេទ</span>
+                  <input
+                    type="text"
+                    name="equipmentType"
+                    placeholder="បញ្ចូលប្រភេទសម្ភារៈ"
+                    value={formData.equipmentType}
                     onChange={onChange}
                     required
+                  />
+                </label>
+                <label className="field">
+                  <span>ចំនួន</span>
+                  <input
+                    type="number"
+                    name="equipmentCount"
+                    min="0"
+                    placeholder="បញ្ចូលចំនួន"
+                    value={formData.equipmentCount}
+                    onChange={onChange}
+                    required
+                  />
+                </label>
+              </div>
+            </section>
+            <section className="phase-card phase-request">
+	              <div className="phase-header">
+	                <h3>ពេលវេលាចេញដំណើរ និងទៅដល់</h3>
+	                <p>សូមបំពេញពេលវេលា និងព័ត៌មានចម្ងាយសម្រាប់ការធ្វើដំណើរ។</p>
+	              </div>
+	              <div className="field-grid">
+	                <label className="field">
+	                  <span>ចេញដំណើរ</span>
+	                  <input
+	                    type="date"
+	                    name="departDate"
+                    value={formData.departDate}
+                    onChange={onChange}
+                    required
+	                  />
+	                </label>
+	                <label className="field">
+	                  <span>ទៅដល់</span>
+	                  <input
+	                    type="date"
+	                    name="arriveDate"
+                    value={formData.arriveDate}
+                    onChange={onChange}
+                    required
+	                  />
+	                </label>
+	                <label className="field">
+	                  <span>ចំងាយផ្លូវ</span>
+	                  <input
+	                    type="text"
+	                    name="routeDistance"
+	                    placeholder="បញ្ចូលចំងាយផ្លូវ"
+	                    value={formData.routeDistance}
+	                    onChange={onChange}
+	                    required
+	                  />
+	                </label>
+	                <label className="field">
+	                  <span>រយៈពេល</span>
+	                  <input
+	                    type="text"
+	                    name="travelDuration"
+	                    placeholder="បញ្ចូលរយៈពេល"
+	                    value={formData.travelDuration}
+	                    onChange={onChange}
+	                    required
                   />
                 </label>
               </div>
@@ -324,7 +446,7 @@ export default function MissionRequestForm({
             <div className="member-modal-header">
               <div className="phase-header">
                 <h3 id="memberModalTitle">បំពេញព័ត៌មានសមាជិក</h3>
-                <p>សូមបំពេញព័ត៌មានសមាជិកម្នាក់ម្តង រហូតដល់សរុប ១៤ នាក់ (មិនរាប់អ្នកស្នើសុំ)។</p>
+                <p>Fill each member one by one up to {MEMBER_LIMIT} members (excluding requester).</p>
               </div>
               <button className="ghost member-close" type="button" onClick={closeMemberModal}>
                 បិទ
@@ -360,6 +482,23 @@ export default function MissionRequestForm({
                     required
                   />
                   {memberErrors.phone ? <p className="field-error">{memberErrors.phone}</p> : null}
+                </label>
+                <label className="field">
+                  <span>ភេទ</span>
+                  <select
+                    name="gender"
+                    value={activeMember.gender}
+                    onChange={handleMemberChange}
+                    className={memberErrors.gender ? "input-error" : ""}
+                    required
+                  >
+                    <option value="" disabled>
+                      ជ្រើសរើសភេទ
+                    </option>
+                    <option value="male">ប្រុស</option>
+                    <option value="female">ស្រី</option>
+                  </select>
+                  {memberErrors.gender ? <p className="field-error">{memberErrors.gender}</p> : null}
                 </label>
                 <label className="field">
                   <span>តួនាទី</span>
@@ -416,6 +555,14 @@ export default function MissionRequestForm({
     </section>
   );
 }
+
+
+
+
+
+
+
+
 
 
 

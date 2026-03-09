@@ -196,11 +196,18 @@
   border-bottom-color: var(--gold-500);
 }
 
-.admin-access-btn {
+.admin-actions {
   position: absolute;
   right: 48px;
   top: 50%;
   transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.admin-access-btn {
+  position: static;
   border: 0;
   border-bottom: 2px solid transparent;
   border-radius: 0;

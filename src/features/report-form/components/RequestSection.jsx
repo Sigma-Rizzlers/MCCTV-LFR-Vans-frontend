@@ -1,38 +1,73 @@
-﻿import MissionRequestForm from "./MissionRequestForm";
+import { useEffect, useState } from "react";
+import MissionRequestForm from "./MissionRequestForm";
+import { loadAdminMissionPanel } from "../../../utils/adminMissionPanel";
+
+const fallbackMissionPanel = {
+  missionTitle: "",
+  missionPlace: "",
+  participantCount: "",
+  mission: ""
+};
+
+function MissionPanelCard({ panel }) {
+  return (
+    <div className="bundle-card">
+      <div className="bundle-header">
+        <div>
+          <h2>ព័ត៌មានបេសកកម្ម</h2>
+        </div>
+      </div>
+      <div className="van-grid">
+        <div className="van-item">
+          <h3>បេសកកម្ម</h3>
+          <div className="van-meta">{panel.missionTitle || "-"}</div>
+        </div>
+      </div>
+      <div className="van-grid">
+        <div className="van-item">
+          <h3>ទីកន្លែងបេសកកម្ម</h3>
+          <div className="van-meta">{panel.missionPlace || "-"}</div>
+        </div>
+        <div className="van-item">
+          <h3>ចំនួនអ្នកចូលរួម</h3>
+          <div className="van-meta">{panel.participantCount || "-"}</div>
+        </div>
+      </div>
+      <div className="bundle-note">{panel.mission || "-"}</div>
+    </div>
+  );
+}
+
+function DefaultBundleCard() {
+  return (
+    <div className="bundle-card">
+      <div className="bundle-header">
+        <div>
+          <h2>ព័ត៌មានបេសកកម្ម</h2>
+          <p>មិនទាន់មានបេសកកម្ម</p>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function RequestSection({ isActive, formProps }) {
+  const [missionPanel, setMissionPanel] = useState(() => loadAdminMissionPanel() || fallbackMissionPanel);
+
+  useEffect(() => {
+    setMissionPanel(loadAdminMissionPanel() || fallbackMissionPanel);
+  }, []);
+
+  const hasMissionPanel =
+    Boolean(missionPanel?.missionTitle) ||
+    Boolean(missionPanel?.missionPlace) ||
+    Boolean(missionPanel?.participantCount) ||
+    Boolean(missionPanel?.mission);
+
   return (
     <section id="request" className={`page-section ${isActive ? "active" : ""}`}>
       <section className="bundle">
-        <div className="bundle-card">
-          <div className="bundle-header">
-            <div>
-              <h2>ព័ត៌មានកញ្ចប់រថយន្ត</h2>
-              <p>កញ្ចប់នេះរួមមាន ៣ រថយន្ត និងត្រូវស្នើសុំជាកញ្ចប់តែមួយជានិច្ច។</p>
-            </div>
-          </div>
-          <div className="van-grid">
-            <div className="van-item">
-              <h3>រថយន្តដឹកជញ្ជូន</h3>
-              <div className="van-sub">The Transport Van</div>
-              <div className="van-meta">៥ នាក់/រថយន្ត</div>
-            </div>
-            <div className="van-item">
-              <h3>រថយន្តមេបញ្ជាការ</h3>
-              <div className="van-sub">Commander Van</div>
-              <div className="van-meta">៥ នាក់/រថយន្ត</div>
-            </div>
-            <div className="van-item">
-              <h3>រថយន្តបច្ចេកទេស</h3>
-              <div className="van-sub">Technical Van</div>
-              <div className="van-meta">៥ នាក់/រថយន្ត</div>
-            </div>
-          </div>
-          <div className="bundle-note">
-            សូមចំណាំ៖ ការស្នើសុំរថយន្តមួយលើក គឺស្មើនឹងការស្នើសុំរថយន្តទាំង ៣ គ្រឿង និងមានសមត្ថភាពសរុប ១៥
-            នាក់/បេសកកម្ម។
-          </div>
-        </div>
+        {hasMissionPanel ? <MissionPanelCard panel={missionPanel} /> : <DefaultBundleCard />}
       </section>
 
       <MissionRequestForm {...formProps} />

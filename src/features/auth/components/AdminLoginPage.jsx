@@ -23,7 +23,7 @@ export default function AdminLoginPage({ onLogin, onCancel }) {
   });
 
   if (!success) {
-    setError("Invalid admin credentials.");
+    setError("Invalid credentials.");
   } else {
     setError("");
   }
@@ -33,7 +33,7 @@ export default function AdminLoginPage({ onLogin, onCancel }) {
     <main className="login-page">
       <section className="login-card-wrap">
         <form className="login-card" onSubmit={handleSubmit}>
-          <h2 className="login-title">Admin Sign In</h2>
+          <h2 className="login-title">Admin / Super Admin Sign In</h2>
 
           <label className="login-label" htmlFor="admin-username">Username</label>
           <input

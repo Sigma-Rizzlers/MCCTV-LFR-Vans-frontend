@@ -14,8 +14,8 @@
 .phase-request .field-grid { grid-template-columns: 1fr; }
 .phase-request .request-field textarea { min-height: 120px; resize: vertical; }
 .field { display: flex; flex-direction: column; gap: 8px; font-weight: 600; color: var(--navy-800); }
-.field input, .field textarea { width: 100%; padding: 12px 14px; border-radius: 12px; border: 1px solid rgba(16, 42, 74, 0.18); font-family: var(--font-kh-sans); font-size: 14px; line-height: 1.45; background: #f9fbfe; }
-.field input:focus, .field textarea:focus { outline: none; border-color: var(--mint-500); box-shadow: 0 0 0 3px rgba(31, 122, 106, 0.15); }
+.field input, .field textarea, .field select { width: 100%; padding: 12px 14px; border-radius: 12px; border: 1px solid rgba(16, 42, 74, 0.18); font-family: var(--font-kh-sans); font-size: 14px; line-height: 1.45; background: #f9fbfe; }
+.field input:focus, .field textarea:focus, .field select:focus { outline: none; border-color: var(--mint-500); box-shadow: 0 0 0 3px rgba(31, 122, 106, 0.15); }
 .field input.input-error { border-color: #c63b2f; box-shadow: 0 0 0 3px rgba(198, 59, 47, 0.12); }
 .field-error { margin: 0; font-size: 12px; font-weight: 600; color: #9f2419; }
 .field.full { grid-column: 1 / -1; }

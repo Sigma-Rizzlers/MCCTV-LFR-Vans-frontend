@@ -3,8 +3,6 @@ import { initialReportForm, initialStatusText, reportNavItems } from "../constan
 import { getRequestStatus } from "../constants/requestStatus";
 import ReportHeader from "../components/ReportHeader";
 import RequestSection from "../components/RequestSection";
-import HistorySection from "../components/HistorySection";
-import ApprovalSection from "../components/ApprovalSection";
 import PolicySection from "../components/PolicySection";
 import PdfTemplate from "../components/PdfTemplate";
 import "../styles/index.css";
@@ -56,11 +54,12 @@ function sanitizeMembers(members) {
     .map((member) => {
       const name = toText(member?.name);
       const phone = toText(member?.phone);
+      const gender = toText(member?.gender);
       const role = toText(member?.role);
       const supportFileName = toText(member?.supportFileName || member?.supportFile?.name);
-      return { name, phone, role, supportFileName };
+      return { name, phone, gender, role, supportFileName };
     })
-    .filter((member) => member.name || member.phone || member.role);
+    .filter((member) => member.name || member.phone || member.gender || member.role);
 }
 
 function sanitizeReport(rawReport) {
@@ -107,7 +106,12 @@ function loadHistoryFromStorage() {
   }
 }
 
-export default function ReportFormPage({ isAdmin = false, onAdminLogin, onAdminLogout }) {
+export default function ReportFormPage({
+  authRole = "guest",
+  onAdminLogin,
+  onAdminLogout,
+  onOpenAdminDashboard
+}) {
   const [activeSection, setActiveSection] = useState("request");
   const [formData, setFormData] = useState(initialReportForm);
   const [supportFile, setSupportFile] = useState(null);
@@ -130,7 +134,16 @@ export default function ReportFormPage({ isAdmin = false, onAdminLogin, onAdminL
 
   function handleChange(event) {
     const { name, value } = event.target;
-    setFormData((current) => ({ ...current, [name]: value }));
+    let nextValue = value;
+    if (name === "vehicleCount") {
+      if (!value) {
+        nextValue = "";
+      } else {
+        nextValue = String(Math.min(50, Math.max(0, Number(value) || 0)));
+      }
+    }
+
+    setFormData((current) => ({ ...current, [name]: nextValue }));
 
     if (name === "phone") {
       setPhoneError(validatePhone(value));
@@ -175,40 +188,16 @@ export default function ReportFormPage({ isAdmin = false, onAdminLogin, onAdminL
     setSubmittedReport(null);
   }
 
-  function handleClearHistory() {
-    setHistoryReports([]);
-  }
-
-  function handleOpenHistoryPdf(requestId) {
-    const selectedReport = historyReports.find((report) => report.requestId === requestId);
-    if (!selectedReport) {
-      return;
-    }
-
-    setSubmittedReport(selectedReport);
-  }
-
-  function handleUpdateApprovalStatus(requestId, nextStatus) {
-    const normalizedStatus = getRequestStatus(nextStatus);
-    setHistoryReports((current) =>
-      current.map((report) =>
-        report.requestId === requestId ? { ...report, approvalStatus: normalizedStatus } : report
-      )
-    );
-    setSubmittedReport((current) =>
-      current && current.requestId === requestId ? { ...current, approvalStatus: normalizedStatus } : current
-    );
-  }
-
   return (
     <div className="page notranslate" translate="no" lang="km">
       <ReportHeader
         activeSection={activeSection}
         navItems={reportNavItems}
         onSectionChange={setActiveSection}
-        isAdmin={isAdmin}
+        authRole={authRole}
         onAdminLogin={onAdminLogin}
         onAdminLogout={onAdminLogout}
+        onOpenAdminDashboard={onOpenAdminDashboard}
       />
 
       <main className="page-main">
@@ -222,20 +211,9 @@ export default function ReportFormPage({ isAdmin = false, onAdminLogin, onAdminL
             onSubmit: handleSubmit,
             onReset: handleReset,
             onSupportFileChange: setSupportFile,
-            phoneError
+            phoneError,
+            hideMissionSection: true
           }}
-        />
-        <HistorySection
-          isActive={activeSection === "history"}
-          reports={historyReports}
-          onClearHistory={handleClearHistory}
-          onOpenPdf={handleOpenHistoryPdf}
-        />
-        <ApprovalSection
-          isActive={activeSection === "approval"}
-          reports={historyReports}
-          onUpdateStatus={handleUpdateApprovalStatus}
-          onOpenPdf={handleOpenHistoryPdf}
         />
         <PolicySection isActive={activeSection === "policy"} />
       </main>
