@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import "../../report-form/styles/index.css";
 import "../../report-form/styles/layout.css";
 import "../../report-form/styles/request.css";
@@ -132,7 +132,9 @@ export default function SuperAdminDashboardPage({ onBackToMain, onLogout }) {
         <div className="brand">
           <div className="brand-main">
             <div className="seal">
-              <img className="brand-logo" src="/logo.png" alt="Ministry of Interior logo" />
+              <img className="brand-logo" src="/logo.png" alt="Ministry of Interior logo" onError={(event) => {
+                event.currentTarget.src = "/logo.png";
+              }} />
             </div>
             <div className="brand-text">
               <div className="brand-title brand-title-kh">Super Admin Dashboard</div>
@@ -193,4 +195,3 @@ export default function SuperAdminDashboardPage({ onBackToMain, onLogout }) {
     </div>
   );
 }
-
