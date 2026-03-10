@@ -16,15 +16,18 @@ export default function ReportHeader({
         <div className="brand">
           <div className="brand-main">
             <div className="seal">
-              <img className="brand-logo" src="/mcctv-logo.jpg" alt="MCCTV logo" />
+              <img className="brand-logo" src="/ministry-logo.png" alt="Ministry of Interior logo" onError={(event) => {
+                event.currentTarget.src = "/mcctv-logo.jpg";
+              }} />
             </div>
             <div className="brand-text">
-              <div className="brand-title brand-title-kh">អគ្គនាយកដ្ឋានបច្ចេកវិទ្យាឌីជីថល និងផ្សព្វផ្សាយអប់រំ</div>
-              <div className="brand-title-en brand-title-system">General Department of Digital Technology and Media</div>
+              <div className="brand-title brand-title-kh">ក្រសួងមហាផ្ទៃ</div>
+              <div className="brand-title-en brand-title-system">MINISTRY OF INTERIOR</div>
+            </div>
+              
             </div>
           </div>
-          <div className="brand-title-en brand-title-sub">ប្រព័ន្ធស្នើសុំរថយន្តបេសកកម្មផ្លូវការ</div>
-        </div>
+          <div className="brand-title-en brand-title-sub"></div>
       </header>
 
       <nav className="nav">

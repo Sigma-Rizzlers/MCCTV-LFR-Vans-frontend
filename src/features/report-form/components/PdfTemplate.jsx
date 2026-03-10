@@ -112,7 +112,7 @@ export default function PdfTemplate({ report, onClose }) {
           <header className="pdf-document-header">
             <div className="pdf-header-main">
               <div className="pdf-seal">
-                <img className="pdf-logo" src="/mcctv-logo.jpg" alt="MCCTV logo" />
+                <img className="pdf-logo" src="/about-moi-logo.png" alt="Ministry of Interior logo" />
               </div>
               <div>
                 <h2 id="pdfTitle" className="pdf-main-title">
@@ -240,7 +240,6 @@ export default function PdfTemplate({ report, onClose }) {
     </div>
   );
 }
-
 
 
 

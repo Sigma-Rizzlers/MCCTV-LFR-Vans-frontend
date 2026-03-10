@@ -1,8 +1,10 @@
-﻿.page {
+.page {
   min-height: 100vh;
-  background: radial-gradient(circle at top left, rgba(212, 161, 42, 0.12), transparent 45%),
-    radial-gradient(circle at 20% 10%, rgba(31, 122, 106, 0.12), transparent 35%),
-    linear-gradient(180deg, #f7f9fc 0%, #eef3f9 40%, #f7f9fc 100%);
+  background:
+    radial-gradient(circle at 12% 8%, rgba(244, 182, 42, 0.16), transparent 45%),
+    radial-gradient(circle at 85% 16%, rgba(247, 213, 138, 0.2), transparent 40%),
+    radial-gradient(circle at 25% 80%, rgba(226, 188, 100, 0.16), transparent 48%),
+    linear-gradient(180deg, #fffdf8 0%, #f9f2e6 50%, #fffdf8 100%);
 }
 
 .intro-screen {
@@ -28,7 +30,7 @@
   display: grid;
   place-items: center;
   margin: 0 auto;
-  box-shadow: 0 18px 38px rgba(11, 31, 58, 0.18);
+  box-shadow: 0 18px 38px rgba(88, 56, 6, 0.18);
 }
 
 .intro-logo {
@@ -44,21 +46,21 @@
   font-size: clamp(18px, 3vw, 26px);
   letter-spacing: 1.4px;
   text-transform: uppercase;
-  color: #a87612;
+  color: #b2760f;
 }
 
 .intro-subtitle {
   font-size: 12px;
   letter-spacing: 2px;
   text-transform: uppercase;
-  color: rgba(168, 118, 18, 0.7);
+  color: rgba(178, 118, 15, 0.7);
 }
 
 .intro-skip {
   margin-top: 8px;
-  border: 1px solid rgba(212, 161, 42, 0.4);
+  border: 1px solid rgba(242, 181, 42, 0.4);
   background: transparent;
-  color: #9c6b10;
+  color: #8a5b0a;
   padding: 8px 18px;
   border-radius: 999px;
   font-weight: 600;
@@ -71,10 +73,11 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 24px 48px 30px;
-  background: linear-gradient(120deg, var(--navy-900), var(--navy-700));
-  color: #fff;
-  box-shadow: var(--shadow);
+  padding: 22px 48px 26px;
+  background: #ffffff;
+  color: var(--ink);
+  border-bottom: 1px solid rgba(244, 182, 42, 0.35);
+  box-shadow: 0 12px 24px rgba(120, 78, 20, 0.12);
 }
 
 .brand {
@@ -103,7 +106,7 @@
   border-radius: 50%;
   display: grid;
   place-items: center;
-  box-shadow: 0 6px 16px rgba(11, 31, 58, 0.18);
+  box-shadow: 0 6px 16px rgba(88, 56, 6, 0.18);
   flex-shrink: 0;
 }
 
@@ -122,7 +125,7 @@
   font-weight: 800;
   line-height: 1.06;
   letter-spacing: 0;
-  color: #f8fbff;
+  color: #c98200;
   text-wrap: balance;
 }
 
@@ -138,7 +141,7 @@
   font-weight: 700;
   line-height: 1.2;
   letter-spacing: 0.08px;
-  color: #dce8ff;
+  color: #7b5a1d;
 }
 
 .brand-title-system {
@@ -148,26 +151,30 @@
   font-size: clamp(19px, 1.62vw, 30px);
   font-weight: 800;
   line-height: 1.12;
-  color: #f8fbff;
+  color: #b7770f;
   margin-top: 0;
   letter-spacing: 0.14px;
 }
 
 .brand-title-sub {
   font-family: var(--font-kh-sans);
-  font-size: clamp(22px, 1.95vw, 34px);
-  font-weight: 700;
-  line-height: 1.13;
-  color: rgba(232, 240, 255, 0.96);
+  font-size: clamp(18px, 1.4vw, 26px);
+  font-weight: 600;
+  line-height: 1.2;
+  color: #6a4c15;
   width: 100%;
   text-align: center;
   align-self: center;
-  margin-top: 16px;
+  margin-top: 12px;
+}
+
+.brand-title-sub:empty {
+  display: none;
 }
 
 .brand-subtitle {
   font-size: 14px;
-  color: rgba(255, 255, 255, 0.75);
+  color: rgba(138, 91, 10, 0.7);
 }
 
 .nav {
@@ -177,13 +184,14 @@
   justify-content: center;
   gap: 24px;
   padding: 14px 48px;
-  background: #fff;
-  box-shadow: 0 8px 20px rgba(15, 25, 45, 0.06);
+  background: linear-gradient(90deg, #f4b62a 0%, #f7c64f 50%, #f4b62a 100%);
+  border-top: 1px solid rgba(255, 255, 255, 0.65);
+  box-shadow: 0 10px 18px rgba(120, 78, 20, 0.12);
 }
 
 .nav a {
   text-decoration: none;
-  color: var(--muted);
+  color: #4b2f0b;
   font-family: var(--font-kh-sans);
   font-weight: 600;
   letter-spacing: 0.05px;
@@ -192,8 +200,8 @@
 }
 
 .nav a.active {
-  color: var(--navy-800);
-  border-bottom-color: var(--gold-500);
+  color: #ffffff;
+  border-bottom-color: rgba(255, 255, 255, 0.9);
 }
 
 .admin-actions {
@@ -215,15 +223,15 @@
   font-family: var(--font-kh-sans);
   font-weight: 600;
   letter-spacing: 0.05px;
-  color: var(--muted);
+  color: rgba(75, 47, 11, 0.85);
   background: transparent;
   cursor: pointer;
 }
 
 .admin-access-btn:hover,
 .admin-access-btn.admin {
-  color: var(--navy-800);
-  border-bottom-color: var(--gold-500);
+  color: #ffffff;
+  border-bottom-color: rgba(255, 255, 255, 0.9);
 }
 
 .page-main {
@@ -251,24 +259,25 @@
 }
 
 .primary {
-  background: var(--navy-800);
-  color: #fff;
+  background: var(--gold-500);
+  color: #3b2a07;
 }
 
 .ghost {
   background: transparent;
   color: var(--navy-800);
-  border: 1px solid rgba(16, 42, 74, 0.2);
+  border: 1px solid rgba(107, 67, 9, 0.2);
 }
 
 .status {
   font-size: 13px;
-  color: var(--muted);
+  color: #6b4b0c;
 }
 
 .footer {
   text-align: center;
   padding: 20px 16px 40px;
-  color: var(--muted);
+  color: #6b4b0c;
   font-size: 13px;
 }
+

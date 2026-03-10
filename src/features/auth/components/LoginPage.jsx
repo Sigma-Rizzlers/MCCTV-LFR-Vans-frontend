@@ -13,7 +13,7 @@ export default function LoginPage({ onLogin, title = "Sign In", onCancel }) {
     const normalizedUsername = username.trim();
 
     if (!normalizedUsername || !password) {
-      setError("សូមបំពេញឈ្មោះអ្នកប្រើ និងពាក្យសម្ងាត់។");
+      setError("ážŸáž¼áž˜áž”áŸ†áž–áŸáž‰ážˆáŸ’áž˜áŸ„áŸ‡áž¢áŸ’áž“áž€áž”áŸ’ážšáž¾ áž“áž·áž„áž–áž¶áž€áŸ’áž™ážŸáž˜áŸ’áž„áž¶ážáŸ‹áŸ”");
       return;
     }
 
@@ -24,10 +24,17 @@ export default function LoginPage({ onLogin, title = "Sign In", onCancel }) {
   return (
     <main className="login-page">
       <section className="login-branding">
-        <img src="/mcctv-logo.jpg" alt="General Commissariat of National Police" className="login-brand-logo" />
+        <img
+          src="/logo.png"
+          alt="Ministry of Interior logo"
+          className="login-brand-logo"
+          onError={(event) => {
+            event.currentTarget.src = "/logo.png";
+          }}
+        />
         <div>
-          <h1 className="login-brand-title-kh">អគ្គនាយកដ្ឋានបច្ចេកវិទ្យាឌីជីថល និងផ្សព្វផ្សាយអប់រំ</h1>
-          <p className="login-brand-title-en">General Department of Digital Technology and Media</p>
+          <h1 className="login-brand-title-kh">ក្រសួងមហាផ្ទៃ</h1>
+          <p className="login-brand-title-en">MINISTRY OF INTERIOR</p>
         </div>
       </section>
 
@@ -86,3 +93,4 @@ export default function LoginPage({ onLogin, title = "Sign In", onCancel }) {
     </main>
   );
 }
+

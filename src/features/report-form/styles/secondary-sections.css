@@ -1,4 +1,4 @@
-﻿.section-header {
+.section-header {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
@@ -79,13 +79,13 @@
 }
 
 .pill.muted {
-  background: rgba(16, 42, 74, 0.08);
+  background: rgba(92, 53, 6, 0.12);
   color: var(--navy-800);
 }
 
 .pill.outline {
   background: transparent;
-  border: 1px solid rgba(16, 42, 74, 0.2);
+  border: 1px solid rgba(92, 53, 6, 0.2);
   color: var(--navy-800);
 }
 
@@ -103,18 +103,18 @@
   border-radius: 999px;
   font-size: 12px;
   font-weight: 600;
-  background: rgba(16, 42, 74, 0.08);
+  background: rgba(92, 53, 6, 0.12);
   color: var(--navy-800);
 }
 
 .tag.pending {
-  background: rgba(212, 161, 42, 0.15);
-  color: #7a5a00;
+  background: rgba(248, 217, 139, 0.4);
+  color: #7a4a0c;
 }
 
 .tag.approved {
-  background: rgba(31, 122, 106, 0.15);
-  color: var(--mint-500);
+  background: rgba(27, 122, 68, 0.16);
+  color: #1b7a44;
 }
 
 .tag.rejected {
@@ -125,7 +125,7 @@
 .empty {
   padding: 16px;
   border-radius: var(--radius-md);
-  background: rgba(16, 42, 74, 0.05);
+  background: rgba(92, 53, 6, 0.08);
   color: var(--muted);
   font-weight: 600;
 }
@@ -145,7 +145,7 @@
 
 .history-item {
   width: 100%;
-  border: 1px solid rgba(16, 42, 74, 0.12);
+  border: 1px solid rgba(92, 53, 6, 0.12);
   border-radius: var(--radius-md);
   background: #fff;
   padding: 12px;
@@ -155,15 +155,15 @@
 }
 
 .history-item:hover {
-  border-color: rgba(16, 42, 74, 0.28);
-  box-shadow: 0 8px 20px rgba(16, 42, 74, 0.08);
+  border-color: rgba(92, 53, 6, 0.28);
+  box-shadow: 0 8px 20px rgba(92, 53, 6, 0.12);
   transform: translateY(-1px);
 }
 
 .history-item.active {
   border-color: var(--mint-500);
-  box-shadow: 0 10px 20px rgba(31, 122, 106, 0.14);
-  background: rgba(31, 122, 106, 0.04);
+  box-shadow: 0 10px 20px rgba(244, 182, 42, 0.18);
+  background: rgba(244, 182, 42, 0.12);
 }
 
 .history-item-top {
@@ -203,7 +203,7 @@
   gap: 12px;
   padding: 10px 12px;
   border-radius: var(--radius-md);
-  background: rgba(16, 42, 74, 0.05);
+  background: rgba(92, 53, 6, 0.08);
 }
 
 .detail-row span {
@@ -222,7 +222,7 @@
   margin-bottom: 14px;
   padding: 12px;
   border-radius: var(--radius-md);
-  border: 1px solid rgba(16, 42, 74, 0.12);
+  border: 1px solid rgba(92, 53, 6, 0.12);
   background: #fff;
   white-space: pre-wrap;
   color: var(--navy-800);
@@ -242,7 +242,7 @@
 }
 
 .approval-filter {
-  border: 1px solid rgba(16, 42, 74, 0.22);
+  border: 1px solid rgba(92, 53, 6, 0.22);
   border-radius: 999px;
   background: #fff;
   color: var(--navy-800);
@@ -255,14 +255,14 @@
 }
 
 .approval-filter.active {
-  background: var(--navy-800);
-  color: #fff;
+  background: var(--gold-500);
+  color: #3d2402;
   border-color: var(--navy-800);
 }
 
 .approval-item {
   width: 100%;
-  border: 1px solid rgba(16, 42, 74, 0.12);
+  border: 1px solid rgba(92, 53, 6, 0.12);
   border-radius: var(--radius-md);
   background: #fff;
   padding: 12px;
@@ -272,15 +272,15 @@
 }
 
 .approval-item:hover {
-  border-color: rgba(16, 42, 74, 0.28);
-  box-shadow: 0 8px 20px rgba(16, 42, 74, 0.08);
+  border-color: rgba(92, 53, 6, 0.28);
+  box-shadow: 0 8px 20px rgba(92, 53, 6, 0.12);
   transform: translateY(-1px);
 }
 
 .approval-item.active {
   border-color: var(--mint-500);
-  box-shadow: 0 10px 20px rgba(31, 122, 106, 0.14);
-  background: rgba(31, 122, 106, 0.04);
+  box-shadow: 0 10px 20px rgba(244, 182, 42, 0.18);
+  background: rgba(244, 182, 42, 0.12);
 }
 
 .approval-actions {
@@ -316,10 +316,10 @@
 .policy-highlight {
   margin-top: 16px;
   padding: 12px 16px;
-  background: rgba(212, 161, 42, 0.12);
+  background: rgba(248, 217, 139, 0.35);
   border-radius: var(--radius-md);
   font-weight: 600;
-  color: #5c4100;
+  color: #6b4006;
 }
 
 .policy-steps {
@@ -328,3 +328,4 @@
   color: var(--muted);
   line-height: 1.7;
 }
+

@@ -170,11 +170,11 @@ export default function AdminDashboardPage({ onBackToMain, onLogout }) {
         <div className="brand">
           <div className="brand-main">
             <div className="seal">
-              <img className="brand-logo" src="/mcctv-logo.jpg" alt="MCCTV logo" />
+              <img className="brand-logo" src="/about-moi-logo.png" alt="Ministry of Interior logo" />
             </div>
             <div className="brand-text">
               <div className="brand-title brand-title-kh">ផ្ទាំងគ្រប់គ្រងអ្នកគ្រប់គ្រង</div>
-              <div className="brand-title-en brand-title-system">MCCTV Fleet Administrative Dashboard</div>
+              <div className="brand-title-en brand-title-system">Ministry of Interior Administrative Dashboard</div>
             </div>
           </div>
           <div className="brand-title-en brand-title-sub">Mission monitoring and request overview</div>
@@ -353,4 +353,3 @@ export default function AdminDashboardPage({ onBackToMain, onLogout }) {
     </div>
   );
 }
-

@@ -1,4 +1,4 @@
-﻿.hero {
+.hero {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: 30px;
@@ -22,7 +22,7 @@
   font-size: 14px;
   text-transform: uppercase;
   letter-spacing: 1.2px;
-  color: var(--mint-500);
+  color: #b77712;
   font-weight: 700;
 }
 
@@ -38,15 +38,15 @@
   align-items: center;
   padding: 6px 14px;
   border-radius: 999px;
-  background: rgba(31, 122, 106, 0.15);
-  color: var(--mint-500);
+  background: rgba(242, 181, 42, 0.18);
+  color: #b77712;
   font-weight: 600;
   font-size: 13px;
 }
 
 .badge.ghost {
-  background: rgba(212, 161, 42, 0.12);
-  color: #7a5a00;
+  background: rgba(248, 217, 139, 0.35);
+  color: #7a4a0c;
 }
 
 .hero-stats {
@@ -100,8 +100,8 @@
 }
 
 .pill {
-  background: var(--navy-800);
-  color: #fff;
+  background: var(--gold-500);
+  color: #3d2402;
   padding: 6px 14px;
   border-radius: 999px;
   font-size: 12px;
@@ -118,8 +118,8 @@
 .van-item {
   padding: 16px;
   border-radius: var(--radius-md);
-  border: 1px solid rgba(16, 42, 74, 0.08);
-  background: linear-gradient(135deg, rgba(16, 42, 74, 0.05), rgba(212, 161, 42, 0.08));
+  border: 1px solid rgba(92, 53, 6, 0.12);
+  background: linear-gradient(135deg, rgba(242, 181, 42, 0.12), rgba(248, 217, 139, 0.25));
 }
 
 .van-item h3 {
@@ -135,14 +135,15 @@
 .van-meta {
   margin-top: 10px;
   font-weight: 600;
-  color: var(--mint-500);
+  color: #b77712;
 }
 
 .bundle-note {
   margin-top: 18px;
   padding: 14px 18px;
-  background: rgba(212, 161, 42, 0.12);
+  background: rgba(248, 217, 139, 0.35);
   border-radius: var(--radius-md);
-  color: #5c4100;
+  color: #6b4006;
   font-weight: 600;
 }
+

@@ -29,7 +29,7 @@
 
 .admin-mission-card {
   margin: 0;
-  background: linear-gradient(180deg, #fcfdff 0%, #f8fbff 100%);
+  background: linear-gradient(180deg, #fffdf8 0%, #fff5e2 100%);
 }
 
 .admin-dashboard-empty {
@@ -41,7 +41,7 @@
 .admin-dashboard-table-wrap {
   overflow-x: auto;
   border-radius: var(--radius-md);
-  border: 1px solid rgba(16, 42, 74, 0.08);
+  border: 1px solid rgba(92, 53, 6, 0.12);
 }
 
 .admin-dashboard-table {
@@ -54,7 +54,7 @@
 .admin-dashboard-table th,
 .admin-dashboard-table td {
   padding: 16px 18px;
-  border-bottom: 1px solid rgba(16, 42, 74, 0.08);
+  border-bottom: 1px solid rgba(92, 53, 6, 0.12);
   text-align: left;
   vertical-align: top;
 }
@@ -63,15 +63,15 @@
   font-family: var(--font-kh-heading);
   font-weight: 800;
   color: var(--navy-800);
-  background: linear-gradient(180deg, rgba(16, 42, 74, 0.05), rgba(212, 161, 42, 0.08));
+  background: linear-gradient(180deg, rgba(242, 181, 42, 0.18), rgba(248, 217, 139, 0.35));
 }
 
 .admin-dashboard-table tbody tr:nth-child(even) {
-  background: rgba(16, 42, 74, 0.02);
+  background: rgba(248, 217, 139, 0.12);
 }
 
 .admin-dashboard-table tbody tr:hover {
-  background: rgba(212, 161, 42, 0.08);
+  background: rgba(248, 217, 139, 0.3);
 }
 
 @media (max-width: 900px) {
@@ -90,3 +90,4 @@
     margin-bottom: 18px;
   }
 }
+

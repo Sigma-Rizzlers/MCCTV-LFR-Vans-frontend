@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import "../../report-form/styles/index.css";
 import "../../report-form/styles/layout.css";
 import "../../report-form/styles/request.css";
@@ -132,7 +132,7 @@ export default function SuperAdminDashboardPage({ onBackToMain, onLogout }) {
         <div className="brand">
           <div className="brand-main">
             <div className="seal">
-              <img className="brand-logo" src="/mcctv-logo.jpg" alt="MCCTV logo" />
+              <img className="brand-logo" src="/logo.png" alt="Ministry of Interior logo" />
             </div>
             <div className="brand-text">
               <div className="brand-title brand-title-kh">Super Admin Dashboard</div>
@@ -152,7 +152,7 @@ export default function SuperAdminDashboardPage({ onBackToMain, onLogout }) {
             setActiveSection("history");
           }}
         >
-          ប្រវត្តិសំណើ
+          áž”áŸ’ážšážœážáŸ’ážáž·ážŸáŸ†ážŽáž¾
         </a>
         <a
           href="#approval"
@@ -162,7 +162,7 @@ export default function SuperAdminDashboardPage({ onBackToMain, onLogout }) {
             setActiveSection("approval");
           }}
         >
-          ការអនុម័ត
+          áž€áž¶ážšáž¢áž“áž»áž˜áŸáž
         </a>
         <div className="admin-actions admin-dashboard-actions-bar">
           <button type="button" className="admin-access-btn admin" onClick={onBackToMain}>
@@ -193,3 +193,4 @@ export default function SuperAdminDashboardPage({ onBackToMain, onLogout }) {
     </div>
   );
 }
+
