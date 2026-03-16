@@ -1,8 +1,12 @@
-import { useRef, useState } from "react";
+﻿import { useRef, useState } from "react";
 
 const MEMBER_LIMIT = 49;
+const VEHICLE_LIMIT = 30;
+const EQUIPMENT_LIMIT = 30;
 const memberPhoneRegex = /^(?:0\d{8,9}|0\d{2}-\d{3}-\d{3,4})$/;
 const emptyMemberError = { name: "", phone: "", gender: "", role: "" };
+const emptyVehicleError = { brand: "", plate: "" };
+const emptyEquipmentError = { type: "", quantity: "" };
 
 function createEmptyMember() {
   return {
@@ -18,9 +22,39 @@ function createMemberList() {
   return Array.from({ length: MEMBER_LIMIT }, () => createEmptyMember());
 }
 
+function createEmptyVehicle() {
+  return {
+    brand: "",
+    plate: ""
+  };
+}
+
+function createVehicleList() {
+  return Array.from({ length: VEHICLE_LIMIT }, () => createEmptyVehicle());
+}
+
+function createEmptyEquipment() {
+  return {
+    type: "",
+    quantity: ""
+  };
+}
+
+function createEquipmentList() {
+  return Array.from({ length: EQUIPMENT_LIMIT }, () => createEmptyEquipment());
+}
+
 function isMemberFilled(member) {
   const normalizedPhone = member.phone.trim();
   return Boolean(member.name.trim() && member.gender.trim() && member.role.trim() && memberPhoneRegex.test(normalizedPhone));
+}
+
+function isVehicleFilled(vehicle) {
+  return Boolean(vehicle.brand.trim() && vehicle.plate.trim());
+}
+
+function isEquipmentFilled(equipment) {
+  return Boolean(equipment.type.trim() && String(equipment.quantity ?? "").trim());
 }
 
 function validateMember(member) {
@@ -55,23 +89,51 @@ function hasMemberError(errors) {
 export default function MissionRequestForm({
   formData,
   supportFile,
+  lodgingImage,
+  breakfastImage,
+  lunchImage,
+  dinnerImage,
+  implementationImage,
   statusText,
   onChange,
   onSubmit,
   onReset,
   onSupportFileChange,
+  onLodgingImageChange,
+  onBreakfastImageChange,
+  onLunchImageChange,
+  onDinnerImageChange,
+  onImplementationImageChange,
   phoneError,
   hideMissionSection = false
 }) {
+  const [activeStep, setActiveStep] = useState(1);
   const [isMemberModalOpen, setIsMemberModalOpen] = useState(false);
   const [activeMemberIndex, setActiveMemberIndex] = useState(0);
   const [members, setMembers] = useState(() => createMemberList());
   const [memberErrors, setMemberErrors] = useState(emptyMemberError);
+  const [isVehicleModalOpen, setIsVehicleModalOpen] = useState(false);
+  const [activeVehicleIndex, setActiveVehicleIndex] = useState(0);
+  const [vehicles, setVehicles] = useState(() => createVehicleList());
+  const [vehicleErrors, setVehicleErrors] = useState(emptyVehicleError);
+  const [isEquipmentModalOpen, setIsEquipmentModalOpen] = useState(false);
+  const [activeEquipmentIndex, setActiveEquipmentIndex] = useState(0);
+  const [equipmentItems, setEquipmentItems] = useState(() => createEquipmentList());
+  const [equipmentErrors, setEquipmentErrors] = useState(emptyEquipmentError);
   const supportFileInputRef = useRef(null);
   const memberSupportFileInputRef = useRef(null);
+  const lodgingImageInputRef = useRef(null);
+  const breakfastImageInputRef = useRef(null);
+  const lunchImageInputRef = useRef(null);
+  const dinnerImageInputRef = useRef(null);
+  const implementationImageInputRef = useRef(null);
 
   const activeMember = members[activeMemberIndex];
   const filledMemberCount = members.filter((member) => isMemberFilled(member)).length;
+  const activeVehicle = vehicles[activeVehicleIndex];
+  const filledVehicleCount = vehicles.filter((vehicle) => isVehicleFilled(vehicle)).length;
+  const activeEquipment = equipmentItems[activeEquipmentIndex];
+  const filledEquipmentCount = equipmentItems.filter((item) => isEquipmentFilled(item)).length;
 
   function openMemberModal() {
     const firstIncompleteIndex = members.findIndex((member) => !isMemberFilled(member));
@@ -83,6 +145,30 @@ export default function MissionRequestForm({
   function closeMemberModal() {
     setMemberErrors(emptyMemberError);
     setIsMemberModalOpen(false);
+  }
+
+  function openVehicleModal() {
+    const firstIncompleteIndex = vehicles.findIndex((vehicle) => !isVehicleFilled(vehicle));
+    setActiveVehicleIndex(firstIncompleteIndex === -1 ? VEHICLE_LIMIT - 1 : firstIncompleteIndex);
+    setVehicleErrors(emptyVehicleError);
+    setIsVehicleModalOpen(true);
+  }
+
+  function closeVehicleModal() {
+    setVehicleErrors(emptyVehicleError);
+    setIsVehicleModalOpen(false);
+  }
+
+  function openEquipmentModal() {
+    const firstIncompleteIndex = equipmentItems.findIndex((item) => !isEquipmentFilled(item));
+    setActiveEquipmentIndex(firstIncompleteIndex === -1 ? EQUIPMENT_LIMIT - 1 : firstIncompleteIndex);
+    setEquipmentErrors(emptyEquipmentError);
+    setIsEquipmentModalOpen(true);
+  }
+
+  function closeEquipmentModal() {
+    setEquipmentErrors(emptyEquipmentError);
+    setIsEquipmentModalOpen(false);
   }
 
   function handleMemberChange(event) {
@@ -105,6 +191,28 @@ export default function MissionRequestForm({
     setMemberErrors((current) => ({ ...current, [name]: "" }));
   }
 
+  function handleVehicleChange(event) {
+    const { name, value } = event.target;
+    setVehicles((current) => {
+      const next = [...current];
+      next[activeVehicleIndex] = { ...next[activeVehicleIndex], [name]: value };
+      return next;
+    });
+
+    setVehicleErrors((current) => ({ ...current, [name]: "" }));
+  }
+
+  function handleEquipmentChange(event) {
+    const { name, value } = event.target;
+    setEquipmentItems((current) => {
+      const next = [...current];
+      next[activeEquipmentIndex] = { ...next[activeEquipmentIndex], [name]: value };
+      return next;
+    });
+
+    setEquipmentErrors((current) => ({ ...current, [name]: "" }));
+  }
+
   function handleMemberSupportFileChange(file) {
     setMembers((current) => {
       const next = [...current];
@@ -117,6 +225,41 @@ export default function MissionRequestForm({
     onSupportFileChange(null);
     if (supportFileInputRef.current) {
       supportFileInputRef.current.value = "";
+    }
+  }
+
+  function handleClearLodgingImage() {
+    onLodgingImageChange(null);
+    if (lodgingImageInputRef.current) {
+      lodgingImageInputRef.current.value = "";
+    }
+  }
+
+  function handleClearBreakfastImage() {
+    onBreakfastImageChange(null);
+    if (breakfastImageInputRef.current) {
+      breakfastImageInputRef.current.value = "";
+    }
+  }
+
+  function handleClearLunchImage() {
+    onLunchImageChange(null);
+    if (lunchImageInputRef.current) {
+      lunchImageInputRef.current.value = "";
+    }
+  }
+
+  function handleClearDinnerImage() {
+    onDinnerImageChange(null);
+    if (dinnerImageInputRef.current) {
+      dinnerImageInputRef.current.value = "";
+    }
+  }
+
+  function handleClearImplementationImage() {
+    onImplementationImageChange(null);
+    if (implementationImageInputRef.current) {
+      implementationImageInputRef.current.value = "";
     }
   }
 
@@ -138,10 +281,39 @@ export default function MissionRequestForm({
     setActiveMemberIndex(0);
     setMemberErrors(emptyMemberError);
     setIsMemberModalOpen(false);
+    setVehicles(createVehicleList());
+    setActiveVehicleIndex(0);
+    setVehicleErrors(emptyVehicleError);
+    setIsVehicleModalOpen(false);
+    setEquipmentItems(createEquipmentList());
+    setActiveEquipmentIndex(0);
+    setEquipmentErrors(emptyEquipmentError);
+    setIsEquipmentModalOpen(false);
+    setActiveStep(1);
+    onLodgingImageChange(null);
+    if (lodgingImageInputRef.current) {
+      lodgingImageInputRef.current.value = "";
+    }
+    onBreakfastImageChange(null);
+    if (breakfastImageInputRef.current) {
+      breakfastImageInputRef.current.value = "";
+    }
+    onLunchImageChange(null);
+    if (lunchImageInputRef.current) {
+      lunchImageInputRef.current.value = "";
+    }
+    onDinnerImageChange(null);
+    if (dinnerImageInputRef.current) {
+      dinnerImageInputRef.current.value = "";
+    }
+    onImplementationImageChange(null);
+    if (implementationImageInputRef.current) {
+      implementationImageInputRef.current.value = "";
+    }
   }
 
   function handleFormSubmit(event) {
-    onSubmit(event, { members });
+    onSubmit(event, { members, vehicles, equipmentItems });
   }
 
   return (
@@ -155,9 +327,17 @@ export default function MissionRequestForm({
         </div>
 
         <form id="missionForm" onSubmit={handleFormSubmit} onReset={handleFormReset}>
-          <div className="phase-grid">
+          <div className="step-indicator" role="status" aria-live="polite">
+            <span className={activeStep === 1 ? "step-node active" : "step-node"}>1</span>
+            <span className={activeStep === 2 ? "step-node active" : "step-node"}>2</span>
+            <span className={activeStep === 3 ? "step-node active" : "step-node"}>3</span>
+            <span className={activeStep === 4 ? "step-node active" : "step-node"}>4</span>
+            <span className={activeStep === 5 ? "step-node active" : "step-node"}>5</span>
+            <span className={activeStep === 6 ? "step-node active" : "step-node"}>6</span>
+          </div>
+          <div className={`phase-grid step-${activeStep}`}>
             {hideMissionSection ? null : (
-              <section className="phase-card phase-mission">
+              <section className="phase-card phase-mission step-1-section">
               <div className="phase-header">
                 <h3>ព័ត៌មានបេសកកម្ម</h3>
                 <p>សូមបំពេញព័ត៌មានបេសកកម្មឲ្យបានច្បាស់លាស់។</p>
@@ -208,7 +388,7 @@ export default function MissionRequestForm({
               </section>
             )}
 
-            <section className="phase-card phase-personal">
+            <section className="phase-card phase-personal step-1-section">
               <div className="phase-header">
                 <h3>ព័ត៌មានផ្ទាល់ខ្លួន</h3>
                 <p>សូមបំពេញព័ត៌មានអ្នកស្នើសុំ និងឯកសារភ្ជាប់។</p>
@@ -295,61 +475,106 @@ export default function MissionRequestForm({
               <button className="member-add" type="button" onClick={openMemberModal}>
                 បន្ថែមសមាជិក
               </button>
+              <div className="field-grid member-extra-grid">
+                <label className="field">
+                  <span>ចំនួនផែនការ</span>
+                  <input
+                    type="number"
+                    name="planCount"
+                    min="0"
+                    placeholder="0"
+                    value={formData.planCount}
+                    onChange={onChange}
+                    required
+                  />
+                </label>
+                <label className="field">
+                  <span>ចំនួនជាក់ស្តែង</span>
+                  <input
+                    type="number"
+                    name="actualCount"
+                    min="0"
+                    placeholder="0"
+                    value={formData.actualCount}
+                    onChange={onChange}
+                    required
+                  />
+                </label>
+              </div>
               <p className="status member-status">
                 សមាជិកដែលបានបំពេញរួច៖ {filledMemberCount}/{MEMBER_LIMIT}
               </p>
             </section>
 
-	            <section className="phase-card">
+	            <section className="phase-card step-2-section">
 	              <div className="phase-header">
 	                <h3>មធ្យោបាយបច្ចេកទេស និងធ្វើដំណើរ</h3>
 	                <p>សូមបំពេញព័ត៌មានរថយន្តសម្រាប់បេសកកម្មនេះ។</p>
 	              </div>
-	              <div className="field-grid">
-	                <label className="field">
-	                  <span>ម៉ាករថយន្ត</span>
-	                  <input
-	                    type="text"
-	                    name="vehicleBrand"
-	                    placeholder="បញ្ចូលម៉ាករថយន្ត"
-	                    value={formData.vehicleBrand}
-	                    onChange={onChange}
-	                    required
-	                  />
-	                </label>
-	                <label className="field">
-	                  <span>ស្លាកលេខ</span>
-	                  <input
-	                    type="text"
-	                    name="vehiclePlate"
+              <div className="field-grid">
+                <div className="field vehicle-brand-wrap">
+                  <span>ម៉ាករថយន្ត</span>
+                  <input
+                    type="text"
+                    name="vehicleBrand"
+                    placeholder="បញ្ចូលម៉ាករថយន្ត"
+                    value={formData.vehicleBrand}
+                    onChange={onChange}
+                    required
+                  />
+                  <button className="vehicle-add" type="button" onClick={openVehicleModal}>
+                    បន្ថែមរថយន្ត
+                  </button>
+                  <p className="status vehicle-status">
+                    រថយន្តដែលបានបំពេញរួច– {filledVehicleCount}/{VEHICLE_LIMIT}
+                  </p>
+                </div>
+                <label className="field">
+                  <span>ស្លាកលេខ</span>
+                  <input
+                    type="text"
+                    name="vehiclePlate"
 	                    placeholder="បញ្ចូលស្លាកលេខ"
 	                    value={formData.vehiclePlate}
 	                    onChange={onChange}
 	                    required
 	                  />
-	                </label>
-	                <label className="field">
-	                  <span>ចំនួនរថយន្ត</span>
-	                  <input
-	                    type="number"
-	                    name="vehicleCount"
-	                    min="0"
-	                    max="50"
-	                    placeholder="អតិបរមា 50"
-	                    value={formData.vehicleCount}
-	                    onChange={onChange}
-	                    required
-	                  />
-	                </label>
-	              </div>
-	            </section>
-            <section className="phase-card">
+                </label>
+                <label className="field">
+                  <span>ចំនួនជាក់ស្តែង</span>
+                  <input
+                    type="number"
+                    name="vehicleCount"
+                    min="0"
+                    max="50"
+                    placeholder="អតិបរមា 50"
+                    value={formData.vehicleCount}
+                    onChange={onChange}
+                    required
+                  />
+                </label>
+                <label className="field">
+                  <span>ចំនួនផែនការ</span>
+                  <input
+                    type="number"
+                    name="vehiclePlanCount"
+                    min="0"
+                    max="50"
+                    placeholder="0"
+                    value={formData.vehiclePlanCount}
+                    onChange={onChange}
+                    required
+                  />
+                </label>
+              </div>
+            </section>
+            <section className="phase-card step-2-section">
               <div className="phase-header">
                 <h3>សម្ភារៈបច្ចេកទេស</h3>
                 <p>សូមបំពេញព័ត៌មានសម្ភារៈដែលត្រូវប្រើក្នុងបេសកកម្ម។</p>
               </div>
               <div className="field-grid">
-                <label className="field">
+                <div className="field equipment-type-wrap">
                   <span>ប្រភេទ</span>
                   <input
                     type="text"
@@ -359,7 +584,7 @@ export default function MissionRequestForm({
                     onChange={onChange}
                     required
                   />
-                </label>
+                </div>
                 <label className="field">
                   <span>ចំនួន</span>
                   <input
@@ -372,13 +597,44 @@ export default function MissionRequestForm({
                     required
                   />
                 </label>
+                <div className="equipment-actions">
+                  <button className="equipment-add" type="button" onClick={openEquipmentModal}>
+                    ប្រភេទសម្ភារៈ
+                  </button>
+                  <div className="equipment-extra-grid">
+                    <label className="field">
+                      <span>ចំនួនផែនការ</span>
+                      <input
+                        type="number"
+                        name="equipmentPlanCount"
+                        min="0"
+                        placeholder="0"
+                        value={formData.equipmentPlanCount}
+                        onChange={onChange}
+                        required
+                      />
+                    </label>
+                    <label className="field">
+                      <span>ចំនួនជាក់ស្តែង</span>
+                      <input
+                        type="number"
+                        name="equipmentActualCount"
+                        min="0"
+                        placeholder="0"
+                        value={formData.equipmentActualCount}
+                        onChange={onChange}
+                        required
+                      />
+                    </label>
+                  </div>
+                </div>
               </div>
             </section>
-            <section className="phase-card phase-request">
-	              <div className="phase-header">
-	                <h3>ពេលវេលាចេញដំណើរ និងទៅដល់</h3>
-	                <p>សូមបំពេញពេលវេលា និងព័ត៌មានចម្ងាយសម្រាប់ការធ្វើដំណើរ។</p>
-	              </div>
+            <section className="phase-card phase-request step-3-section">
+              <div className="phase-header">
+                <h3>ពេលវេលាចេញដំណើរ និងទៅដល់</h3>
+                <p>សូមបំពេញពេលវេលា និងព័ត៌មានចម្ងាយសម្រាប់ការធ្វើដំណើរ។</p>
+              </div>
 	              <div className="field-grid">
 	                <label className="field">
 	                  <span>ចេញដំណើរ</span>
@@ -424,18 +680,634 @@ export default function MissionRequestForm({
                 </label>
               </div>
             </section>
+            <section className="phase-card step-4-section">
+              <div className="phase-header">
+                <h3>ពិនិត្យគោលដៅ និងប្រជុំស្តាប់ផែនការ</h3>
+                <p>សូមបំពេញព័ត៌មានអ្នកចូលរួម និងរយៈពេលប្រជុំ។</p>
+              </div>
+              <div className="field-grid">
+                <label className="field">
+                  <span>អ្នកចូលរួម (ចំនួន)</span>
+                  <input
+                    type="number"
+                    name="meetingParticipantsCount"
+                    min="0"
+                    placeholder="0"
+                    value={formData.meetingParticipantsCount}
+                    onChange={onChange}
+                    required
+                  />
+                </label>
+                <label className="field">
+                  <span>អ្នកចូលរួម (ស្រី)</span>
+                  <input
+                    type="number"
+                    name="meetingParticipantsFemale"
+                    min="0"
+                    placeholder="0"
+                    value={formData.meetingParticipantsFemale}
+                    onChange={onChange}
+                    required
+                  />
+                </label>
+                <label className="field">
+                  <span>រយៈពេល (ចាប់ផ្តើម)</span>
+                  <input
+                    type="time"
+                    name="meetingStartTime"
+                    value={formData.meetingStartTime}
+                    onChange={onChange}
+                    required
+                  />
+                </label>
+                <label className="field">
+                  <span>រយៈពេល (បញ្ចប់)</span>
+                  <input
+                    type="time"
+                    name="meetingEndTime"
+                    value={formData.meetingEndTime}
+                    onChange={onChange}
+                    required
+                  />
+                </label>
+              </div>
+            </section>
+            <section className="phase-card step-4-section">
+              <div className="phase-header">
+                <h3>ការស្នាក់នៅ</h3>
+                <p>សូមបំពេញទីតាំងស្នាក់នៅ រូបភាព និងចំនួនអ្នកស្នាក់នៅ។</p>
+              </div>
+              <div className="field-grid lodging-count-grid">
+                <label className="field full">
+                  <span>ទីតាំងស្នាក់នៅ</span>
+                  <input
+                    type="text"
+                    name="lodgingPlace"
+                    placeholder="កន្លែង"
+                    value={formData.lodgingPlace}
+                    onChange={onChange}
+                    required
+                  />
+                </label>
+              </div>
+              <div className="upload-block">
+                <div className="upload-label">រូបភាព</div>
+                <label className="upload-area" htmlFor="lodgingImage">
+                  <span className="upload-icon" aria-hidden="true">
+                    ↑
+                  </span>
+                  <span className="upload-text">បញ្ចូល ឬសរសេរភ្ជាប់</span>
+                  <input
+                    id="lodgingImage"
+                    ref={lodgingImageInputRef}
+                    type="file"
+                    accept=".jpg,.jpeg,.png"
+                    onChange={(event) => onLodgingImageChange(event.target.files?.[0] ?? null)}
+                  />
+                </label>
+                {lodgingImage ? (
+                  <div className="upload-file-actions">
+                    <p className="status">{lodgingImage.name}</p>
+                    <button className="ghost upload-remove" type="button" onClick={handleClearLodgingImage}>
+                      លុបរូបភាព
+                    </button>
+                  </div>
+                ) : null}
+              </div>
+              <div className="field-grid">
+                <label className="field">
+                  <span className="label-tight">ចំនួនអ្នកស្នាក់នៅ (ចំនួន)</span>
+                  <input
+                    type="number"
+                    name="lodgingCount"
+                    min="0"
+                    placeholder="0"
+                    value={formData.lodgingCount}
+                    onChange={onChange}
+                    required
+                  />
+                </label>
+                <label className="field">
+                  <span className="label-tight">ចំនួនអ្នកស្នាក់នៅ (ស្រី)</span>
+                  <input
+                    type="number"
+                    name="lodgingFemale"
+                    min="0"
+                    placeholder="0"
+                    value={formData.lodgingFemale}
+                    onChange={onChange}
+                    required
+                  />
+                </label>
+              </div>
+            </section>
+            <section className="phase-card step-5-section">
+              <div className="phase-header">
+                <h3>ការបរិភោគអាហារព្រឹក</h3>
+                <p>សូមបំពេញទីតាំងបរិភោគ រូបភាព និងចំនួនអ្នកបរិភោគ។</p>
+              </div>
+              <div className="field-grid">
+                <label className="field full">
+                  <span>ទីតាំងបរិភោគ</span>
+                  <input
+                    type="text"
+                    name="breakfastPlace"
+                    placeholder="កន្លែង"
+                    value={formData.breakfastPlace}
+                    onChange={onChange}
+                    required
+                  />
+                </label>
+              </div>
+              <div className="upload-block">
+                <div className="upload-label">រូបភាព</div>
+                <label className="upload-area" htmlFor="breakfastImage">
+                  <span className="upload-icon" aria-hidden="true">
+                    ↑
+                  </span>
+                  <span className="upload-text">បញ្ចូល ឬសរសេរភ្ជាប់</span>
+                  <input
+                    id="breakfastImage"
+                    ref={breakfastImageInputRef}
+                    type="file"
+                    accept=".jpg,.jpeg,.png"
+                    onChange={(event) => onBreakfastImageChange(event.target.files?.[0] ?? null)}
+                  />
+                </label>
+                {breakfastImage ? (
+                  <div className="upload-file-actions">
+                    <p className="status">{breakfastImage.name}</p>
+                    <button className="ghost upload-remove" type="button" onClick={handleClearBreakfastImage}>
+                      លុបរូបភាព
+                    </button>
+                  </div>
+                ) : null}
+              </div>
+              <div className="field-grid">
+                <label className="field">
+                  <span>ចំនួនអ្នកបរិភោគ (ចំនួន)</span>
+                  <input
+                    type="number"
+                    name="breakfastCount"
+                    min="0"
+                    placeholder="0"
+                    value={formData.breakfastCount}
+                    onChange={onChange}
+                    required
+                  />
+                </label>
+                <label className="field">
+                  <span>ចំនួនអ្នកបរិភោគ (ស្រី)</span>
+                  <input
+                    type="number"
+                    name="breakfastFemale"
+                    min="0"
+                    placeholder="0"
+                    value={formData.breakfastFemale}
+                    onChange={onChange}
+                    required
+                  />
+                </label>
+                <label className="field">
+                  <span>ការទូទាត់ (អង្គភាព)</span>
+                  <input
+                    type="text"
+                    name="breakfastPaymentUnit"
+                    placeholder="អង្គភាព"
+                    value={formData.breakfastPaymentUnit}
+                    onChange={onChange}
+                    required
+                  />
+                </label>
+                <label className="field">
+                  <span>ការទូទាត់ (អ្នកឧបត្ថម្ភ)</span>
+                  <input
+                    type="text"
+                    name="breakfastSponsor"
+                    placeholder="អ្នកឧបត្ថម្ភ"
+                    value={formData.breakfastSponsor}
+                    onChange={onChange}
+                    required
+                  />
+                </label>
+              </div>
+            </section>
+            <section className="phase-card step-5-section">
+              <div className="phase-header">
+                <h3>ការបរិភោគអាហារថ្ងៃ</h3>
+                <p>សូមបំពេញទីតាំងបរិភោគ រូបភាព និងចំនួនអ្នកបរិភោគ។</p>
+              </div>
+              <div className="field-grid">
+                <label className="field full">
+                  <span>ទីតាំងបរិភោគ</span>
+                  <input
+                    type="text"
+                    name="lunchPlace"
+                    placeholder="កន្លែង"
+                    value={formData.lunchPlace}
+                    onChange={onChange}
+                    required
+                  />
+                </label>
+              </div>
+              <div className="upload-block">
+                <div className="upload-label">រូបភាព</div>
+                <label className="upload-area" htmlFor="lunchImage">
+                  <span className="upload-icon" aria-hidden="true">
+                    ↑
+                  </span>
+                  <span className="upload-text">បញ្ចូល ឬសរសេរភ្ជាប់</span>
+                  <input
+                    id="lunchImage"
+                    ref={lunchImageInputRef}
+                    type="file"
+                    accept=".jpg,.jpeg,.png"
+                    onChange={(event) => onLunchImageChange(event.target.files?.[0] ?? null)}
+                  />
+                </label>
+                {lunchImage ? (
+                  <div className="upload-file-actions">
+                    <p className="status">{lunchImage.name}</p>
+                    <button className="ghost upload-remove" type="button" onClick={handleClearLunchImage}>
+                      លុបរូបភាព
+                    </button>
+                  </div>
+                ) : null}
+              </div>
+              <div className="field-grid">
+                <label className="field">
+                  <span>ចំនួនអ្នកបរិភោគ (ចំនួន)</span>
+                  <input
+                    type="number"
+                    name="lunchCount"
+                    min="0"
+                    placeholder="0"
+                    value={formData.lunchCount}
+                    onChange={onChange}
+                    required
+                  />
+                </label>
+                <label className="field">
+                  <span>ចំនួនអ្នកបរិភោគ (ស្រី)</span>
+                  <input
+                    type="number"
+                    name="lunchFemale"
+                    min="0"
+                    placeholder="0"
+                    value={formData.lunchFemale}
+                    onChange={onChange}
+                    required
+                  />
+                </label>
+                <label className="field">
+                  <span>ការទូទាត់ (អង្គភាព)</span>
+                  <input
+                    type="text"
+                    name="lunchPaymentUnit"
+                    placeholder="អង្គភាព"
+                    value={formData.lunchPaymentUnit}
+                    onChange={onChange}
+                    required
+                  />
+                </label>
+                <label className="field">
+                  <span>ការទូទាត់ (អ្នកឧបត្ថម្ភ)</span>
+                  <input
+                    type="text"
+                    name="lunchSponsor"
+                    placeholder="អ្នកឧបត្ថម្ភ"
+                    value={formData.lunchSponsor}
+                    onChange={onChange}
+                    required
+                  />
+                </label>
+              </div>
+            </section>
+            <section className="phase-card step-5-section">
+              <div className="phase-header">
+                <h3>ការបរិភោគអាហារល្ងាច</h3>
+                <p>សូមបំពេញទីតាំងបរិភោគ រូបភាព និងចំនួនអ្នកបរិភោគ។</p>
+              </div>
+              <div className="field-grid">
+                <label className="field full">
+                  <span>ទីតាំងបរិភោគ</span>
+                  <input
+                    type="text"
+                    name="dinnerPlace"
+                    placeholder="កន្លែង"
+                    value={formData.dinnerPlace}
+                    onChange={onChange}
+                    required
+                  />
+                </label>
+              </div>
+              <div className="upload-block">
+                <div className="upload-label">រូបភាព</div>
+                <label className="upload-area" htmlFor="dinnerImage">
+                  <span className="upload-icon" aria-hidden="true">
+                    ↑
+                  </span>
+                  <span className="upload-text">បញ្ចូល ឬសរសេរភ្ជាប់</span>
+                  <input
+                    id="dinnerImage"
+                    ref={dinnerImageInputRef}
+                    type="file"
+                    accept=".jpg,.jpeg,.png"
+                    onChange={(event) => onDinnerImageChange(event.target.files?.[0] ?? null)}
+                  />
+                </label>
+                {dinnerImage ? (
+                  <div className="upload-file-actions">
+                    <p className="status">{dinnerImage.name}</p>
+                    <button className="ghost upload-remove" type="button" onClick={handleClearDinnerImage}>
+                      លុបរូបភាព
+                    </button>
+                  </div>
+                ) : null}
+              </div>
+              <div className="field-grid">
+                <label className="field">
+                  <span>ចំនួនអ្នកបរិភោគ (ចំនួន)</span>
+                  <input
+                    type="number"
+                    name="dinnerCount"
+                    min="0"
+                    placeholder="0"
+                    value={formData.dinnerCount}
+                    onChange={onChange}
+                    required
+                  />
+                </label>
+                <label className="field">
+                  <span>ចំនួនអ្នកបរិភោគ (ស្រី)</span>
+                  <input
+                    type="number"
+                    name="dinnerFemale"
+                    min="0"
+                    placeholder="0"
+                    value={formData.dinnerFemale}
+                    onChange={onChange}
+                    required
+                  />
+                </label>
+                <label className="field">
+                  <span>ការទូទាត់ (អង្គភាព)</span>
+                  <input
+                    type="text"
+                    name="dinnerPaymentUnit"
+                    placeholder="អង្គភាព"
+                    value={formData.dinnerPaymentUnit}
+                    onChange={onChange}
+                    required
+                  />
+                </label>
+                <label className="field">
+                  <span>ការទូទាត់ (អ្នកឧបត្ថម្ភ)</span>
+                  <input
+                    type="text"
+                    name="dinnerSponsor"
+                    placeholder="អ្នកឧបត្ថម្ភ"
+                    value={formData.dinnerSponsor}
+                    onChange={onChange}
+                    required
+                  />
+                </label>
+              </div>
+            </section>
+            <section className="phase-card step-6-section">
+              <div className="phase-header">
+                <h3>ការអនុវត្តន៍ជាក់ស្តែង</h3>
+                <p>សូមបំពេញផែនការ ជាក់ស្តែង និងរយៈពេលនៃការអនុវត្តន៍។</p>
+              </div>
+              <div className="field-grid">
+                <label className="field">
+                  <span>ផែនការ (ចំនួនសរុប)</span>
+                  <input
+                    type="number"
+                    name="implementationPlanTotal"
+                    min="0"
+                    placeholder="0"
+                    value={formData.implementationPlanTotal}
+                    onChange={onChange}
+                    required
+                  />
+                </label>
+                <label className="field">
+                  <span>ផែនការ (ស្រី)</span>
+                  <input
+                    type="number"
+                    name="implementationPlanFemale"
+                    min="0"
+                    placeholder="0"
+                    value={formData.implementationPlanFemale}
+                    onChange={onChange}
+                    required
+                  />
+                </label>
+                <label className="field">
+                  <span>ជាក់ស្តែង (ចំនួនសរុប)</span>
+                  <input
+                    type="number"
+                    name="implementationActualTotal"
+                    min="0"
+                    placeholder="0"
+                    value={formData.implementationActualTotal}
+                    onChange={onChange}
+                    required
+                  />
+                </label>
+                <label className="field">
+                  <span>ជាក់ស្តែង (ស្រី)</span>
+                  <input
+                    type="number"
+                    name="implementationActualFemale"
+                    min="0"
+                    placeholder="0"
+                    value={formData.implementationActualFemale}
+                    onChange={onChange}
+                    required
+                  />
+                </label>
+                <label className="field">
+                  <span>រយៈពេលនៃការអនុវត្តន៍ (ត្រួតពិនិត្យ)</span>
+                  <input
+                    type="text"
+                    name="implementationDurationCheck"
+                    placeholder="ត្រួតពិនិត្យ"
+                    value={formData.implementationDurationCheck}
+                    onChange={onChange}
+                    required
+                  />
+                </label>
+                <label className="field">
+                  <span>រយៈពេលនៃការអនុវត្តន៍ (គ្រប់គ្រង)</span>
+                  <input
+                    type="text"
+                    name="implementationDurationManage"
+                    placeholder="គ្រប់គ្រង"
+                    value={formData.implementationDurationManage}
+                    onChange={onChange}
+                    required
+                  />
+                </label>
+              </div>
+              <div className="upload-block">
+                <div className="upload-label upload-label-dark">បញ្ចប់</div>
+                <label className="upload-area" htmlFor="implementationImage">
+                  <span className="upload-icon" aria-hidden="true">
+                    ↑
+                  </span>
+                  <span className="upload-text">បញ្ចូល ឬសរសេរភ្ជាប់</span>
+                  <input
+                    id="implementationImage"
+                    ref={implementationImageInputRef}
+                    type="file"
+                    accept=".jpg,.jpeg,.png"
+                    onChange={(event) => onImplementationImageChange(event.target.files?.[0] ?? null)}
+                  />
+                </label>
+                {implementationImage ? (
+                  <div className="upload-file-actions">
+                    <p className="status">{implementationImage.name}</p>
+                    <button className="ghost upload-remove" type="button" onClick={handleClearImplementationImage}>
+                      លុបរូបភាព
+                    </button>
+                  </div>
+                ) : null}
+              </div>
+            </section>
+            <section className="phase-card step-6-section">
+              <div className="phase-header">
+                <h3>ពេលវេលាចេញដំណើរត្រឡប់មកវិញ</h3>
+                <p>សូមបំពេញពេលវេលា និងស្តានភាពសុវត្ថិភាព។</p>
+              </div>
+              <div className="field-grid">
+                <label className="field">
+                  <span>ពេលវេលា (ចេញដំណើរ)</span>
+                  <input
+                    type="time"
+                    name="returnDepartTime"
+                    value={formData.returnDepartTime}
+                    onChange={onChange}
+                    required
+                  />
+                </label>
+                <label className="field">
+                  <span>ពេលវេលា (មកដល់)</span>
+                  <input
+                    type="time"
+                    name="returnArriveTime"
+                    value={formData.returnArriveTime}
+                    onChange={onChange}
+                    required
+                  />
+                </label>
+                <label className="field">
+                  <span>ស្តានភាព</span>
+                  <select name="returnSafetyStatus" value={formData.returnSafetyStatus} onChange={onChange} required>
+                    <option value="" disabled>
+                      ជ្រើសរើសស្តានភាព
+                    </option>
+                    <option value="safe">សុវត្ថិភាព</option>
+                    <option value="unsafe">អត់សុវត្ថិភាព</option>
+                  </select>
+                </label>
+                {formData.returnSafetyStatus === "unsafe" ? (
+                  <label className="field">
+                    <span>បញ្ហា</span>
+                    <input
+                      type="text"
+                      name="returnIssue"
+                      placeholder="បញ្ចូលបញ្ហា"
+                      value={formData.returnIssue}
+                      onChange={onChange}
+                      required
+                    />
+                  </label>
+                ) : null}
+              </div>
+            </section>
           </div>
 
           <div className="actions">
-            <button className="primary" type="submit">
-              បញ្ជូន និងបង្កើត PDF
-            </button>
-            <button className="ghost" type="reset">
-              សម្អាត
-            </button>
-            <div className="status" id="statusText">
-              {statusText}
-            </div>
+            {activeStep === 1 ? (
+              <>
+                <button className="primary" type="button" onClick={() => setActiveStep(2)}>
+                  បន្ទាប់
+                </button>
+                <button className="ghost" type="reset">
+                  សម្អាត
+                </button>
+              </>
+            ) : null}
+            {activeStep === 2 ? (
+              <>
+                <button className="ghost" type="button" onClick={() => setActiveStep(1)}>
+                  ត្រឡប់
+                </button>
+                <button className="primary" type="button" onClick={() => setActiveStep(3)}>
+                  បន្ទាប់
+                </button>
+                <button className="ghost" type="reset">
+                  សម្អាត
+                </button>
+              </>
+            ) : null}
+            {activeStep === 3 ? (
+              <>
+                <button className="ghost" type="button" onClick={() => setActiveStep(2)}>
+                  ត្រឡប់
+                </button>
+                <button className="primary" type="button" onClick={() => setActiveStep(4)}>
+                  បន្ទាប់
+                </button>
+                <button className="ghost" type="reset">
+                  សម្អាត
+                </button>
+              </>
+            ) : null}
+            {activeStep === 4 ? (
+              <>
+                <button className="ghost" type="button" onClick={() => setActiveStep(3)}>
+                  ត្រឡប់
+                </button>
+                <button className="primary" type="button" onClick={() => setActiveStep(5)}>
+                  បន្ទាប់
+                </button>
+                <button className="ghost" type="reset">
+                  សម្អាត
+                </button>
+              </>
+            ) : null}
+            {activeStep === 5 ? (
+              <>
+                <button className="ghost" type="button" onClick={() => setActiveStep(4)}>
+                  ត្រឡប់
+                </button>
+                <button className="primary" type="button" onClick={() => setActiveStep(6)}>
+                  បន្ទាប់
+                </button>
+                <button className="ghost" type="reset">
+                  សម្អាត
+                </button>
+              </>
+            ) : null}
+            {activeStep === 6 ? (
+              <>
+                <button className="ghost" type="button" onClick={() => setActiveStep(5)}>
+                  ត្រឡប់
+                </button>
+                <button className="primary" type="submit">
+                  បញ្ជូន និងបង្កើត PDF
+                </button>
+                <button className="ghost" type="reset">
+                  សម្អាត
+                </button>
+                <div className="status" id="statusText">
+                  {statusText}
+                </div>
+              </>
+            ) : null}
           </div>
         </form>
       </div>
@@ -552,9 +1424,127 @@ export default function MissionRequestForm({
           </section>
         </div>
       ) : null}
+      {isVehicleModalOpen ? (
+        <div className="member-modal-overlay vehicle-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="vehicleModalTitle">
+          <section className="member-modal-card vehicle-modal-card">
+            <div className="member-modal-header vehicle-modal-header">
+              <div className="phase-header">
+                <h3 id="vehicleModalTitle">បំពេញព័ត៌មានរថយន្ត</h3>
+                <p>Fill each vehicle one by one up to {VEHICLE_LIMIT} vehicles.</p>
+              </div>
+              <button className="ghost member-close" type="button" onClick={closeVehicleModal}>
+                បិទ
+              </button>
+            </div>
+
+            <section className="phase-card phase-personal member-step-card">
+              <div className="field-grid">
+                <label className="field">
+                  <span>ម៉ាករថយន្ត</span>
+                  <input
+                    type="text"
+                    name="brand"
+                    placeholder="បញ្ចូលម៉ាករថយន្ត"
+                    value={activeVehicle.brand}
+                    onChange={handleVehicleChange}
+                    className={vehicleErrors.brand ? "input-error" : ""}
+                    required
+                  />
+                  {vehicleErrors.brand ? <p className="field-error">{vehicleErrors.brand}</p> : null}
+                </label>
+                <label className="field">
+                  <span>ស្លាកលេខ</span>
+                  <input
+                    type="text"
+                    name="plate"
+                    placeholder="បញ្ចូលស្លាកលេខ"
+                    value={activeVehicle.plate}
+                    onChange={handleVehicleChange}
+                    className={vehicleErrors.plate ? "input-error" : ""}
+                    required
+                  />
+                  {vehicleErrors.plate ? <p className="field-error">{vehicleErrors.plate}</p> : null}
+                </label>
+              </div>
+            </section>
+
+            <div className="member-modal-footer vehicle-modal-footer">
+              <div className="member-progress-wrap">
+                <strong className="member-progress">
+                  ({filledVehicleCount}/{VEHICLE_LIMIT})
+                </strong>
+                <div className="status">កំពុងបំពេញរថយន្តទី {activeVehicleIndex + 1}</div>
+              </div>
+            </div>
+          </section>
+        </div>
+      ) : null}
+      {isEquipmentModalOpen ? (
+        <div className="member-modal-overlay equipment-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="equipmentModalTitle">
+          <section className="member-modal-card equipment-modal-card">
+            <div className="member-modal-header equipment-modal-header">
+              <div className="phase-header">
+                <h3 id="equipmentModalTitle">បំពេញព័ត៌មានសម្ភារៈ</h3>
+                <p>Fill each equipment item one by one up to {EQUIPMENT_LIMIT} items.</p>
+              </div>
+              <button className="ghost member-close" type="button" onClick={closeEquipmentModal}>
+                បិទ
+              </button>
+            </div>
+
+            <section className="phase-card phase-personal member-step-card">
+              <div className="field-grid">
+                <label className="field">
+                  <span>ប្រភេទ</span>
+                  <input
+                    type="text"
+                    name="type"
+                    placeholder="បញ្ចូលប្រភេទសម្ភារៈ"
+                    value={activeEquipment.type}
+                    onChange={handleEquipmentChange}
+                    className={equipmentErrors.type ? "input-error" : ""}
+                    required
+                  />
+                </label>
+                <label className="field">
+                  <span>ចំនួន</span>
+                  <input
+                    type="number"
+                    name="quantity"
+                    min="0"
+                    placeholder="បញ្ចូលចំនួន"
+                    value={activeEquipment.quantity}
+                    onChange={handleEquipmentChange}
+                    className={equipmentErrors.quantity ? "input-error" : ""}
+                    required
+                  />
+                </label>
+              </div>
+            </section>
+
+            <div className="member-modal-footer equipment-modal-footer">
+              <div className="member-progress-wrap">
+                <strong className="member-progress">
+                  ({filledEquipmentCount}/{EQUIPMENT_LIMIT})
+                </strong>
+                <div className="status">កំពុងបំពេញសម្ភារៈទី {activeEquipmentIndex + 1}</div>
+              </div>
+            </div>
+          </section>
+        </div>
+      ) : null}
     </section>
   );
 }
+
+
+
+
+
+
+
+
+
 
 
 

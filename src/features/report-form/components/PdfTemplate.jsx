@@ -55,9 +55,11 @@ export default function PdfTemplate({ report, onClose }) {
     return null;
   }
 
-  const { formData, requestId, submittedAt, supportFileName, members } = report;
+  const { formData, requestId, submittedAt, supportFileName, members, vehicles, equipmentItems } = report;
   const requesterName = renderValue(formData.name);
   const filledMembers = Array.isArray(members) ? members : [];
+  const filledVehicles = Array.isArray(vehicles) ? vehicles : [];
+  const filledEquipment = Array.isArray(equipmentItems) ? equipmentItems : [];
   const requestStatus = getRequestStatus(report.approvalStatus);
   const statusLabel = requestStatusLabelMap[requestStatus];
   const approvalDisplayText = requestStatus === "pending" ? "-" : "ប្រព័ន្ធស្នើសុំរថយន្ត MCCTV";
@@ -173,6 +175,14 @@ export default function PdfTemplate({ report, onClose }) {
                 <div className="pdf-value">{renderValue(formData.role)}</div>
               </div>
               <div className="pdf-row">
+                <div className="pdf-label">ចំនួនផែនការ</div>
+                <div className="pdf-value">{renderValue(formData.planCount)}</div>
+              </div>
+              <div className="pdf-row">
+                <div className="pdf-label">ចំនួនជាក់ស្តែង</div>
+                <div className="pdf-value">{renderValue(formData.actualCount)}</div>
+              </div>
+              <div className="pdf-row">
                 <div className="pdf-label">ឯកសារភ្ជាប់</div>
                 <div className="pdf-value">{renderValue(supportFileName)}</div>
               </div>
@@ -204,6 +214,56 @@ export default function PdfTemplate({ report, onClose }) {
               </table>
             ) : (
               <p className="pdf-empty-member">មិនមានទិន្នន័យសមាជិកបន្ថែម។</p>
+            )}
+          </section>
+          <section className="pdf-panel pdf-panel-full">
+            <h3>បញ្ជីរថយន្ត</h3>
+            {filledVehicles.length ? (
+              <table className="pdf-member-table">
+                <thead>
+                  <tr>
+                    <th>ល.រ</th>
+                    <th>ម៉ាករថយន្ត</th>
+                    <th>ស្លាកលេខ</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filledVehicles.map((vehicle, index) => (
+                    <tr key={`${vehicle.plate}-${index}`}>
+                      <td>{index + 1}</td>
+                      <td>{renderValue(vehicle.brand)}</td>
+                      <td>{renderValue(vehicle.plate)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            ) : (
+              <p className="pdf-empty-member">មិនមានទិន្នន័យរថយន្តបន្ថែម។</p>
+            )}
+          </section>
+          <section className="pdf-panel pdf-panel-full">
+            <h3>បញ្ជីសម្ភារៈបច្ចេកទេស</h3>
+            {filledEquipment.length ? (
+              <table className="pdf-member-table">
+                <thead>
+                  <tr>
+                    <th>ល.រ</th>
+                    <th>ប្រភេទ</th>
+                    <th>ចំនួន</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filledEquipment.map((item, index) => (
+                    <tr key={`${item.type}-${index}`}>
+                      <td>{index + 1}</td>
+                      <td>{renderValue(item.type)}</td>
+                      <td>{renderValue(item.quantity)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            ) : (
+              <p className="pdf-empty-member">មិនមានទិន្នន័យសម្ភារៈបន្ថែម។</p>
             )}
           </section>
 

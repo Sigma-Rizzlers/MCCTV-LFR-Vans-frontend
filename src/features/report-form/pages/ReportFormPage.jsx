@@ -62,6 +62,32 @@ function sanitizeMembers(members) {
     .filter((member) => member.name || member.phone || member.gender || member.role);
 }
 
+function sanitizeVehicles(vehicles) {
+  if (!Array.isArray(vehicles)) {
+    return [];
+  }
+
+  return vehicles
+    .map((vehicle) => ({
+      brand: toText(vehicle?.brand),
+      plate: toText(vehicle?.plate)
+    }))
+    .filter((vehicle) => vehicle.brand || vehicle.plate);
+}
+
+function sanitizeEquipmentItems(items) {
+  if (!Array.isArray(items)) {
+    return [];
+  }
+
+  return items
+    .map((item) => ({
+      type: toText(item?.type),
+      quantity: toText(item?.quantity)
+    }))
+    .filter((item) => item.type || item.quantity);
+}
+
 function sanitizeReport(rawReport) {
   if (!rawReport || typeof rawReport !== "object") {
     return null;
@@ -79,7 +105,14 @@ function sanitizeReport(rawReport) {
     approvalStatus: getRequestStatus(rawReport.approvalStatus),
     formData: sanitizeFormData(rawReport.formData),
     supportFileName: toText(rawReport.supportFileName),
-    members: sanitizeMembers(rawReport.members)
+    lodgingImageName: toText(rawReport.lodgingImageName),
+    breakfastImageName: toText(rawReport.breakfastImageName),
+    lunchImageName: toText(rawReport.lunchImageName),
+    dinnerImageName: toText(rawReport.dinnerImageName),
+    implementationImageName: toText(rawReport.implementationImageName),
+    members: sanitizeMembers(rawReport.members),
+    vehicles: sanitizeVehicles(rawReport.vehicles),
+    equipmentItems: sanitizeEquipmentItems(rawReport.equipmentItems)
   };
 }
 
@@ -115,6 +148,11 @@ export default function ReportFormPage({
   const [activeSection, setActiveSection] = useState("request");
   const [formData, setFormData] = useState(initialReportForm);
   const [supportFile, setSupportFile] = useState(null);
+  const [lodgingImage, setLodgingImage] = useState(null);
+  const [breakfastImage, setBreakfastImage] = useState(null);
+  const [lunchImage, setLunchImage] = useState(null);
+  const [dinnerImage, setDinnerImage] = useState(null);
+  const [implementationImage, setImplementationImage] = useState(null);
   const [statusText, setStatusText] = useState(initialStatusText);
   const [phoneError, setPhoneError] = useState("");
   const [submittedReport, setSubmittedReport] = useState(null);
@@ -135,7 +173,30 @@ export default function ReportFormPage({
   function handleChange(event) {
     const { name, value } = event.target;
     let nextValue = value;
-    if (name === "vehicleCount") {
+    if (
+      name === "vehicleCount" ||
+      name === "vehiclePlanCount" ||
+      name === "vehicleActualCount" ||
+      name === "equipmentCount" ||
+      name === "equipmentPlanCount" ||
+      name === "equipmentActualCount" ||
+      name === "planCount" ||
+      name === "actualCount" ||
+      name === "meetingParticipantsCount" ||
+      name === "meetingParticipantsFemale" ||
+      name === "lodgingCount" ||
+      name === "lodgingFemale" ||
+      name === "breakfastCount" ||
+      name === "breakfastFemale" ||
+      name === "lunchCount" ||
+      name === "lunchFemale" ||
+      name === "dinnerCount" ||
+      name === "dinnerFemale" ||
+      name === "implementationPlanTotal" ||
+      name === "implementationPlanFemale" ||
+      name === "implementationActualTotal" ||
+      name === "implementationActualFemale"
+    ) {
       if (!value) {
         nextValue = "";
       } else {
@@ -166,7 +227,14 @@ export default function ReportFormPage({
       approvalStatus: "pending",
       formData: { ...formData },
       supportFileName: supportFile?.name ?? "",
-      members: payload.members
+      lodgingImageName: lodgingImage?.name ?? "",
+      breakfastImageName: breakfastImage?.name ?? "",
+      lunchImageName: lunchImage?.name ?? "",
+      dinnerImageName: dinnerImage?.name ?? "",
+      implementationImageName: implementationImage?.name ?? "",
+      members: payload.members,
+      vehicles: payload.vehicles,
+      equipmentItems: payload.equipmentItems
     });
 
     if (!nextReport) {
@@ -183,6 +251,11 @@ export default function ReportFormPage({
   function handleReset() {
     setFormData(initialReportForm);
     setSupportFile(null);
+    setLodgingImage(null);
+    setBreakfastImage(null);
+    setLunchImage(null);
+    setDinnerImage(null);
+    setImplementationImage(null);
     setStatusText(initialStatusText);
     setPhoneError("");
     setSubmittedReport(null);
@@ -206,11 +279,21 @@ export default function ReportFormPage({
           formProps={{
             formData,
             supportFile,
+            lodgingImage,
+            breakfastImage,
+            lunchImage,
+            dinnerImage,
+            implementationImage,
             statusText,
             onChange: handleChange,
             onSubmit: handleSubmit,
             onReset: handleReset,
             onSupportFileChange: setSupportFile,
+            onLodgingImageChange: setLodgingImage,
+            onBreakfastImageChange: setBreakfastImage,
+            onLunchImageChange: setLunchImage,
+            onDinnerImageChange: setDinnerImage,
+            onImplementationImageChange: setImplementationImage,
             phoneError,
             hideMissionSection: true
           }}
