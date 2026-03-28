@@ -33,7 +33,7 @@ export default function LoginPage({ onLogin, title = "Sign In", onCancel }) {
           }}
         />
         <div>
-          <h1 className="login-brand-title-kh">ក្រសួងមហាផ្ទៃ</h1>
+          <h1 className="login-brand-title-kh ministry-brand-title-kh">ក្រសួងមហាផ្ទៃ</h1>
           <p className="login-brand-title-en">MINISTRY OF INTERIOR</p>
         </div>
       </section>
@@ -93,4 +93,3 @@ export default function LoginPage({ onLogin, title = "Sign In", onCancel }) {
     </main>
   );
 }
-

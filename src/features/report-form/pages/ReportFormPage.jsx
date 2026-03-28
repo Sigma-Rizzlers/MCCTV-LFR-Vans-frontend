@@ -3,7 +3,6 @@ import { initialReportForm, initialStatusText, reportNavItems } from "../constan
 import { getRequestStatus } from "../constants/requestStatus";
 import ReportHeader from "../components/ReportHeader";
 import RequestSection from "../components/RequestSection";
-import PolicySection from "../components/PolicySection";
 import PdfTemplate from "../components/PdfTemplate";
 import "../styles/index.css";
 
@@ -298,7 +297,6 @@ export default function ReportFormPage({
             hideMissionSection: true
           }}
         />
-        <PolicySection isActive={activeSection === "policy"} />
       </main>
 
       <footer className="footer">© 2026 អគ្គនាយកដ្ឋានបច្ចេកវិទ្យាឌីជីថល និងផ្សព្វផ្សាយអប់រំ - ប្រព័ន្ធស្នើសុំរថយន្តបេសកកម្ម</footer>

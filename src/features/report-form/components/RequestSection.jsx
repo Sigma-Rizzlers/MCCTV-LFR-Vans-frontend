@@ -63,14 +63,11 @@ export default function RequestSection({ isActive, formProps }) {
     Boolean(missionPanel?.missionPlace) ||
     Boolean(missionPanel?.participantCount) ||
     Boolean(missionPanel?.mission);
+  const missionPanelContent = hasMissionPanel ? <MissionPanelCard panel={missionPanel} /> : <DefaultBundleCard />;
 
   return (
     <section id="request" className={`page-section ${isActive ? "active" : ""}`}>
-      <section className="bundle">
-        {hasMissionPanel ? <MissionPanelCard panel={missionPanel} /> : <DefaultBundleCard />}
-      </section>
-
-      <MissionRequestForm {...formProps} />
+      <MissionRequestForm {...formProps} missionPanelContent={missionPanelContent} />
     </section>
   );
 }

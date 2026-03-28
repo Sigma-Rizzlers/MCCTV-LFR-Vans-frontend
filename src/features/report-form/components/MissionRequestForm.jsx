@@ -57,6 +57,36 @@ function isEquipmentFilled(equipment) {
   return Boolean(equipment.type.trim() && String(equipment.quantity ?? "").trim());
 }
 
+function getFilledVehicles(vehicles) {
+  return vehicles.reduce((filledVehicles, vehicle, index) => {
+    if (!isVehicleFilled(vehicle)) {
+      return filledVehicles;
+    }
+
+    filledVehicles.push({
+      index,
+      brand: vehicle.brand.trim(),
+      plate: vehicle.plate.trim()
+    });
+    return filledVehicles;
+  }, []);
+}
+
+function getFilledEquipmentItems(equipmentItems) {
+  return equipmentItems.reduce((filledItems, equipment, index) => {
+    if (!isEquipmentFilled(equipment)) {
+      return filledItems;
+    }
+
+    filledItems.push({
+      index,
+      type: equipment.type.trim(),
+      quantity: String(equipment.quantity ?? "").trim()
+    });
+    return filledItems;
+  }, []);
+}
+
 function validateMember(member) {
   const errors = { ...emptyMemberError };
   const normalizedPhone = member.phone.trim();
@@ -105,9 +135,12 @@ export default function MissionRequestForm({
   onDinnerImageChange,
   onImplementationImageChange,
   phoneError,
+  missionPanelContent = null,
   hideMissionSection = false
 }) {
   const [activeStep, setActiveStep] = useState(1);
+  const [activeMealSection, setActiveMealSection] = useState("breakfast");
+  const [mealStepError, setMealStepError] = useState("");
   const [isMemberModalOpen, setIsMemberModalOpen] = useState(false);
   const [activeMemberIndex, setActiveMemberIndex] = useState(0);
   const [members, setMembers] = useState(() => createMemberList());
@@ -127,13 +160,73 @@ export default function MissionRequestForm({
   const lunchImageInputRef = useRef(null);
   const dinnerImageInputRef = useRef(null);
   const implementationImageInputRef = useRef(null);
+  const mealSections = [
+    {
+      id: "breakfast",
+      optionLabel: "អាហាព្រឹក",
+      title: "ការបរិភោគអាហារព្រឹក",
+      placeName: "breakfastPlace",
+      countName: "breakfastCount",
+      femaleName: "breakfastFemale",
+      paymentUnitName: "breakfastPaymentUnit",
+      sponsorName: "breakfastSponsor",
+      imageId: "breakfastImage",
+      image: breakfastImage,
+      imageInputRef: breakfastImageInputRef,
+      onImageChange: onBreakfastImageChange,
+      onClearImage: handleClearBreakfastImage
+    },
+    {
+      id: "lunch",
+      optionLabel: "ថ្ងៃ",
+      title: "ការបរិភោគអាហារថ្ងៃ",
+      placeName: "lunchPlace",
+      countName: "lunchCount",
+      femaleName: "lunchFemale",
+      paymentUnitName: "lunchPaymentUnit",
+      sponsorName: "lunchSponsor",
+      imageId: "lunchImage",
+      image: lunchImage,
+      imageInputRef: lunchImageInputRef,
+      onImageChange: onLunchImageChange,
+      onClearImage: handleClearLunchImage
+    },
+    {
+      id: "dinner",
+      optionLabel: "ល្ងាច",
+      title: "ការបរិភោគអាហារល្ងាច",
+      placeName: "dinnerPlace",
+      countName: "dinnerCount",
+      femaleName: "dinnerFemale",
+      paymentUnitName: "dinnerPaymentUnit",
+      sponsorName: "dinnerSponsor",
+      imageId: "dinnerImage",
+      image: dinnerImage,
+      imageInputRef: dinnerImageInputRef,
+      onImageChange: onDinnerImageChange,
+      onClearImage: handleClearDinnerImage
+    }
+  ];
+  const activeMealConfig = mealSections.find((section) => section.id === activeMealSection) ?? mealSections[0];
 
   const activeMember = members[activeMemberIndex];
   const filledMemberCount = members.filter((member) => isMemberFilled(member)).length;
   const activeVehicle = vehicles[activeVehicleIndex];
-  const filledVehicleCount = vehicles.filter((vehicle) => isVehicleFilled(vehicle)).length;
+  const filledVehicles = getFilledVehicles(vehicles);
+  const filledVehicleCount = filledVehicles.length;
+  const hasPreviousVehicle = activeVehicleIndex > 0;
+  const hasNextVehicle = activeVehicleIndex < VEHICLE_LIMIT - 1;
   const activeEquipment = equipmentItems[activeEquipmentIndex];
-  const filledEquipmentCount = equipmentItems.filter((item) => isEquipmentFilled(item)).length;
+  const filledEquipmentItems = getFilledEquipmentItems(equipmentItems);
+  const filledEquipmentCount = filledEquipmentItems.length;
+  const hasPreviousEquipment = activeEquipmentIndex > 0;
+  const hasNextEquipment = activeEquipmentIndex < EQUIPMENT_LIMIT - 1;
+
+  function focusVehicleIndex(nextIndex) {
+    const safeIndex = Math.min(Math.max(nextIndex, 0), VEHICLE_LIMIT - 1);
+    setActiveVehicleIndex(safeIndex);
+    setVehicleErrors(emptyVehicleError);
+  }
 
   function openMemberModal() {
     const firstIncompleteIndex = members.findIndex((member) => !isMemberFilled(member));
@@ -149,8 +242,7 @@ export default function MissionRequestForm({
 
   function openVehicleModal() {
     const firstIncompleteIndex = vehicles.findIndex((vehicle) => !isVehicleFilled(vehicle));
-    setActiveVehicleIndex(firstIncompleteIndex === -1 ? VEHICLE_LIMIT - 1 : firstIncompleteIndex);
-    setVehicleErrors(emptyVehicleError);
+    focusVehicleIndex(firstIncompleteIndex === -1 ? VEHICLE_LIMIT - 1 : firstIncompleteIndex);
     setIsVehicleModalOpen(true);
   }
 
@@ -159,16 +251,37 @@ export default function MissionRequestForm({
     setIsVehicleModalOpen(false);
   }
 
+  function showPreviousVehicle() {
+    focusVehicleIndex(activeVehicleIndex - 1);
+  }
+
+  function showNextVehicle() {
+    focusVehicleIndex(activeVehicleIndex + 1);
+  }
+
+  function focusEquipmentIndex(nextIndex) {
+    const safeIndex = Math.min(Math.max(nextIndex, 0), EQUIPMENT_LIMIT - 1);
+    setActiveEquipmentIndex(safeIndex);
+    setEquipmentErrors(emptyEquipmentError);
+  }
+
   function openEquipmentModal() {
     const firstIncompleteIndex = equipmentItems.findIndex((item) => !isEquipmentFilled(item));
-    setActiveEquipmentIndex(firstIncompleteIndex === -1 ? EQUIPMENT_LIMIT - 1 : firstIncompleteIndex);
-    setEquipmentErrors(emptyEquipmentError);
+    focusEquipmentIndex(firstIncompleteIndex === -1 ? EQUIPMENT_LIMIT - 1 : firstIncompleteIndex);
     setIsEquipmentModalOpen(true);
   }
 
   function closeEquipmentModal() {
     setEquipmentErrors(emptyEquipmentError);
     setIsEquipmentModalOpen(false);
+  }
+
+  function showPreviousEquipment() {
+    focusEquipmentIndex(activeEquipmentIndex - 1);
+  }
+
+  function showNextEquipment() {
+    focusEquipmentIndex(activeEquipmentIndex + 1);
   }
 
   function handleMemberChange(event) {
@@ -202,6 +315,18 @@ export default function MissionRequestForm({
     setVehicleErrors((current) => ({ ...current, [name]: "" }));
   }
 
+  function handleVehicleDelete(vehicleIndex) {
+    setVehicles((current) => {
+      const next = [...current];
+      next[vehicleIndex] = createEmptyVehicle();
+      return next;
+    });
+
+    if (vehicleIndex === activeVehicleIndex) {
+      setVehicleErrors(emptyVehicleError);
+    }
+  }
+
   function handleEquipmentChange(event) {
     const { name, value } = event.target;
     setEquipmentItems((current) => {
@@ -211,6 +336,18 @@ export default function MissionRequestForm({
     });
 
     setEquipmentErrors((current) => ({ ...current, [name]: "" }));
+  }
+
+  function handleEquipmentDelete(equipmentIndex) {
+    setEquipmentItems((current) => {
+      const next = [...current];
+      next[equipmentIndex] = createEmptyEquipment();
+      return next;
+    });
+
+    if (equipmentIndex === activeEquipmentIndex) {
+      setEquipmentErrors(emptyEquipmentError);
+    }
   }
 
   function handleMemberSupportFileChange(file) {
@@ -290,6 +427,8 @@ export default function MissionRequestForm({
     setEquipmentErrors(emptyEquipmentError);
     setIsEquipmentModalOpen(false);
     setActiveStep(1);
+    setActiveMealSection("breakfast");
+    setMealStepError("");
     onLodgingImageChange(null);
     if (lodgingImageInputRef.current) {
       lodgingImageInputRef.current.value = "";
@@ -310,6 +449,28 @@ export default function MissionRequestForm({
     if (implementationImageInputRef.current) {
       implementationImageInputRef.current.value = "";
     }
+  }
+
+  function showMealSection(sectionId) {
+    setActiveMealSection(sectionId);
+    setMealStepError("");
+  }
+
+  function showNextStepFromMeals() {
+    const incompleteMealSection = mealSections.find((section) =>
+      [section.placeName, section.countName, section.femaleName, section.paymentUnitName, section.sponsorName].some(
+        (fieldName) => !String(formData[fieldName] ?? "").trim()
+      )
+    );
+
+    if (incompleteMealSection) {
+      setActiveMealSection(incompleteMealSection.id);
+      setMealStepError(`សូមបំពេញព័ត៌មាន${incompleteMealSection.optionLabel}ឲ្យបានគ្រប់ជាមុនសិន។`);
+      return;
+    }
+
+    setMealStepError("");
+    setActiveStep(6);
   }
 
   function handleFormSubmit(event) {
@@ -336,6 +497,7 @@ export default function MissionRequestForm({
             <span className={activeStep === 6 ? "step-node active" : "step-node"}>6</span>
           </div>
           <div className={`phase-grid step-${activeStep}`}>
+            {activeStep === 1 && missionPanelContent ? <div className="step-1-section form-step-bundle">{missionPanelContent}</div> : null}
             {hideMissionSection ? null : (
               <section className="phase-card phase-mission step-1-section">
               <div className="phase-header">
@@ -454,7 +616,7 @@ export default function MissionRequestForm({
                   <span className="upload-icon" aria-hidden="true">
                     ↑
                   </span>
-                  <span className="upload-text">បញ្ចូល ឬសរសេរភ្ជាប់</span>
+                  <span className="upload-text">បញ្ជូលរូបភាព</span>
                   <input
                     id="supportFile"
                     ref={supportFileInputRef}
@@ -525,9 +687,35 @@ export default function MissionRequestForm({
                   <button className="vehicle-add" type="button" onClick={openVehicleModal}>
                     បន្ថែមរថយន្ត
                   </button>
-                  <p className="status vehicle-status">
-                    រថយន្តដែលបានបំពេញរួច– {filledVehicleCount}/{VEHICLE_LIMIT}
-                  </p>
+                  <div className="vehicle-status-preview" tabIndex={0}>
+                    <p className="status vehicle-status">
+                      រថយន្តដែលបានបំពេញរួច– {filledVehicleCount}/{VEHICLE_LIMIT}
+                    </p>
+                    <div className="vehicle-preview-card" role="note">
+                      <p className="vehicle-preview-title">រថយន្តដែលបានបំពេញរួច</p>
+                      {filledVehicles.length ? (
+                        <ul className="vehicle-preview-list">
+                          {filledVehicles.map((vehicle) => (
+                            <li key={`${vehicle.plate}-${vehicle.index}`} className="vehicle-preview-item">
+                              <span className="vehicle-preview-index">#{vehicle.index + 1}</span>
+                              <span className="vehicle-preview-text">
+                                {vehicle.brand} - {vehicle.plate}
+                              </span>
+                              <button
+                                className="vehicle-preview-delete"
+                                type="button"
+                                onClick={() => handleVehicleDelete(vehicle.index)}
+                              >
+                                លុប
+                              </button>
+                            </li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <p className="vehicle-preview-empty">មិនទាន់មានរថយន្តដែលបានបំពេញនៅឡើយទេ។</p>
+                      )}
+                    </div>
+                  </div>
                 </div>
                 <label className="field">
                   <span>ស្លាកលេខ</span>
@@ -601,6 +789,35 @@ export default function MissionRequestForm({
                   <button className="equipment-add" type="button" onClick={openEquipmentModal}>
                     ប្រភេទសម្ភារៈ
                   </button>
+                  <div className="equipment-status-preview" tabIndex={0}>
+                    <p className="status equipment-status">
+                      សម្ភារៈដែលបានបំពេញរួច– {filledEquipmentCount}/{EQUIPMENT_LIMIT}
+                    </p>
+                    <div className="equipment-preview-card" role="note">
+                      <p className="equipment-preview-title">សម្ភារៈដែលបានបំពេញរួច</p>
+                      {filledEquipmentItems.length ? (
+                        <ul className="equipment-preview-list">
+                          {filledEquipmentItems.map((equipment) => (
+                            <li key={`${equipment.type}-${equipment.index}`} className="equipment-preview-item">
+                              <span className="equipment-preview-index">#{equipment.index + 1}</span>
+                              <span className="equipment-preview-text">
+                                {equipment.type} - {equipment.quantity}
+                              </span>
+                              <button
+                                className="equipment-preview-delete"
+                                type="button"
+                                onClick={() => handleEquipmentDelete(equipment.index)}
+                              >
+                                លុប
+                              </button>
+                            </li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <p className="equipment-preview-empty">មិនទាន់មានសម្ភារៈដែលបានបំពេញនៅឡើយទេ។</p>
+                      )}
+                    </div>
+                  </div>
                   <div className="equipment-extra-grid">
                     <label className="field">
                       <span>ចំនួនផែនការ</span>
@@ -756,7 +973,7 @@ export default function MissionRequestForm({
                   <span className="upload-icon" aria-hidden="true">
                     ↑
                   </span>
-                  <span className="upload-text">បញ្ចូល ឬសរសេរភ្ជាប់</span>
+                  <span className="upload-text">បញ្ជូលរូបភាព</span>
                   <input
                     id="lodgingImage"
                     ref={lodgingImageInputRef}
@@ -801,278 +1018,119 @@ export default function MissionRequestForm({
                 </label>
               </div>
             </section>
-            <section className="phase-card step-5-section">
+            <section className="phase-card step-5-section meal-phase-card">
               <div className="phase-header">
-                <h3>ការបរិភោគអាហារព្រឹក</h3>
-                <p>សូមបំពេញទីតាំងបរិភោគ រូបភាព និងចំនួនអ្នកបរិភោគ។</p>
+                <h3>ការបរិភោគអាហារ</h3>
+                <p>ជ្រើសរើសវេនបរិភោគអាហារ ហើយបំពេញទីតាំងបរិភោគ រូបភាព និងចំនួនអ្នកបរិភោគ។</p>
               </div>
-              <div className="field-grid">
-                <label className="field full">
-                  <span>ទីតាំងបរិភោគ</span>
-                  <input
-                    type="text"
-                    name="breakfastPlace"
-                    placeholder="កន្លែង"
-                    value={formData.breakfastPlace}
-                    onChange={onChange}
-                    required
-                  />
-                </label>
-              </div>
-              <div className="upload-block">
-                <div className="upload-label">រូបភាព</div>
-                <label className="upload-area" htmlFor="breakfastImage">
-                  <span className="upload-icon" aria-hidden="true">
-                    ↑
-                  </span>
-                  <span className="upload-text">បញ្ចូល ឬសរសេរភ្ជាប់</span>
-                  <input
-                    id="breakfastImage"
-                    ref={breakfastImageInputRef}
-                    type="file"
-                    accept=".jpg,.jpeg,.png"
-                    onChange={(event) => onBreakfastImageChange(event.target.files?.[0] ?? null)}
-                  />
-                </label>
-                {breakfastImage ? (
-                  <div className="upload-file-actions">
-                    <p className="status">{breakfastImage.name}</p>
-                    <button className="ghost upload-remove" type="button" onClick={handleClearBreakfastImage}>
-                      លុបរូបភាព
-                    </button>
-                  </div>
-                ) : null}
-              </div>
-              <div className="field-grid">
-                <label className="field">
-                  <span>ចំនួនអ្នកបរិភោគ (ចំនួន)</span>
-                  <input
-                    type="number"
-                    name="breakfastCount"
-                    min="0"
-                    placeholder="0"
-                    value={formData.breakfastCount}
-                    onChange={onChange}
-                    required
-                  />
-                </label>
-                <label className="field">
-                  <span>ចំនួនអ្នកបរិភោគ (ស្រី)</span>
-                  <input
-                    type="number"
-                    name="breakfastFemale"
-                    min="0"
-                    placeholder="0"
-                    value={formData.breakfastFemale}
-                    onChange={onChange}
-                    required
-                  />
-                </label>
-                <label className="field">
-                  <span>ការទូទាត់ (អង្គភាព)</span>
-                  <input
-                    type="text"
-                    name="breakfastPaymentUnit"
-                    placeholder="អង្គភាព"
-                    value={formData.breakfastPaymentUnit}
-                    onChange={onChange}
-                    required
-                  />
-                </label>
-                <label className="field">
-                  <span>ការទូទាត់ (អ្នកឧបត្ថម្ភ)</span>
-                  <input
-                    type="text"
-                    name="breakfastSponsor"
-                    placeholder="អ្នកឧបត្ថម្ភ"
-                    value={formData.breakfastSponsor}
-                    onChange={onChange}
-                    required
-                  />
+              <div className="meal-select-wrap">
+                <label className="field meal-select-field">
+                  <span>ជ្រើសរើសវេនបរិភោគអាហារ</span>
+                  <select value={activeMealSection} onChange={(event) => showMealSection(event.target.value)}>
+                    {mealSections.map((section) => (
+                      <option key={section.id} value={section.id}>
+                        {section.optionLabel}
+                      </option>
+                    ))}
+                  </select>
                 </label>
               </div>
-            </section>
-            <section className="phase-card step-5-section">
-              <div className="phase-header">
-                <h3>ការបរិភោគអាហារថ្ងៃ</h3>
-                <p>សូមបំពេញទីតាំងបរិភោគ រូបភាព និងចំនួនអ្នកបរិភោគ។</p>
+              <div className="meal-panel" key={activeMealConfig.id}>
+                <div className="meal-panel-header">
+                  <h4>{activeMealConfig.title}</h4>
+                  <p>សូមបំពេញទីតាំងបរិភោគ រូបភាព និងចំនួនអ្នកបរិភោគ។</p>
+                </div>
+                <div className="field-grid">
+                  <label className="field full">
+                    <span>ទីតាំងបរិភោគ</span>
+                    <input
+                      type="text"
+                      name={activeMealConfig.placeName}
+                      placeholder="កន្លែង"
+                      value={formData[activeMealConfig.placeName]}
+                      onChange={onChange}
+                      required
+                    />
+                  </label>
+                </div>
+                <div className="upload-block">
+                  <div className="upload-label">រូបភាព</div>
+                  <label className="upload-area" htmlFor={activeMealConfig.imageId}>
+                    <span className="upload-icon" aria-hidden="true">
+                      ↑
+                    </span>
+                    <span className="upload-text">បញ្ជូលរូបភាព</span>
+                    <input
+                      id={activeMealConfig.imageId}
+                      ref={activeMealConfig.imageInputRef}
+                      type="file"
+                      accept=".jpg,.jpeg,.png"
+                      onChange={(event) => activeMealConfig.onImageChange(event.target.files?.[0] ?? null)}
+                    />
+                  </label>
+                  {activeMealConfig.image ? (
+                    <div className="upload-file-actions">
+                      <p className="status">{activeMealConfig.image.name}</p>
+                      <button className="ghost upload-remove" type="button" onClick={activeMealConfig.onClearImage}>
+                        លុបរូបភាព
+                      </button>
+                    </div>
+                  ) : null}
+                </div>
+                <div className="field-grid">
+                  <label className="field">
+                    <span>ចំនួនអ្នកបរិភោគ (ចំនួន)</span>
+                    <input
+                      type="number"
+                      name={activeMealConfig.countName}
+                      min="0"
+                      placeholder="0"
+                      value={formData[activeMealConfig.countName]}
+                      onChange={onChange}
+                      required
+                    />
+                  </label>
+                  <label className="field">
+                    <span>ចំនួនអ្នកបរិភោគ (ស្រី)</span>
+                    <input
+                      type="number"
+                      name={activeMealConfig.femaleName}
+                      min="0"
+                      placeholder="0"
+                      value={formData[activeMealConfig.femaleName]}
+                      onChange={onChange}
+                      required
+                    />
+                  </label>
+                  <label className="field">
+                    <span>ការទូទាត់ (អង្គភាព)</span>
+                    <input
+                      type="text"
+                      name={activeMealConfig.paymentUnitName}
+                      placeholder="អង្គភាព"
+                      value={formData[activeMealConfig.paymentUnitName]}
+                      onChange={onChange}
+                      required
+                    />
+                  </label>
+                  <label className="field">
+                    <span>ការទូទាត់ (អ្នកឧបត្ថម្ភ)</span>
+                    <input
+                      type="text"
+                      name={activeMealConfig.sponsorName}
+                      placeholder="អ្នកឧបត្ថម្ភ"
+                      value={formData[activeMealConfig.sponsorName]}
+                      onChange={onChange}
+                      required
+                    />
+                  </label>
+                </div>
               </div>
-              <div className="field-grid">
-                <label className="field full">
-                  <span>ទីតាំងបរិភោគ</span>
-                  <input
-                    type="text"
-                    name="lunchPlace"
-                    placeholder="កន្លែង"
-                    value={formData.lunchPlace}
-                    onChange={onChange}
-                    required
-                  />
-                </label>
-              </div>
-              <div className="upload-block">
-                <div className="upload-label">រូបភាព</div>
-                <label className="upload-area" htmlFor="lunchImage">
-                  <span className="upload-icon" aria-hidden="true">
-                    ↑
-                  </span>
-                  <span className="upload-text">បញ្ចូល ឬសរសេរភ្ជាប់</span>
-                  <input
-                    id="lunchImage"
-                    ref={lunchImageInputRef}
-                    type="file"
-                    accept=".jpg,.jpeg,.png"
-                    onChange={(event) => onLunchImageChange(event.target.files?.[0] ?? null)}
-                  />
-                </label>
-                {lunchImage ? (
-                  <div className="upload-file-actions">
-                    <p className="status">{lunchImage.name}</p>
-                    <button className="ghost upload-remove" type="button" onClick={handleClearLunchImage}>
-                      លុបរូបភាព
-                    </button>
-                  </div>
-                ) : null}
-              </div>
-              <div className="field-grid">
-                <label className="field">
-                  <span>ចំនួនអ្នកបរិភោគ (ចំនួន)</span>
-                  <input
-                    type="number"
-                    name="lunchCount"
-                    min="0"
-                    placeholder="0"
-                    value={formData.lunchCount}
-                    onChange={onChange}
-                    required
-                  />
-                </label>
-                <label className="field">
-                  <span>ចំនួនអ្នកបរិភោគ (ស្រី)</span>
-                  <input
-                    type="number"
-                    name="lunchFemale"
-                    min="0"
-                    placeholder="0"
-                    value={formData.lunchFemale}
-                    onChange={onChange}
-                    required
-                  />
-                </label>
-                <label className="field">
-                  <span>ការទូទាត់ (អង្គភាព)</span>
-                  <input
-                    type="text"
-                    name="lunchPaymentUnit"
-                    placeholder="អង្គភាព"
-                    value={formData.lunchPaymentUnit}
-                    onChange={onChange}
-                    required
-                  />
-                </label>
-                <label className="field">
-                  <span>ការទូទាត់ (អ្នកឧបត្ថម្ភ)</span>
-                  <input
-                    type="text"
-                    name="lunchSponsor"
-                    placeholder="អ្នកឧបត្ថម្ភ"
-                    value={formData.lunchSponsor}
-                    onChange={onChange}
-                    required
-                  />
-                </label>
-              </div>
-            </section>
-            <section className="phase-card step-5-section">
-              <div className="phase-header">
-                <h3>ការបរិភោគអាហារល្ងាច</h3>
-                <p>សូមបំពេញទីតាំងបរិភោគ រូបភាព និងចំនួនអ្នកបរិភោគ។</p>
-              </div>
-              <div className="field-grid">
-                <label className="field full">
-                  <span>ទីតាំងបរិភោគ</span>
-                  <input
-                    type="text"
-                    name="dinnerPlace"
-                    placeholder="កន្លែង"
-                    value={formData.dinnerPlace}
-                    onChange={onChange}
-                    required
-                  />
-                </label>
-              </div>
-              <div className="upload-block">
-                <div className="upload-label">រូបភាព</div>
-                <label className="upload-area" htmlFor="dinnerImage">
-                  <span className="upload-icon" aria-hidden="true">
-                    ↑
-                  </span>
-                  <span className="upload-text">បញ្ចូល ឬសរសេរភ្ជាប់</span>
-                  <input
-                    id="dinnerImage"
-                    ref={dinnerImageInputRef}
-                    type="file"
-                    accept=".jpg,.jpeg,.png"
-                    onChange={(event) => onDinnerImageChange(event.target.files?.[0] ?? null)}
-                  />
-                </label>
-                {dinnerImage ? (
-                  <div className="upload-file-actions">
-                    <p className="status">{dinnerImage.name}</p>
-                    <button className="ghost upload-remove" type="button" onClick={handleClearDinnerImage}>
-                      លុបរូបភាព
-                    </button>
-                  </div>
-                ) : null}
-              </div>
-              <div className="field-grid">
-                <label className="field">
-                  <span>ចំនួនអ្នកបរិភោគ (ចំនួន)</span>
-                  <input
-                    type="number"
-                    name="dinnerCount"
-                    min="0"
-                    placeholder="0"
-                    value={formData.dinnerCount}
-                    onChange={onChange}
-                    required
-                  />
-                </label>
-                <label className="field">
-                  <span>ចំនួនអ្នកបរិភោគ (ស្រី)</span>
-                  <input
-                    type="number"
-                    name="dinnerFemale"
-                    min="0"
-                    placeholder="0"
-                    value={formData.dinnerFemale}
-                    onChange={onChange}
-                    required
-                  />
-                </label>
-                <label className="field">
-                  <span>ការទូទាត់ (អង្គភាព)</span>
-                  <input
-                    type="text"
-                    name="dinnerPaymentUnit"
-                    placeholder="អង្គភាព"
-                    value={formData.dinnerPaymentUnit}
-                    onChange={onChange}
-                    required
-                  />
-                </label>
-                <label className="field">
-                  <span>ការទូទាត់ (អ្នកឧបត្ថម្ភ)</span>
-                  <input
-                    type="text"
-                    name="dinnerSponsor"
-                    placeholder="អ្នកឧបត្ថម្ភ"
-                    value={formData.dinnerSponsor}
-                    onChange={onChange}
-                    required
-                  />
-                </label>
-              </div>
+              {mealStepError ? (
+                <p className="field-error meal-step-error" role="alert">
+                  {mealStepError}
+                </p>
+              ) : null}
             </section>
             <section className="phase-card step-6-section">
               <div className="phase-header">
@@ -1157,7 +1215,7 @@ export default function MissionRequestForm({
                   <span className="upload-icon" aria-hidden="true">
                     ↑
                   </span>
-                  <span className="upload-text">បញ្ចូល ឬសរសេរភ្ជាប់</span>
+                  <span className="upload-text">បញ្ជូលរូបភាព</span>
                   <input
                     id="implementationImage"
                     ref={implementationImageInputRef}
@@ -1284,7 +1342,7 @@ export default function MissionRequestForm({
                 <button className="ghost" type="button" onClick={() => setActiveStep(4)}>
                   ត្រឡប់
                 </button>
-                <button className="primary" type="button" onClick={() => setActiveStep(6)}>
+                <button className="primary" type="button" onClick={showNextStepFromMeals}>
                   បន្ទាប់
                 </button>
                 <button className="ghost" type="reset">
@@ -1393,7 +1451,7 @@ export default function MissionRequestForm({
                   <span className="upload-icon" aria-hidden="true">
                     ↑
                   </span>
-                  <span className="upload-text">បញ្ចូល ឬសរសេរភ្ជាប់</span>
+                  <span className="upload-text">បញ្ជូលរូបភាព</span>
                   <input
                     id={`memberSupportFile-${activeMemberIndex}`}
                     ref={memberSupportFileInputRef}
@@ -1475,6 +1533,14 @@ export default function MissionRequestForm({
                 </strong>
                 <div className="status">កំពុងបំពេញរថយន្តទី {activeVehicleIndex + 1}</div>
               </div>
+              <div className="vehicle-modal-actions">
+                <button className="ghost" type="button" onClick={showPreviousVehicle} disabled={!hasPreviousVehicle}>
+                  ថយក្រោយ
+                </button>
+                <button className="ghost" type="button" onClick={showNextVehicle} disabled={!hasNextVehicle}>
+                  បន្ទាប់
+                </button>
+              </div>
             </div>
           </section>
         </div>
@@ -1529,6 +1595,14 @@ export default function MissionRequestForm({
                 </strong>
                 <div className="status">កំពុងបំពេញសម្ភារៈទី {activeEquipmentIndex + 1}</div>
               </div>
+              <div className="equipment-modal-actions">
+                <button className="ghost" type="button" onClick={showPreviousEquipment} disabled={!hasPreviousEquipment}>
+                  ថយក្រោយ
+                </button>
+                <button className="ghost" type="button" onClick={showNextEquipment} disabled={!hasNextEquipment}>
+                  បន្ទាប់
+                </button>
+              </div>
             </div>
           </section>
         </div>
@@ -1536,14 +1610,6 @@ export default function MissionRequestForm({
     </section>
   );
 }
-
-
-
-
-
-
-
-
 
 
 

@@ -16,18 +16,22 @@ export default function ReportHeader({
         <div className="brand">
           <div className="brand-main">
             <div className="seal">
-              <img className="brand-logo" src="/ministry-logo.png" alt="Ministry of Interior logo" onError={(event) => {
-                event.currentTarget.src = "/mcctv-logo.jpg";
-              }} />
+              <img
+                className="brand-logo"
+                src="/ministry-logo.png"
+                alt="Ministry of Interior logo"
+                onError={(event) => {
+                  event.currentTarget.src = "/mcctv-logo.jpg";
+                }}
+              />
             </div>
             <div className="brand-text">
-              <div className="brand-title brand-title-kh">ក្រសួងមហាផ្ទៃ</div>
+              <div className="brand-title brand-title-kh ministry-brand-title-kh">ក្រសួងមហាផ្ទៃ</div>
               <div className="brand-title-en brand-title-system">MINISTRY OF INTERIOR</div>
             </div>
-              
-            </div>
           </div>
-          <div className="brand-title-en brand-title-sub"></div>
+        </div>
+        <div className="brand-title-en brand-title-sub"></div>
       </header>
 
       <nav className="nav">
