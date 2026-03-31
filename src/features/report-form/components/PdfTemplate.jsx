@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { exportReportToPdfBlob, openPrintFallbackFromElement, saveBlobToFile } from "../utils/pdfExport";
-import { getRequestStatus, requestStatusLabelMap } from "../constants/requestStatus";
 
 function formatDate(value) {
   if (!value) {
@@ -60,15 +59,7 @@ export default function PdfTemplate({ report, onClose }) {
   const filledMembers = Array.isArray(members) ? members : [];
   const filledVehicles = Array.isArray(vehicles) ? vehicles : [];
   const filledEquipment = Array.isArray(equipmentItems) ? equipmentItems : [];
-  const requestStatus = getRequestStatus(report.approvalStatus);
-  const statusLabel = requestStatusLabelMap[requestStatus];
-  const approvalDisplayText = requestStatus === "pending" ? "-" : "ប្រព័ន្ធស្នើសុំរថយន្ត MCCTV";
-  const pdfTitleText =
-    requestStatus === "approved"
-      ? "បង្កាន់ដៃអនុម័តសំណើរថយន្តបេសកកម្ម"
-      : requestStatus === "rejected"
-        ? "បង្កាន់ដៃមិនអនុម័តសំណើរថយន្តបេសកកម្ម"
-        : "បង្កាន់ដៃសំណើរថយន្តបេសកកម្ម";
+  const pdfTitleText = "បង្កាន់ដៃសំណើរថយន្តបេសកកម្ម";
 
   async function handleSavePdfFile() {
     if (isSavingFile) {
@@ -129,11 +120,6 @@ export default function PdfTemplate({ report, onClose }) {
               <div className="pdf-request-time">បង្កើត៖ {formatDateTime(submittedAt)}</div>
             </div>
           </header>
-
-          <section className="pdf-status-row">
-            <div className="pdf-status-title">ស្ថានភាពសំណើបេសកកម្ម</div>
-            <div className={`pdf-status-badge ${requestStatus}`}>{statusLabel}</div>
-          </section>
 
           <section className="pdf-grid">
             <section className="pdf-panel pdf-panel-full">
@@ -271,25 +257,6 @@ export default function PdfTemplate({ report, onClose }) {
             <h3>សំណូមពរ និងតម្រូវការបន្ថែម</h3>
             <p className="pdf-request-note">{renderValue(formData.requestNote)}</p>
           </section>
-          <section className="pdf-panel pdf-panel-full">
-              <h3>ព័ត៌មានការអនុម័ត</h3>
-              <div className="pdf-row">
-                <div className="pdf-label">ស្ថានភាពពិនិត្យ</div>
-                <div className={`pdf-value pdf-value-status ${requestStatus}`}>{statusLabel}</div>
-              </div>
-              <div className="pdf-row">
-                <div className="pdf-label">ពិនិត្យដោយ</div>
-                <div className="pdf-value">{approvalDisplayText}</div>
-              </div>
-              <div className="pdf-row">
-                <div className="pdf-label">ពេលវេលាពិនិត្យ</div>
-                <div className="pdf-value">{formatDateTime(submittedAt)}</div>
-              </div>
-              <div className="pdf-row">
-                <div className="pdf-label">ហត្ថលេខា</div>
-                <div className="pdf-signature-line">______________________________</div>
-              </div>
-            </section>
           </section>
           <footer className="pdf-document-footer">
             <span>បង្កើតដោយប្រព័ន្ធ MCCTV Fleet</span>

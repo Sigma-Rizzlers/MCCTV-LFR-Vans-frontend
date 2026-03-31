@@ -12,32 +12,22 @@
 .step-1 .step-3-section { display: none; }
 .step-1 .step-4-section { display: none; }
 .step-1 .step-5-section { display: none; }
-.step-1 .step-6-section { display: none; }
 .step-2 .step-1-section { display: none; }
 .step-2 .step-3-section { display: none; }
 .step-2 .step-4-section { display: none; }
 .step-2 .step-5-section { display: none; }
-.step-2 .step-6-section { display: none; }
 .step-3 .step-1-section { display: none; }
 .step-3 .step-2-section { display: none; }
 .step-3 .step-4-section { display: none; }
 .step-3 .step-5-section { display: none; }
-.step-3 .step-6-section { display: none; }
 .step-4 .step-1-section { display: none; }
 .step-4 .step-2-section { display: none; }
 .step-4 .step-3-section { display: none; }
 .step-4 .step-5-section { display: none; }
-.step-4 .step-6-section { display: none; }
 .step-5 .step-1-section { display: none; }
 .step-5 .step-2-section { display: none; }
 .step-5 .step-3-section { display: none; }
 .step-5 .step-4-section { display: none; }
-.step-5 .step-6-section { display: none; }
-.step-6 .step-1-section { display: none; }
-.step-6 .step-2-section { display: none; }
-.step-6 .step-3-section { display: none; }
-.step-6 .step-4-section { display: none; }
-.step-6 .step-5-section { display: none; }
 .phase-grid { display: grid; grid-template-columns: 1fr; gap: 10px; margin: 10px 0 18px; }
 .form-step-bundle .bundle-card { margin-bottom: 0; }
 .phase-card { border: 2px solid rgba(242, 181, 42, 0.9); border-radius: 8px; padding: 14px; background: #fffaf2; }

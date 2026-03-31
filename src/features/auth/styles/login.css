@@ -53,11 +53,71 @@
 }
 
 .login-title {
-  margin: 0 0 26px;
+  margin: 0;
   text-align: center;
   font-family: var(--font-latin);
   font-size: 42px;
   color: #3d2402;
+}
+
+.login-subtitle {
+  margin: 12px 0 24px;
+  text-align: center;
+  color: #6b4b0c;
+  font-size: 17px;
+  line-height: 1.5;
+}
+
+.login-role-switch {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.login-role-chip {
+  border: 1px solid #dcc7a0;
+  border-radius: 16px;
+  padding: 10px 12px;
+  background: #fff7e8;
+  color: #6b4b0c;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, transform 0.2s ease;
+}
+
+.login-role-chip:hover {
+  transform: translateY(-1px);
+  border-color: #c9961e;
+}
+
+.login-role-chip.active {
+  border-color: #8f6307;
+  color: #fffaf0;
+  background: linear-gradient(135deg, #9b6b08 0%, #d59e1e 100%);
+}
+
+.login-role-note {
+  margin-bottom: 22px;
+  padding: 14px 16px;
+  border-radius: 18px;
+  background: #fff7e5;
+  border: 1px solid #ead7b1;
+  color: #6b4b0c;
+}
+
+.login-role-note strong {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 17px;
+  color: #4d2f02;
+}
+
+.login-role-note p {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.5;
 }
 
 .login-label {
@@ -177,6 +237,14 @@
 
   .login-title {
     font-size: 34px;
+  }
+
+  .login-subtitle {
+    font-size: 15px;
+  }
+
+  .login-role-switch {
+    grid-template-columns: 1fr;
   }
 
   .login-label {

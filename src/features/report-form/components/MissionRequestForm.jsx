@@ -7,6 +7,48 @@ const memberPhoneRegex = /^(?:0\d{8,9}|0\d{2}-\d{3}-\d{3,4})$/;
 const emptyMemberError = { name: "", phone: "", gender: "", role: "" };
 const emptyVehicleError = { brand: "", plate: "" };
 const emptyEquipmentError = { type: "", quantity: "" };
+const stepOneMissionFieldNames = ["missionTitle", "departureDate", "returnDate", "missionPlace", "mission"];
+const stepOneProfileFieldNames = ["name", "phone", "gender", "role"];
+const stepOneForceFieldNames = ["planCount", "actualCount"];
+const stepOnePersonalFieldNames = [...stepOneProfileFieldNames, ...stepOneForceFieldNames];
+const stepTwoFieldNames = [
+  "vehicleBrand",
+  "vehiclePlate",
+  "vehicleCount",
+  "vehiclePlanCount",
+  "vehicleActualCount",
+  "equipmentType",
+  "equipmentCount",
+  "equipmentPlanCount",
+  "equipmentActualCount"
+];
+const stepThreeFieldNames = ["departDate", "arriveDate", "routeDistance", "travelDuration"];
+const stepFourFieldNames = [
+  "meetingParticipantsCount",
+  "meetingParticipantsFemale",
+  "meetingStartTime",
+  "meetingEndTime",
+  "lodgingPlace",
+  "lodgingCount",
+  "lodgingFemale"
+];
+const mealSectionFieldNames = {
+  breakfast: ["breakfastPlace", "breakfastCount", "breakfastFemale", "breakfastPaymentUnit", "breakfastSponsor"],
+  lunch: ["lunchPlace", "lunchCount", "lunchFemale", "lunchPaymentUnit", "lunchSponsor"],
+  dinner: ["dinnerPlace", "dinnerCount", "dinnerFemale", "dinnerPaymentUnit", "dinnerSponsor"]
+};
+const stepSixFieldNames = [
+  "implementationPlanTotal",
+  "implementationPlanFemale",
+  "implementationActualTotal",
+  "implementationActualFemale",
+  "implementationDurationCheck",
+  "implementationDurationManage",
+  "returnDepartTime",
+  "returnArriveTime",
+  "returnSafetyStatus",
+  "returnIssue"
+];
 
 function createEmptyMember() {
   return {
@@ -116,6 +158,12 @@ function hasMemberError(errors) {
   return Object.values(errors).some(Boolean);
 }
 
+function clearInputValue(inputRef) {
+  if (inputRef.current) {
+    inputRef.current.value = "";
+  }
+}
+
 export default function MissionRequestForm({
   formData,
   supportFile,
@@ -136,7 +184,8 @@ export default function MissionRequestForm({
   onImplementationImageChange,
   phoneError,
   missionPanelContent = null,
-  hideMissionSection = false
+  hideMissionSection = false,
+  hidePersonalFields = false
 }) {
   const [activeStep, setActiveStep] = useState(1);
   const [activeMealSection, setActiveMealSection] = useState("breakfast");
@@ -208,6 +257,11 @@ export default function MissionRequestForm({
     }
   ];
   const activeMealConfig = mealSections.find((section) => section.id === activeMealSection) ?? mealSections[0];
+  const stepOneVisibleFieldNames = hidePersonalFields ? stepOneForceFieldNames : stepOnePersonalFieldNames;
+  const stepOneFieldNames = hideMissionSection
+    ? [...stepOneVisibleFieldNames, ...stepTwoFieldNames]
+    : [...stepOneMissionFieldNames, ...stepOneVisibleFieldNames, ...stepTwoFieldNames];
+  const activeMealFieldNames = mealSectionFieldNames[activeMealSection] ?? mealSectionFieldNames.breakfast;
 
   const activeMember = members[activeMemberIndex];
   const filledMemberCount = members.filter((member) => isMemberFilled(member)).length;
@@ -229,6 +283,10 @@ export default function MissionRequestForm({
   }
 
   function openMemberModal() {
+    if (hidePersonalFields) {
+      return;
+    }
+
     const firstIncompleteIndex = members.findIndex((member) => !isMemberFilled(member));
     setActiveMemberIndex(firstIncompleteIndex === -1 ? MEMBER_LIMIT - 1 : firstIncompleteIndex);
     setMemberErrors(emptyMemberError);
@@ -407,47 +465,64 @@ export default function MissionRequestForm({
       return next;
     });
 
-    if (memberSupportFileInputRef.current) {
-      memberSupportFileInputRef.current.value = "";
-    }
+    clearInputValue(memberSupportFileInputRef);
   }
 
-  function handleFormReset(event) {
-    onReset(event);
+  function resetMemberState() {
     setMembers(createMemberList());
     setActiveMemberIndex(0);
     setMemberErrors(emptyMemberError);
     setIsMemberModalOpen(false);
+    clearInputValue(memberSupportFileInputRef);
+  }
+
+  function resetVehicleState() {
     setVehicles(createVehicleList());
     setActiveVehicleIndex(0);
     setVehicleErrors(emptyVehicleError);
     setIsVehicleModalOpen(false);
+  }
+
+  function resetEquipmentState() {
     setEquipmentItems(createEquipmentList());
     setActiveEquipmentIndex(0);
     setEquipmentErrors(emptyEquipmentError);
     setIsEquipmentModalOpen(false);
-    setActiveStep(1);
-    setActiveMealSection("breakfast");
-    setMealStepError("");
-    onLodgingImageChange(null);
-    if (lodgingImageInputRef.current) {
-      lodgingImageInputRef.current.value = "";
+  }
+
+  function handleCurrentStepReset() {
+    if (activeStep === 1) {
+      onReset(stepOneFieldNames, { clearPhoneError: true, resetStatus: true });
+      if (!hidePersonalFields) {
+        handleClearSupportFile();
+      }
+      resetMemberState();
+      resetVehicleState();
+      resetEquipmentState();
+      return;
     }
-    onBreakfastImageChange(null);
-    if (breakfastImageInputRef.current) {
-      breakfastImageInputRef.current.value = "";
+
+    if (activeStep === 2) {
+      onReset(stepThreeFieldNames, { resetStatus: true });
+      return;
     }
-    onLunchImageChange(null);
-    if (lunchImageInputRef.current) {
-      lunchImageInputRef.current.value = "";
+
+    if (activeStep === 3) {
+      onReset(stepFourFieldNames, { resetStatus: true });
+      handleClearLodgingImage();
+      return;
     }
-    onDinnerImageChange(null);
-    if (dinnerImageInputRef.current) {
-      dinnerImageInputRef.current.value = "";
+
+    if (activeStep === 4) {
+      onReset(activeMealFieldNames, { resetStatus: true });
+      activeMealConfig.onClearImage();
+      setMealStepError("");
+      return;
     }
-    onImplementationImageChange(null);
-    if (implementationImageInputRef.current) {
-      implementationImageInputRef.current.value = "";
+
+    if (activeStep === 5) {
+      onReset(stepSixFieldNames, { resetStatus: true });
+      handleClearImplementationImage();
     }
   }
 
@@ -470,7 +545,7 @@ export default function MissionRequestForm({
     }
 
     setMealStepError("");
-    setActiveStep(6);
+    setActiveStep(5);
   }
 
   function handleFormSubmit(event) {
@@ -487,14 +562,13 @@ export default function MissionRequestForm({
           </div>
         </div>
 
-        <form id="missionForm" onSubmit={handleFormSubmit} onReset={handleFormReset}>
+        <form id="missionForm" onSubmit={handleFormSubmit}>
           <div className="step-indicator" role="status" aria-live="polite">
             <span className={activeStep === 1 ? "step-node active" : "step-node"}>1</span>
             <span className={activeStep === 2 ? "step-node active" : "step-node"}>2</span>
             <span className={activeStep === 3 ? "step-node active" : "step-node"}>3</span>
             <span className={activeStep === 4 ? "step-node active" : "step-node"}>4</span>
             <span className={activeStep === 5 ? "step-node active" : "step-node"}>5</span>
-            <span className={activeStep === 6 ? "step-node active" : "step-node"}>6</span>
           </div>
           <div className={`phase-grid step-${activeStep}`}>
             {activeStep === 1 && missionPanelContent ? <div className="step-1-section form-step-bundle">{missionPanelContent}</div> : null}
@@ -552,91 +626,101 @@ export default function MissionRequestForm({
 
             <section className="phase-card phase-personal step-1-section">
               <div className="phase-header">
-                <h3>ព័ត៌មានផ្ទាល់ខ្លួន</h3>
-                <p>សូមបំពេញព័ត៌មានអ្នកស្នើសុំ និងឯកសារភ្ជាប់។</p>
+                <h3>{hidePersonalFields ? "ចំនួនកងកំលាំង" : "ព័ត៌មានផ្ទាល់ខ្លួន"}</h3>
+                <p>
+                  {hidePersonalFields
+                    ? "សូមបំពេញចំនួនកងកំលាំង និងសមាជិកដែលពាក់ព័ន្ធ។"
+                    : "សូមបំពេញព័ត៌មានអ្នកស្នើសុំ និងឯកសារភ្ជាប់។"}
+                </p>
               </div>
-              <div className="field-grid">
-                <label className="field full">
-                  <span>គោត្តនាម</span>
-                  <input
-                    type="text"
-                    name="name"
-                    placeholder="បញ្ចូលឈ្មោះពេញ"
-                    value={formData.name}
-                    onChange={onChange}
-                    required
-                  />
-                </label>
-                <label className="field">
-                  <span>លេខទូរស័ព្ទ</span>
-                  <input
-                    type="tel"
-                    name="phone"
-                    placeholder="e.g. 012-345-678"
-                    value={formData.phone}
-                    onChange={onChange}
-                    autoComplete="tel"
-                    inputMode="numeric"
-                    aria-invalid={phoneError ? "true" : "false"}
-                    aria-describedby={phoneError ? "phoneError" : undefined}
-                    className={phoneError ? "input-error" : ""}
-                    required
-                  />
-                  {phoneError ? (
-                    <p className="field-error" id="phoneError" role="alert">
-                      {phoneError}
-                    </p>
-                  ) : null}
-                </label>
-                <label className="field">
-                  <span>ភេទ</span>
-                  <select name="gender" value={formData.gender} onChange={onChange} required>
-                    <option value="" disabled>
-                      ជ្រើសរើសភេទ
-                    </option>
-                    <option value="male">ប្រុស</option>
-                    <option value="female">ស្រី</option>
-                  </select>
-                </label>
-                <label className="field">
-                  <span>តួនាទី</span>
-                  <input
-                    type="text"
-                    name="role"
-                    placeholder="e.g. Team Lead / Member"
-                    value={formData.role}
-                    onChange={onChange}
-                    required
-                  />
-                </label>
-              </div>
-              <div className="upload-block">
-                <div className="upload-label">ឯកសារភ្ជាប់</div>
-                <label className="upload-area" htmlFor="supportFile">
-                  <span className="upload-icon" aria-hidden="true">
-                    ↑
-                  </span>
-                  <span className="upload-text">បញ្ជូលរូបភាព</span>
-                  <input
-                    id="supportFile"
-                    ref={supportFileInputRef}
-                    type="file"
-                    accept=".pdf,.jpg,.jpeg,.png"
-                    onChange={(event) => onSupportFileChange(event.target.files?.[0] ?? null)}
-                  />
-                </label>
-                {supportFile ? (
-                  <div className="upload-file-actions">
-                    <p className="status">{supportFile.name}</p>
-                    <button className="ghost upload-remove" type="button" onClick={handleClearSupportFile}>
-                      លុបរូបភាព
-                    </button>
+              {!hidePersonalFields ? (
+                <>
+                  <div className="field-grid">
+                    <label className="field full">
+                      <span>គោត្តនាម</span>
+                      <input
+                        type="text"
+                        name="name"
+                        placeholder="បញ្ចូលឈ្មោះពេញ"
+                        value={formData.name}
+                        onChange={onChange}
+                        required
+                      />
+                    </label>
+                    <label className="field">
+                      <span>លេខទូរស័ព្ទ</span>
+                      <input
+                        type="tel"
+                        name="phone"
+                        placeholder="e.g. 012-345-678"
+                        value={formData.phone}
+                        onChange={onChange}
+                        autoComplete="tel"
+                        inputMode="numeric"
+                        aria-invalid={phoneError ? "true" : "false"}
+                        aria-describedby={phoneError ? "phoneError" : undefined}
+                        className={phoneError ? "input-error" : ""}
+                        required
+                      />
+                      {phoneError ? (
+                        <p className="field-error" id="phoneError" role="alert">
+                          {phoneError}
+                        </p>
+                      ) : null}
+                    </label>
+                    <label className="field">
+                      <span>ភេទ</span>
+                      <select name="gender" value={formData.gender} onChange={onChange} required>
+                        <option value="" disabled>
+                          ជ្រើសរើសភេទ
+                        </option>
+                        <option value="male">ប្រុស</option>
+                        <option value="female">ស្រី</option>
+                      </select>
+                    </label>
+                    <label className="field">
+                      <span>តួនាទី</span>
+                      <input
+                        type="text"
+                        name="role"
+                        placeholder="e.g. Team Lead / Member"
+                        value={formData.role}
+                        onChange={onChange}
+                        required
+                      />
+                    </label>
                   </div>
-                ) : null}
-              </div>
-              <button className="member-add" type="button" onClick={openMemberModal}>
-                បន្ថែមសមាជិក
-              </button>
+                  <div className="upload-block">
+                    <div className="upload-label">ឯកសារភ្ជាប់</div>
+                    <label className="upload-area" htmlFor="supportFile">
+                      <span className="upload-icon" aria-hidden="true">
+                        ↑
+                      </span>
+                      <span className="upload-text">បញ្ជូលរូបភាព</span>
+                      <input
+                        id="supportFile"
+                        ref={supportFileInputRef}
+                        type="file"
+                        accept=".pdf,.jpg,.jpeg,.png"
+                        onChange={(event) => onSupportFileChange(event.target.files?.[0] ?? null)}
+                      />
+                    </label>
+                    {supportFile ? (
+                      <div className="upload-file-actions">
+                        <p className="status">{supportFile.name}</p>
+                        <button className="ghost upload-remove" type="button" onClick={handleClearSupportFile}>
+                          លុបរូបភាព
+                        </button>
+                      </div>
+                    ) : null}
+                  </div>
+                </>
+              ) : null}
+              {!hidePersonalFields ? (
+                <button className="member-add" type="button" onClick={openMemberModal}>
+                  បន្ថែមសមាជិក
+                </button>
+              ) : null}
               <div className="field-grid member-extra-grid">
                 <label className="field">
                   <span>ចំនួនផែនការ</span>
@@ -663,12 +747,14 @@ export default function MissionRequestForm({
                   />
                 </label>
               </div>
-              <p className="status member-status">
-                សមាជិកដែលបានបំពេញរួច៖ {filledMemberCount}/{MEMBER_LIMIT}
-              </p>
+              {!hidePersonalFields ? (
+                <p className="status member-status">
+                  សមាជិកដែលបានបំពេញរួច៖ {filledMemberCount}/{MEMBER_LIMIT}
+                </p>
+              ) : null}
             </section>
 
-	            <section className="phase-card step-2-section">
+	            <section className="phase-card step-1-section">
 	              <div className="phase-header">
 	                <h3>មធ្យោបាយបច្ចេកទេស និងធ្វើដំណើរ</h3>
 	                <p>សូមបំពេញព័ត៌មានរថយន្តសម្រាប់បេសកកម្មនេះ។</p>
@@ -756,7 +842,7 @@ export default function MissionRequestForm({
                 </label>
               </div>
             </section>
-            <section className="phase-card step-2-section">
+            <section className="phase-card step-1-section">
               <div className="phase-header">
                 <h3>សម្ភារៈបច្ចេកទេស</h3>
                 <p>សូមបំពេញព័ត៌មានសម្ភារៈដែលត្រូវប្រើក្នុងបេសកកម្ម។</p>
@@ -847,7 +933,7 @@ export default function MissionRequestForm({
                 </div>
               </div>
             </section>
-            <section className="phase-card phase-request step-3-section">
+            <section className="phase-card phase-request step-2-section">
               <div className="phase-header">
                 <h3>ពេលវេលាចេញដំណើរ និងទៅដល់</h3>
                 <p>សូមបំពេញពេលវេលា និងព័ត៌មានចម្ងាយសម្រាប់ការធ្វើដំណើរ។</p>
@@ -897,7 +983,7 @@ export default function MissionRequestForm({
                 </label>
               </div>
             </section>
-            <section className="phase-card step-4-section">
+            <section className="phase-card step-3-section">
               <div className="phase-header">
                 <h3>ពិនិត្យគោលដៅ និងប្រជុំស្តាប់ផែនការ</h3>
                 <p>សូមបំពេញព័ត៌មានអ្នកចូលរួម និងរយៈពេលប្រជុំ។</p>
@@ -949,7 +1035,7 @@ export default function MissionRequestForm({
                 </label>
               </div>
             </section>
-            <section className="phase-card step-4-section">
+            <section className="phase-card step-3-section">
               <div className="phase-header">
                 <h3>ការស្នាក់នៅ</h3>
                 <p>សូមបំពេញទីតាំងស្នាក់នៅ រូបភាព និងចំនួនអ្នកស្នាក់នៅ។</p>
@@ -1018,7 +1104,7 @@ export default function MissionRequestForm({
                 </label>
               </div>
             </section>
-            <section className="phase-card step-5-section meal-phase-card">
+            <section className="phase-card step-4-section meal-phase-card">
               <div className="phase-header">
                 <h3>ការបរិភោគអាហារ</h3>
                 <p>ជ្រើសរើសវេនបរិភោគអាហារ ហើយបំពេញទីតាំងបរិភោគ រូបភាព និងចំនួនអ្នកបរិភោគ។</p>
@@ -1132,7 +1218,7 @@ export default function MissionRequestForm({
                 </p>
               ) : null}
             </section>
-            <section className="phase-card step-6-section">
+            <section className="phase-card step-5-section">
               <div className="phase-header">
                 <h3>ការអនុវត្តន៍ជាក់ស្តែង</h3>
                 <p>សូមបំពេញផែនការ ជាក់ស្តែង និងរយៈពេលនៃការអនុវត្តន៍។</p>
@@ -1234,7 +1320,7 @@ export default function MissionRequestForm({
                 ) : null}
               </div>
             </section>
-            <section className="phase-card step-6-section">
+            <section className="phase-card step-5-section">
               <div className="phase-header">
                 <h3>ពេលវេលាចេញដំណើរត្រឡប់មកវិញ</h3>
                 <p>សូមបំពេញពេលវេលា និងស្តានភាពសុវត្ថិភាព។</p>
@@ -1293,7 +1379,7 @@ export default function MissionRequestForm({
                 <button className="primary" type="button" onClick={() => setActiveStep(2)}>
                   បន្ទាប់
                 </button>
-                <button className="ghost" type="reset">
+                <button className="ghost" type="button" onClick={handleCurrentStepReset}>
                   សម្អាត
                 </button>
               </>
@@ -1306,7 +1392,7 @@ export default function MissionRequestForm({
                 <button className="primary" type="button" onClick={() => setActiveStep(3)}>
                   បន្ទាប់
                 </button>
-                <button className="ghost" type="reset">
+                <button className="ghost" type="button" onClick={handleCurrentStepReset}>
                   សម្អាត
                 </button>
               </>
@@ -1319,7 +1405,7 @@ export default function MissionRequestForm({
                 <button className="primary" type="button" onClick={() => setActiveStep(4)}>
                   បន្ទាប់
                 </button>
-                <button className="ghost" type="reset">
+                <button className="ghost" type="button" onClick={handleCurrentStepReset}>
                   សម្អាត
                 </button>
               </>
@@ -1329,10 +1415,10 @@ export default function MissionRequestForm({
                 <button className="ghost" type="button" onClick={() => setActiveStep(3)}>
                   ត្រឡប់
                 </button>
-                <button className="primary" type="button" onClick={() => setActiveStep(5)}>
+                <button className="primary" type="button" onClick={showNextStepFromMeals}>
                   បន្ទាប់
                 </button>
-                <button className="ghost" type="reset">
+                <button className="ghost" type="button" onClick={handleCurrentStepReset}>
                   សម្អាត
                 </button>
               </>
@@ -1342,23 +1428,10 @@ export default function MissionRequestForm({
                 <button className="ghost" type="button" onClick={() => setActiveStep(4)}>
                   ត្រឡប់
                 </button>
-                <button className="primary" type="button" onClick={showNextStepFromMeals}>
-                  បន្ទាប់
-                </button>
-                <button className="ghost" type="reset">
-                  សម្អាត
-                </button>
-              </>
-            ) : null}
-            {activeStep === 6 ? (
-              <>
-                <button className="ghost" type="button" onClick={() => setActiveStep(5)}>
-                  ត្រឡប់
-                </button>
                 <button className="primary" type="submit">
                   បញ្ជូន និងបង្កើត PDF
                 </button>
-                <button className="ghost" type="reset">
+                <button className="ghost" type="button" onClick={handleCurrentStepReset}>
                   សម្អាត
                 </button>
                 <div className="status" id="statusText">
@@ -1370,7 +1443,7 @@ export default function MissionRequestForm({
         </form>
       </div>
 
-      {isMemberModalOpen ? (
+      {!hidePersonalFields && isMemberModalOpen ? (
         <div className="member-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="memberModalTitle">
           <section className="member-modal-card">
             <div className="member-modal-header">

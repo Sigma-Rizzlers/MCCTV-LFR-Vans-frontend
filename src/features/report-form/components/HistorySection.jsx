@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from "react";
-import { getRequestStatus, requestStatusLabelMap, summarizeRequestStatuses } from "../constants/requestStatus";
 
 function formatDateTime(value) {
   if (!value) {
@@ -44,14 +43,13 @@ export default function HistorySection({ isActive, reports = [], onClearHistory,
     () => reports.find((report) => report.requestId === selectedRequestId) ?? null,
     [reports, selectedRequestId]
   );
-  const summary = useMemo(() => summarizeRequestStatuses(reports), [reports]);
 
   return (
     <section id="history" className={`page-section ${isActive ? "active" : ""}`}>
       <div className="section-header">
         <div>
           <h2>ប្រវត្តិសំណើ</h2>
-          <p>បញ្ជីសំណើត្រូវបានរក្សាទុកក្នុងឧបករណ៍នេះ ដើម្បីតាមដាន និងបោះពុម្ព។</p>
+          <p>បញ្ជីសំណើដែលបានរក្សាទុកក្នុងប្រព័ន្ធ ដើម្បីតាមដាន និងបើកឯកសារ PDF។</p>
         </div>
         <button className="ghost" type="button" onClick={onClearHistory} disabled={!reports.length}>
           លុបប្រវត្តិ
@@ -60,34 +58,21 @@ export default function HistorySection({ isActive, reports = [], onClearHistory,
 
       <div className="summary-cards">
         <div className="summary-card">
-          <div className="summary-value">{summary.total}</div>
+          <div className="summary-value">{reports.length}</div>
           <div className="summary-label">សំណើសរុប</div>
-        </div>
-        <div className="summary-card">
-          <div className="summary-value">{summary.pending}</div>
-          <div className="summary-label">កំពុងរង់ចាំ</div>
-        </div>
-        <div className="summary-card">
-          <div className="summary-value">{summary.approved}</div>
-          <div className="summary-label">អនុម័តរួច</div>
-        </div>
-        <div className="summary-card">
-          <div className="summary-value">{summary.rejected}</div>
-          <div className="summary-label">មិនអនុម័ត</div>
         </div>
       </div>
 
       <div className="history-grid">
         <div className="history-card">
           <div className="list-header">
-            <h3>បញ្ជីសំណើថ្មីៗ</h3>
+            <h3>បញ្ជីសំណើ</h3>
             <span className="pill muted">{reports.length} កំណត់ត្រា</span>
           </div>
 
           {reports.length ? (
             <div className="history-list">
               {reports.map((report) => {
-                const statusValue = getRequestStatus(report.approvalStatus);
                 const isSelected = report.requestId === selectedRequestId;
                 return (
                   <button
@@ -98,7 +83,6 @@ export default function HistorySection({ isActive, reports = [], onClearHistory,
                   >
                     <div className="history-item-top">
                       <strong>{report.requestId}</strong>
-                      <span className={`tag ${statusValue}`}>{requestStatusLabelMap[statusValue]}</span>
                     </div>
                     <div className="history-item-title">{renderValue(report.formData?.missionTitle)}</div>
                     <div className="history-item-meta">
@@ -109,7 +93,7 @@ export default function HistorySection({ isActive, reports = [], onClearHistory,
               })}
             </div>
           ) : (
-            <div className="empty">មិនទាន់មានសំណើឡើយ។ សូមបំពេញសំណើថ្មី។</div>
+            <div className="empty">មិនទាន់មានសំណើនៅឡើយទេ។ សូមបំពេញសំណើថ្មី។</div>
           )}
         </div>
 
@@ -125,10 +109,6 @@ export default function HistorySection({ isActive, reports = [], onClearHistory,
                 <div className="detail-row">
                   <span>ពេលបញ្ជូន</span>
                   <strong>{formatDateTime(selectedReport.submittedAt)}</strong>
-                </div>
-                <div className="detail-row">
-                  <span>ស្ថានភាព</span>
-                  <strong>{requestStatusLabelMap[getRequestStatus(selectedReport.approvalStatus)]}</strong>
                 </div>
                 <div className="detail-row">
                   <span>ឈ្មោះបេសកកម្ម</span>

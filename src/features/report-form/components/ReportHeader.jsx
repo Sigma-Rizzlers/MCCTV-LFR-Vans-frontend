@@ -5,10 +5,21 @@ export default function ReportHeader({
   authRole = "guest",
   onAdminLogin,
   onAdminLogout,
-  onOpenAdminDashboard
+  onOpenAdminDashboard,
+  onOpenProfile
 }) {
-  const isAuthenticated = authRole === "admin" || authRole === "super_admin";
+  const isAuthenticated = authRole !== "guest";
+  const isPrivilegedUser = authRole === "admin" || authRole === "super_admin";
+  const isStandardUser = authRole === "user";
   const dashboardLabel = authRole === "super_admin" ? "Super Admin Dashboard" : "Admin Dashboard";
+  const roleLabel =
+    authRole === "super_admin"
+      ? "Super Admin"
+      : authRole === "admin"
+        ? "Admin"
+        : authRole === "user"
+          ? ""
+          : "Guest";
 
   return (
     <>
@@ -49,22 +60,34 @@ export default function ReportHeader({
           </a>
         ))}
         <div className="admin-actions">
+          {isPrivilegedUser ? (
+            <button
+              type="button"
+              className="admin-access-btn admin"
+              onClick={onOpenAdminDashboard}
+            >
+              {dashboardLabel}
+            </button>
+          ) : null}
+          {isStandardUser && onOpenProfile ? (
+            <button type="button" className="admin-access-btn admin" onClick={onOpenProfile}>
+              កែប្រែព័ត៌មាន
+            </button>
+          ) : null}
           {isAuthenticated ? (
             <>
+              {roleLabel ? <span className="admin-role-badge">{roleLabel}</span> : null}
               <button
                 type="button"
                 className="admin-access-btn admin"
-                onClick={onOpenAdminDashboard}
+                onClick={onAdminLogout}
               >
-                {dashboardLabel}
-              </button>
-              <button type="button" className="admin-access-btn admin" onClick={onAdminLogout}>
-                Admin Logout
+                ចាកចេញ
               </button>
             </>
           ) : (
             <button type="button" className="admin-access-btn" onClick={onAdminLogin}>
-              Admin Login
+              ចូលប្រើ
             </button>
           )}
         </div>

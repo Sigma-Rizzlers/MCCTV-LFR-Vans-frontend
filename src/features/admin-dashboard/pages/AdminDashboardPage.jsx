@@ -1,23 +1,30 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import "../../report-form/styles/layout.css";
 import "../../report-form/styles/request.css";
 import "../../report-form/styles/form.css";
 import "../../report-form/styles/responsive.css";
 import "../../report-form/styles/pdf.css";
 import "../styles/dashboard.css";
-import { loadAdminMissionPanel, saveAdminMissionPanel } from "../../../utils/adminMissionPanel";
+import { loadAdminMissionPanel, sanitizeAdminMissionPanel, saveAdminMissionPanel } from "../../../utils/adminMissionPanel";
+import {
+  clearAdminMissionFile,
+  createAdminMissionFileKey,
+  saveAdminMissionFile
+} from "../../../utils/adminMissionFileStore";
 import PdfTemplate from "../../report-form/components/PdfTemplate";
-import { getRequestStatus, requestStatusLabelMap } from "../../report-form/constants/requestStatus";
 
 const historyStorageKey = "mcctv:mission-request-history";
 const fallbackText = "-";
 const initialMissionData = {
   missionTitle: "",
-  departureDate: "",
-  returnDate: "",
   missionPlace: "",
+  missionTime: "",
   participantCount: "",
-  mission: ""
+  missionVia: "",
+  requestPlanFileName: "",
+  requestPlanFileDataUrl: "",
+  requestPlanFileKey: "",
+  requestPlanFileType: ""
 };
 
 function toText(value) {
@@ -27,8 +34,8 @@ function toText(value) {
 function getParticipantCount(report) {
   const memberCount = Array.isArray(report?.members)
     ? report.members.filter(
-      (member) => toText(member?.name) || toText(member?.phone) || toText(member?.role)
-    ).length
+        (member) => toText(member?.name) || toText(member?.phone) || toText(member?.role)
+      ).length
     : 0;
 
   if (memberCount > 0) {
@@ -52,39 +59,14 @@ function normalizeDashboardRow(report) {
   const program = toText(formData.missionTitle) || toText(formData.mission) || fallbackText;
   const location = toText(formData.missionPlace) || fallbackText;
   const via = toText(formData.role) || toText(formData.name) || fallbackText;
-  const approvalStatus = getRequestStatus(report.approvalStatus);
 
   return {
     requestId,
     program,
     location,
     participantCount: getParticipantCount(report),
-    via,
-    approvalStatusLabel: requestStatusLabelMap[approvalStatus]
+    via
   };
-}
-
-function loadDashboardRows() {
-  if (typeof window === "undefined") {
-    return [];
-  }
-
-  try {
-    const rawValue = window.localStorage.getItem(historyStorageKey);
-    if (!rawValue) {
-      return [];
-    }
-
-    const parsed = JSON.parse(rawValue);
-    if (!Array.isArray(parsed)) {
-      return [];
-    }
-
-    return parsed.map(normalizeDashboardRow).filter(Boolean);
-  } catch (error) {
-    console.error(error);
-    return [];
-  }
 }
 
 function loadDashboardReports() {
@@ -128,6 +110,7 @@ export default function AdminDashboardPage({ onBackToMain, onLogout }) {
   const [missionData, setMissionData] = useState(initialMissionData);
   const [missionStatusText, setMissionStatusText] = useState("");
   const [selectedReport, setSelectedReport] = useState(null);
+  const requestPlanFileInputRef = useRef(null);
   const dashboardReports = useMemo(() => loadDashboardReports(), []);
   const dashboardRows = useMemo(() => dashboardReports.map(normalizeDashboardRow).filter(Boolean), [dashboardReports]);
   const totalParticipants = dashboardRows.reduce((sum, row) => sum + row.participantCount, 0);
@@ -148,20 +131,104 @@ export default function AdminDashboardPage({ onBackToMain, onLogout }) {
     setMissionStatusText("");
   }
 
-  function handleCreateMissionPanel() {
-    const savedPanel = saveAdminMissionPanel(missionData);
-    if (!savedPanel) {
-      setMissionStatusText("Please fill mission information before creating.");
+  async function handleRequestPlanFileChange(file) {
+    if (!file) {
+      await handleClearRequestPlanFile();
       return;
     }
 
-    setMissionStatusText("Created successfully. Main page mission panel is updated.");
+    try {
+      const savedFile = await saveAdminMissionFile(file, createAdminMissionFileKey());
+      setMissionData((current) => ({
+        ...current,
+        requestPlanFileName: savedFile?.name ?? "",
+        requestPlanFileDataUrl: "",
+        requestPlanFileKey: savedFile?.key ?? "",
+        requestPlanFileType: savedFile?.type ?? ""
+      }));
+      setMissionStatusText("");
+    } catch (error) {
+      console.error(error);
+      setMissionStatusText("មិនអាចរក្សាទុកឯកសារនេះបានទេ។ សូមសាកល្បងម្ដងទៀត។");
+      if (requestPlanFileInputRef.current) {
+        requestPlanFileInputRef.current.value = "";
+      }
+    }
   }
 
-  function handleClearMissionPanel() {
+  async function handleClearRequestPlanFile() {
+    const savedMissionPanel = loadAdminMissionPanel();
+    const savedFileKey = savedMissionPanel?.requestPlanFileKey || "";
+    const currentFileKey = missionData.requestPlanFileKey;
+
+    if (currentFileKey && currentFileKey !== savedFileKey) {
+      try {
+        await clearAdminMissionFile(currentFileKey);
+      } catch (error) {
+        console.error(error);
+      }
+    }
+
+    setMissionData((current) => ({
+      ...current,
+      requestPlanFileName: "",
+      requestPlanFileDataUrl: "",
+      requestPlanFileKey: "",
+      requestPlanFileType: ""
+    }));
+    setMissionStatusText("");
+
+    if (requestPlanFileInputRef.current) {
+      requestPlanFileInputRef.current.value = "";
+    }
+  }
+
+  async function handleCreateMissionPanel() {
+    const previousSavedPanel = loadAdminMissionPanel();
+    const savedPanel = saveAdminMissionPanel(missionData);
+    if (!savedPanel) {
+      setMissionStatusText(
+        sanitizeAdminMissionPanel(missionData)
+          ? "មិនអាចរក្សាទុកឯកសារនេះបានទេ។ សូមសាកល្បងឯកសារដែលមានទំហំតូចជាងនេះ។"
+          : "សូមបំពេញព័ត៌មានបេសកកម្មមុនពេលបង្កើត។"
+      );
+      return;
+    }
+
+    const previousFileKey = previousSavedPanel?.requestPlanFileKey || "";
+    const nextFileKey = savedPanel.requestPlanFileKey || "";
+    if (previousFileKey && previousFileKey !== nextFileKey) {
+      try {
+        await clearAdminMissionFile(previousFileKey);
+      } catch (error) {
+        console.error(error);
+      }
+    }
+
+    setMissionStatusText("បានបង្កើតដោយជោគជ័យ។ ព័ត៌មានបេសកកម្មនៅទំព័រដើមត្រូវបានអាប់ដេត។");
+  }
+
+  async function handleClearMissionPanel() {
+    const savedMissionPanel = loadAdminMissionPanel();
+    const fileKeys = new Set(
+      [savedMissionPanel?.requestPlanFileKey, missionData.requestPlanFileKey].filter(Boolean)
+    );
+
     setMissionData(initialMissionData);
     saveAdminMissionPanel(null);
-    setMissionStatusText("Cleared. Main page reverted to default vehicle package info.");
+
+    for (const fileKey of fileKeys) {
+      try {
+        await clearAdminMissionFile(fileKey);
+      } catch (error) {
+        console.error(error);
+      }
+    }
+
+    if (requestPlanFileInputRef.current) {
+      requestPlanFileInputRef.current.value = "";
+    }
+    setMissionStatusText("បានសម្អាត។ ព័ត៌មាននៅទំព័រដើមត្រឡប់ទៅលំនាំដើមវិញ។");
   }
 
   return (
@@ -174,84 +241,49 @@ export default function AdminDashboardPage({ onBackToMain, onLogout }) {
             </div>
             <div className="brand-text">
               <div className="brand-title brand-title-kh">ផ្ទាំងគ្រប់គ្រងអ្នកគ្រប់គ្រង</div>
-              <div className="brand-title-en brand-title-system">Ministry of Interior Administrative Dashboard</div>
+              <div className="brand-title-en brand-title-system">ផ្ទាំងគ្រប់គ្រងរដ្ឋបាលក្រសួងមហាផ្ទៃ</div>
             </div>
           </div>
-          <div className="brand-title-en brand-title-sub">Mission monitoring and request overview</div>
+          <div className="brand-title-en brand-title-sub">តាមដានបេសកកម្ម និងទិន្នន័យសំណើ</div>
         </div>
       </header>
 
       <nav className="nav admin-dashboard-nav">
         <a href="#overview" className="active">
-          Dashboard Overview
+          ទិដ្ឋភាពទូទៅ
         </a>
-        <a href="#mission-panel">Mission Panel</a>
-        <a href="#request-summary">Request Summary</a>
         <div className="admin-actions admin-dashboard-actions-bar">
-          <button type="button" className="admin-access-btn admin" onClick={onBackToMain}>
-            Main Page
-          </button>
+          {onBackToMain ? (
+            <button type="button" className="admin-access-btn admin" onClick={onBackToMain}>
+              ទំព័រដើម
+            </button>
+          ) : null}
           <button type="button" className="admin-access-btn admin" onClick={onLogout}>
-            Admin Logout
+            ចាកចេញ
           </button>
         </div>
       </nav>
 
       <main className="page-main admin-dashboard-main">
-        <section id="overview" className="hero admin-dashboard-hero">
-          <div className="hero-content">
-            <div className="kicker">Admin Dashboard</div>
-            <h1>Same visual language as the main page, focused on admin work.</h1>
-            <p>
-              Review mission information, keep an eye on submitted requests, and work inside the same MCCTV
-              design system instead of a disconnected layout.
-            </p>
-            <div className="badge-row">
-              <span className="badge">Mission Control</span>
-              <span className="badge ghost">{dashboardRows.length} saved requests</span>
-            </div>
-          </div>
-
-          <div className="hero-stats">
-            <div className="stat-card">
-              <div className="stat-value">{dashboardRows.length}</div>
-              <div className="stat-label">Total Requests</div>
-            </div>
-            <div className="stat-card">
-              <div className="stat-value">{totalParticipants}</div>
-              <div className="stat-label">Participants Counted</div>
-            </div>
-            <div className="stat-card">
-              <div className="stat-value">{totalLocations}</div>
-              <div className="stat-label">Unique Locations</div>
-            </div>
-          </div>
-        </section>
-
         <section id="mission-panel" className="bundle">
           <div className="bundle-card admin-dashboard-card">
-            <div className="bundle-header admin-dashboard-card-header">
-              <div>
-                <h2>ព័ត៌មានបេសកកម្ម</h2>
-                <p>សូមបំពេញព័ត៌មានបេសកកម្មឲ្យបានច្បាស់លាស់។</p>
-              </div>
-              <span className="pill">Admin Only</span>
-            </div>
-
             <section className="phase-card phase-mission admin-mission-card">
+              <div className="phase-header admin-mission-main-header">
+                <h3>ពត៌មានកម្មវិធី</h3>
+              </div>
               <div className="field-grid">
                 <label className="field full">
-                  <span>បេសកកម្ម</span>
+                  <span>កម្មវិធី</span>
                   <input
                     type="text"
                     name="missionTitle"
-                    placeholder="បញ្ចូលឈ្មោះបេសកកម្ម"
+                    placeholder="បញ្ចូលឈ្មោះកម្មវិធី"
                     value={missionData.missionTitle}
                     onChange={handleMissionChange}
                   />
                 </label>
-                <label className="field full">
-                  <span>ទីកន្លែងបេសកកម្ម</span>
+                <label className="field">
+                  <span>ទីតាំង</span>
                   <input
                     type="text"
                     name="missionPlace"
@@ -260,8 +292,18 @@ export default function AdminDashboardPage({ onBackToMain, onLogout }) {
                     onChange={handleMissionChange}
                   />
                 </label>
-                <label className="field full">
-                  <span>ចំនួនអ្នកចូលរួម</span>
+                <label className="field">
+                  <span>ពេលវេលា</span>
+                  <input
+                    type="text"
+                    name="missionTime"
+                    placeholder="ឧ. 08:00 ព្រឹក - 11:30 ថ្ងៃទី 31/03/2026"
+                    value={missionData.missionTime}
+                    onChange={handleMissionChange}
+                  />
+                </label>
+                <label className="field">
+                  <span>ទំហអ្នកចូលរួម</span>
                   <input
                     type="number"
                     name="participantCount"
@@ -270,27 +312,73 @@ export default function AdminDashboardPage({ onBackToMain, onLogout }) {
                     onChange={handleMissionChange}
                   />
                 </label>
-                <label className="field full">
+                <label className="field">
                   <span>តាមរយៈ</span>
-                  <textarea
-                    name="mission"
-                    rows="4"
-                    placeholder="តាមរយៈ"
-                    value={missionData.mission}
+                  <input
+                    type="text"
+                    name="missionVia"
+                    placeholder="បញ្ចូលឈ្មោះ ឬមធ្យោបាយពាក់ព័ន្ធ"
+                    value={missionData.missionVia}
                     onChange={handleMissionChange}
                   />
                 </label>
               </div>
               <div className="actions">
                 <button className="primary" type="button" onClick={handleCreateMissionPanel}>
-                  Create
+                  បង្កើត
                 </button>
                 <button className="ghost" type="button" onClick={handleClearMissionPanel}>
-                  Clear
+                  សម្អាត
                 </button>
                 <div className="status">{missionStatusText}</div>
               </div>
             </section>
+
+            <section className="phase-card admin-mission-card admin-mission-upload-card">
+              <div className="phase-header admin-mission-upload-header">
+                <h3>ឯកសារស្នើសុំផែនការ កំលាំង និងសម្ភារៈបច្ចេកទេស</h3>
+              </div>
+              <div className="upload-block admin-mission-upload-block">
+                <label className="upload-area" htmlFor="requestPlanFile">
+                  <span className="upload-icon" aria-hidden="true">
+                    ↑
+                  </span>
+                  <span className="upload-text">បញ្ចូលឯកសារ</span>
+                  <input
+                    id="requestPlanFile"
+                    ref={requestPlanFileInputRef}
+                    type="file"
+                    accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png"
+                    onChange={(event) => handleRequestPlanFileChange(event.target.files?.[0] ?? null)}
+                  />
+                </label>
+                {missionData.requestPlanFileName ? (
+                  <div className="upload-file-actions">
+                    <p className="status">{missionData.requestPlanFileName}</p>
+                    <button className="ghost upload-remove" type="button" onClick={handleClearRequestPlanFile}>
+                      លុបឯកសារ
+                    </button>
+                  </div>
+                ) : null}
+              </div>
+            </section>
+          </div>
+        </section>
+
+        <section id="overview" className="hero admin-dashboard-hero">
+          <div className="hero-stats">
+            <div className="stat-card">
+              <div className="stat-value">{dashboardRows.length}</div>
+              <div className="stat-label">សំណើសរុប</div>
+            </div>
+            <div className="stat-card">
+              <div className="stat-value">{totalParticipants}</div>
+              <div className="stat-label">ចំនួនអ្នកចូលរួម</div>
+            </div>
+            <div className="stat-card">
+              <div className="stat-value">{totalLocations}</div>
+              <div className="stat-label">ទីតាំងសរុប</div>
+            </div>
           </div>
         </section>
 
@@ -299,9 +387,8 @@ export default function AdminDashboardPage({ onBackToMain, onLogout }) {
             <div className="bundle-header admin-dashboard-card-header">
               <div>
                 <h2>ទិន្នន័យសំណើរបេសកកម្ម</h2>
-                <p>Overview of the request records already stored in the system.</p>
+                <p>ទិដ្ឋភាពទូទៅនៃកំណត់ត្រាសំណើដែលបានរក្សាទុកក្នុងប្រព័ន្ធ។</p>
               </div>
-              <span className="pill">Live Storage</span>
             </div>
 
             {dashboardRows.length === 0 ? (
@@ -315,8 +402,7 @@ export default function AdminDashboardPage({ onBackToMain, onLogout }) {
                       <th>ទីតាំង</th>
                       <th>ចំនួនអ្នកចូលរួម</th>
                       <th>តាមរយៈ</th>
-                      <th>ស្ថានភាពអនុម័ត</th>
-                      <th>PDF</th>
+                      <th>ឯកសារ PDF</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -326,7 +412,6 @@ export default function AdminDashboardPage({ onBackToMain, onLogout }) {
                         <td>{row.location}</td>
                         <td>{row.participantCount}</td>
                         <td>{row.via}</td>
-                        <td>{row.approvalStatusLabel}</td>
                         <td>
                           <button
                             type="button"

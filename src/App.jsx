@@ -1,25 +1,26 @@
 import { useState } from "react";
-import { AdminLoginPage } from "./features/auth";
+import { LoginPage } from "./features/auth";
 import { AdminDashboardPage } from "./features/admin-dashboard";
 import { SuperAdminDashboardPage } from "./features/super-admin-dashboard";
 import { ReportFormPage } from "./features/report-form";
 
 const sessionAuthKey = "mcctv:session-role";
-const rememberAuthKey = "mcctv:remember-role";
+const pageLogin = "login";
 const pageMain = "main";
-const pageAdminLogin = "admin-login";
 const pageAdminDashboard = "admin-dashboard";
 const pageSuperAdminDashboard = "super-admin-dashboard";
 const roleGuest = "guest";
+const roleUser = "user";
 const roleAdmin = "admin";
 const roleSuperAdmin = "super_admin";
 const credentialsList = [
+  { role: roleUser, username: "user", password: "123456" },
   { role: roleAdmin, username: "admin", password: "123456" },
   { role: roleSuperAdmin, username: "superadmin", password: "123456" }
 ];
 
 function normalizeRole(value) {
-  return value === roleAdmin || value === roleSuperAdmin ? value : roleGuest;
+  return value === roleUser || value === roleAdmin || value === roleSuperAdmin ? value : roleGuest;
 }
 
 function getInitialAuthRole() {
@@ -27,17 +28,24 @@ function getInitialAuthRole() {
     return roleGuest;
   }
 
-  const sessionRole = normalizeRole(window.sessionStorage.getItem(sessionAuthKey));
-  if (sessionRole !== roleGuest) {
-    return sessionRole;
-  }
-
-  return normalizeRole(window.localStorage.getItem(rememberAuthKey));
+  return normalizeRole(window.sessionStorage.getItem(sessionAuthKey));
 }
 
 export default function App() {
   const [authRole, setAuthRole] = useState(getInitialAuthRole);
-  const [activePage, setActivePage] = useState(pageMain);
+  const [activePage, setActivePage] = useState(() => {
+    const initialRole = getInitialAuthRole();
+
+    if (initialRole === roleAdmin) {
+      return pageAdminDashboard;
+    }
+
+    if (initialRole === roleSuperAdmin) {
+      return pageSuperAdminDashboard;
+    }
+
+    return initialRole === roleGuest ? pageLogin : pageMain;
+  });
 
   function openAdminDashboard() {
     if (authRole === roleAdmin) {
@@ -50,10 +58,10 @@ export default function App() {
       return;
     }
 
-    setActivePage(pageAdminLogin);
+    setActivePage(pageMain);
   }
 
-  function handleAdminLogin({ username, password, keepSignedIn }) {
+  function handleLogin({ username, password }) {
     const matchedCredentials = credentialsList.find(
       (item) => item.username === username && item.password === password
     );
@@ -63,35 +71,50 @@ export default function App() {
 
     if (typeof window !== "undefined") {
       window.sessionStorage.setItem(sessionAuthKey, matchedCredentials.role);
-
-      if (keepSignedIn) {
-        window.localStorage.setItem(rememberAuthKey, matchedCredentials.role);
-      } else {
-        window.localStorage.removeItem(rememberAuthKey);
-      }
     }
 
     setAuthRole(matchedCredentials.role);
-    setActivePage(matchedCredentials.role === roleSuperAdmin ? pageSuperAdminDashboard : pageAdminDashboard);
+    setActivePage(
+      matchedCredentials.role === roleAdmin
+        ? pageAdminDashboard
+        : matchedCredentials.role === roleSuperAdmin
+          ? pageSuperAdminDashboard
+          : pageMain
+    );
 
     return true;
   }
 
-  function handleAdminLogout() {
+  function handleLogout() {
     if (typeof window !== "undefined") {
       window.sessionStorage.removeItem(sessionAuthKey);
-      window.localStorage.removeItem(rememberAuthKey);
     }
 
     setAuthRole(roleGuest);
-    setActivePage(pageMain);
+    setActivePage(pageLogin);
   }
 
-  if (activePage === pageAdminLogin) {
+  if (activePage === pageLogin || authRole === roleGuest) {
     return (
-      <AdminLoginPage
-        onLogin={handleAdminLogin}
-        onCancel={() => setActivePage(pageMain)}
+      <LoginPage
+        title="Mission Request Login"
+        onLogin={handleLogin}
+      />
+    );
+  }
+
+  if (authRole === roleAdmin) {
+    return (
+      <AdminDashboardPage
+        onLogout={handleLogout}
+      />
+    );
+  }
+
+  if (authRole === roleSuperAdmin) {
+    return (
+      <SuperAdminDashboardPage
+        onLogout={handleLogout}
       />
     );
   }
@@ -99,9 +122,9 @@ export default function App() {
   if (activePage === pageAdminDashboard) {
     if (authRole !== roleAdmin) {
       return (
-        <AdminLoginPage
-          onLogin={handleAdminLogin}
-          onCancel={() => setActivePage(pageMain)}
+        <LoginPage
+          title="Mission Request Login"
+          onLogin={handleLogin}
         />
       );
     }
@@ -109,7 +132,7 @@ export default function App() {
     return (
       <AdminDashboardPage
         onBackToMain={() => setActivePage(pageMain)}
-        onLogout={handleAdminLogout}
+        onLogout={handleLogout}
       />
     );
   }
@@ -117,17 +140,16 @@ export default function App() {
   if (activePage === pageSuperAdminDashboard) {
     if (authRole !== roleSuperAdmin) {
       return (
-        <AdminLoginPage
-          onLogin={handleAdminLogin}
-          onCancel={() => setActivePage(pageMain)}
+        <LoginPage
+          title="Mission Request Login"
+          onLogin={handleLogin}
         />
       );
     }
 
     return (
       <SuperAdminDashboardPage
-        onBackToMain={() => setActivePage(pageMain)}
-        onLogout={handleAdminLogout}
+        onLogout={handleLogout}
       />
     );
   }
@@ -135,8 +157,8 @@ export default function App() {
   return (
     <ReportFormPage
       authRole={authRole}
-      onAdminLogin={() => setActivePage(pageAdminLogin)}
-      onAdminLogout={handleAdminLogout}
+      onAdminLogin={() => setActivePage(pageLogin)}
+      onAdminLogout={handleLogout}
       onOpenAdminDashboard={openAdminDashboard}
     />
   );

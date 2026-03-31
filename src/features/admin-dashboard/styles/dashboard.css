@@ -32,6 +32,23 @@
   background: linear-gradient(180deg, #fffdf8 0%, #fff5e2 100%);
 }
 
+.admin-mission-main-header {
+  margin-bottom: 14px;
+}
+
+.admin-mission-upload-header {
+  margin-top: 0;
+  margin-bottom: 0;
+}
+
+.admin-mission-upload-card {
+  margin-top: 14px;
+}
+
+.admin-mission-upload-block {
+  margin-top: 8px;
+}
+
 .admin-dashboard-empty {
   margin: 0;
   color: var(--muted);

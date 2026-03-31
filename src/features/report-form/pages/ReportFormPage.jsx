@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
 import { initialReportForm, initialStatusText, reportNavItems } from "../constants/reportFormConfig";
-import { getRequestStatus } from "../constants/requestStatus";
 import ReportHeader from "../components/ReportHeader";
 import RequestSection from "../components/RequestSection";
 import PdfTemplate from "../components/PdfTemplate";
+import UserProfileSection from "../components/UserProfileSection";
 import "../styles/index.css";
+import { loadUserProfile, saveUserProfile } from "../../../utils/userProfileStorage";
 
 const cambodiaPhoneRegex = /^(?:0\d{8,9}|0\d{2}-\d{3}-\d{3,4})$/;
 const phoneErrorMessage =
@@ -12,6 +13,37 @@ const phoneErrorMessage =
 const historyStorageKey = "mcctv:mission-request-history";
 const maxHistoryEntries = 100;
 const reportFormFields = Object.keys(initialReportForm);
+const profileFieldNames = ["name", "phone", "gender", "role"];
+
+function createSupportFileReference(profile) {
+  const fileName = toText(profile?.supportFileName || profile?.supportFile?.name);
+  return fileName ? { name: fileName } : null;
+}
+
+function pickProfileFields(profile) {
+  return profileFieldNames.reduce((result, field) => {
+    result[field] = toText(profile?.[field]);
+    return result;
+  }, {});
+}
+
+function createProfileDraft(profile) {
+  return {
+    ...pickProfileFields(profile),
+    supportFile: createSupportFileReference(profile)
+  };
+}
+
+function getInitialUserState() {
+  const savedProfile = loadUserProfile();
+
+  return {
+    savedProfile,
+    profileDraft: createProfileDraft(savedProfile),
+    formData: { ...initialReportForm, ...pickProfileFields(savedProfile) },
+    supportFile: createSupportFileReference(savedProfile)
+  };
+}
 
 function createRequestId(date) {
   const year = date.getFullYear();
@@ -101,7 +133,6 @@ function sanitizeReport(rawReport) {
   return {
     requestId,
     submittedAt,
-    approvalStatus: getRequestStatus(rawReport.approvalStatus),
     formData: sanitizeFormData(rawReport.formData),
     supportFileName: toText(rawReport.supportFileName),
     lodgingImageName: toText(rawReport.lodgingImageName),
@@ -144,9 +175,14 @@ export default function ReportFormPage({
   onAdminLogout,
   onOpenAdminDashboard
 }) {
+  const [initialUserState] = useState(getInitialUserState);
   const [activeSection, setActiveSection] = useState("request");
-  const [formData, setFormData] = useState(initialReportForm);
-  const [supportFile, setSupportFile] = useState(null);
+  const [savedProfile, setSavedProfile] = useState(initialUserState.savedProfile);
+  const [profileDraft, setProfileDraft] = useState(initialUserState.profileDraft);
+  const [profilePhoneError, setProfilePhoneError] = useState("");
+  const [profileStatusText, setProfileStatusText] = useState("");
+  const [formData, setFormData] = useState(initialUserState.formData);
+  const [supportFile, setSupportFile] = useState(initialUserState.supportFile);
   const [lodgingImage, setLodgingImage] = useState(null);
   const [breakfastImage, setBreakfastImage] = useState(null);
   const [lunchImage, setLunchImage] = useState(null);
@@ -208,14 +244,113 @@ export default function ReportFormPage({
     if (name === "phone") {
       setPhoneError(validatePhone(value));
     }
+
+    if (name === "planCount" || name === "actualCount") {
+      setStatusText(initialStatusText);
+    }
+  }
+
+  function handleOpenProfile() {
+    if (activeSection === "profile") {
+      return;
+    }
+
+    const nextDraft = {
+      name: toText(formData.name) || savedProfile.name,
+      phone: toText(formData.phone) || savedProfile.phone,
+      gender: toText(formData.gender) || savedProfile.gender,
+      role: toText(formData.role) || savedProfile.role,
+      supportFile: supportFile || createSupportFileReference(savedProfile)
+    };
+
+    setProfileDraft(nextDraft);
+    setProfilePhoneError(validatePhone(nextDraft.phone));
+    setProfileStatusText("");
+    setActiveSection("profile");
+  }
+
+  function handleBackToRequest() {
+    setActiveSection("request");
+    setProfilePhoneError("");
+    setProfileStatusText("");
+  }
+
+  function handleSectionChange(nextSection) {
+    if (nextSection === activeSection) {
+      return;
+    }
+
+    setActiveSection(nextSection);
+  }
+
+  function handleProfileFieldChange(event) {
+    const { name, value } = event.target;
+
+    setProfileDraft((current) => ({ ...current, [name]: value }));
+    setProfileStatusText("");
+
+    if (name === "phone") {
+      setProfilePhoneError(validatePhone(value));
+    }
+  }
+
+  function handleProfileSupportFileChange(file) {
+    setProfileDraft((current) => ({ ...current, supportFile: file }));
+    setProfileStatusText("");
+  }
+
+  function handleClearProfileSupportFile() {
+    setProfileDraft((current) => ({ ...current, supportFile: null }));
+    setProfileStatusText("");
+  }
+
+  function handleProfileSubmit(event) {
+    event.preventDefault();
+
+    const nextPhoneError = validatePhone(profileDraft.phone);
+    if (nextPhoneError) {
+      setProfilePhoneError(nextPhoneError);
+      return;
+    }
+
+    const nextSavedProfile = saveUserProfile({
+      ...profileDraft,
+      supportFileName: profileDraft.supportFile?.name ?? ""
+    });
+    const nextSupportFile = profileDraft.supportFile || createSupportFileReference(nextSavedProfile);
+
+    setSavedProfile(nextSavedProfile);
+    setProfileDraft(createProfileDraft(nextSavedProfile));
+    setFormData((current) => ({ ...current, ...pickProfileFields(nextSavedProfile) }));
+    setSupportFile(nextSupportFile);
+    setPhoneError("");
+    setProfilePhoneError("");
+    setProfileStatusText("បានរក្សាទុកព័ត៌មានផ្ទាល់ខ្លួនរួចរាល់");
   }
 
   function handleSubmit(event, payload = {}) {
     event.preventDefault();
 
-    const nextPhoneError = validatePhone(formData.phone);
-    if (nextPhoneError) {
-      setPhoneError(nextPhoneError);
+    const nextProfilePhoneError = validatePhone(formData.phone);
+    const isProfileMissing =
+      !toText(formData.name) ||
+      !toText(formData.phone) ||
+      !toText(formData.gender) ||
+      !toText(formData.role);
+
+    if (isProfileMissing || nextProfilePhoneError) {
+      const nextDraft = {
+        name: toText(formData.name) || savedProfile.name,
+        phone: toText(formData.phone) || savedProfile.phone,
+        gender: toText(formData.gender) || savedProfile.gender,
+        role: toText(formData.role) || savedProfile.role,
+        supportFile: supportFile || createSupportFileReference(savedProfile)
+      };
+
+      setProfileDraft(nextDraft);
+      setProfilePhoneError(nextProfilePhoneError);
+      setProfileStatusText("សូមបំពេញព័ត៌មានផ្ទាល់ខ្លួនជាមុនសិន");
+      setActiveSection("profile");
       return;
     }
 
@@ -223,7 +358,6 @@ export default function ReportFormPage({
     const nextReport = sanitizeReport({
       requestId: createRequestId(now),
       submittedAt: now.toISOString(),
-      approvalStatus: "pending",
       formData: { ...formData },
       supportFileName: supportFile?.name ?? "",
       lodgingImageName: lodgingImage?.name ?? "",
@@ -244,20 +378,50 @@ export default function ReportFormPage({
     setHistoryReports((current) => [nextReport, ...current].slice(0, maxHistoryEntries));
 
     setPhoneError("");
-    setStatusText("បានបញ្ជូនសំណើរបស់អ្នកដោយជោគជ័យ ហើយកំពុងរង់ចាំការអនុម័ត");
+    setStatusText("បានបញ្ជូនសំណើររបស់អ្នកដោយជោគជ័យ");
   }
 
-  function handleReset() {
-    setFormData(initialReportForm);
-    setSupportFile(null);
-    setLodgingImage(null);
-    setBreakfastImage(null);
-    setLunchImage(null);
-    setDinnerImage(null);
-    setImplementationImage(null);
-    setStatusText(initialStatusText);
-    setPhoneError("");
-    setSubmittedReport(null);
+  function handleReset(fieldNames = null, options = {}) {
+    const isPartialReset = Array.isArray(fieldNames);
+    const {
+      clearPhoneError = !isPartialReset,
+      clearSubmittedReport = !isPartialReset,
+      resetStatus = !isPartialReset
+    } = options;
+
+    if (isPartialReset) {
+      setFormData((current) => {
+        const next = { ...current };
+
+        fieldNames.forEach((fieldName) => {
+          if (Object.prototype.hasOwnProperty.call(initialReportForm, fieldName)) {
+            next[fieldName] = initialReportForm[fieldName];
+          }
+        });
+
+        return next;
+      });
+    } else {
+      setFormData({ ...initialReportForm, ...pickProfileFields(savedProfile) });
+      setSupportFile(createSupportFileReference(savedProfile));
+      setLodgingImage(null);
+      setBreakfastImage(null);
+      setLunchImage(null);
+      setDinnerImage(null);
+      setImplementationImage(null);
+    }
+
+    if (resetStatus) {
+      setStatusText(initialStatusText);
+    }
+
+    if (clearPhoneError) {
+      setPhoneError("");
+    }
+
+    if (clearSubmittedReport) {
+      setSubmittedReport(null);
+    }
   }
 
   return (
@@ -265,11 +429,12 @@ export default function ReportFormPage({
       <ReportHeader
         activeSection={activeSection}
         navItems={reportNavItems}
-        onSectionChange={setActiveSection}
+        onSectionChange={handleSectionChange}
         authRole={authRole}
         onAdminLogin={onAdminLogin}
         onAdminLogout={onAdminLogout}
         onOpenAdminDashboard={onOpenAdminDashboard}
+        onOpenProfile={authRole === "user" ? handleOpenProfile : undefined}
       />
 
       <main className="page-main">
@@ -294,8 +459,20 @@ export default function ReportFormPage({
             onDinnerImageChange: setDinnerImage,
             onImplementationImageChange: setImplementationImage,
             phoneError,
-            hideMissionSection: true
+            hideMissionSection: true,
+            hidePersonalFields: true
           }}
+        />
+        <UserProfileSection
+          isActive={activeSection === "profile"}
+          profileData={profileDraft}
+          phoneError={profilePhoneError}
+          statusText={profileStatusText}
+          onFieldChange={handleProfileFieldChange}
+          onSupportFileChange={handleProfileSupportFileChange}
+          onClearSupportFile={handleClearProfileSupportFile}
+          onBack={handleBackToRequest}
+          onSubmit={handleProfileSubmit}
         />
       </main>
 

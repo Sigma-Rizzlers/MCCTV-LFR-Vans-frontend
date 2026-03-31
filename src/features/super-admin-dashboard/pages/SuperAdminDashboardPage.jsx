@@ -6,9 +6,7 @@ import "../../report-form/styles/form.css";
 import "../../report-form/styles/responsive.css";
 import "../../report-form/styles/pdf.css";
 import "../../admin-dashboard/styles/dashboard.css";
-import { getRequestStatus } from "../../report-form/constants/requestStatus";
 import HistorySection from "../../report-form/components/HistorySection";
-import ApprovalSection from "../../report-form/components/ApprovalSection";
 import PdfTemplate from "../../report-form/components/PdfTemplate";
 
 const historyStorageKey = "mcctv:mission-request-history";
@@ -54,10 +52,11 @@ function sanitizeReport(rawReport) {
   return {
     requestId,
     submittedAt,
-    approvalStatus: getRequestStatus(rawReport.approvalStatus),
     formData,
     supportFileName: toText(rawReport.supportFileName),
-    members: sanitizeMembers(rawReport.members)
+    members: sanitizeMembers(rawReport.members),
+    vehicles: Array.isArray(rawReport.vehicles) ? rawReport.vehicles : [],
+    equipmentItems: Array.isArray(rawReport.equipmentItems) ? rawReport.equipmentItems : []
   };
 }
 
@@ -85,7 +84,6 @@ function loadHistoryFromStorage() {
 }
 
 export default function SuperAdminDashboardPage({ onBackToMain, onLogout }) {
-  const [activeSection, setActiveSection] = useState("history");
   const [historyReports, setHistoryReports] = useState(() => loadHistoryFromStorage());
   const [selectedReport, setSelectedReport] = useState(null);
 
@@ -114,79 +112,51 @@ export default function SuperAdminDashboardPage({ onBackToMain, onLogout }) {
     setSelectedReport(report);
   }
 
-  function handleUpdateApprovalStatus(requestId, nextStatus) {
-    const normalizedStatus = getRequestStatus(nextStatus);
-    setHistoryReports((current) =>
-      current.map((report) =>
-        report.requestId === requestId ? { ...report, approvalStatus: normalizedStatus } : report
-      )
-    );
-    setSelectedReport((current) =>
-      current && current.requestId === requestId ? { ...current, approvalStatus: normalizedStatus } : current
-    );
-  }
-
   return (
     <div className="page admin-dashboard-page notranslate" translate="no" lang="km">
       <header className="topbar">
         <div className="brand">
           <div className="brand-main">
             <div className="seal">
-              <img className="brand-logo" src="/logo.png" alt="Ministry of Interior logo" onError={(event) => {
-                event.currentTarget.src = "/logo.png";
-              }} />
+              <img
+                className="brand-logo"
+                src="/logo.png"
+                alt="Ministry of Interior logo"
+                onError={(event) => {
+                  event.currentTarget.src = "/logo.png";
+                }}
+              />
             </div>
             <div className="brand-text">
-              <div className="brand-title brand-title-kh">Super Admin Dashboard</div>
-              <div className="brand-title-en brand-title-system">History and Approval Control</div>
+              <div className="brand-title brand-title-kh">ផ្ទាំងគ្រប់គ្រងអ្នកគ្រប់គ្រងជាន់ខ្ពស់</div>
+              <div className="brand-title-en brand-title-system">ប្រវត្តិសំណើ</div>
             </div>
           </div>
-          <div className="brand-title-en brand-title-sub">Review requests and manage approvals</div>
+          <div className="brand-title-en brand-title-sub">ពិនិត្យសំណើដែលបានរក្សាទុកក្នុងប្រព័ន្ធ</div>
         </div>
       </header>
 
       <nav className="nav admin-dashboard-nav">
-        <a
-          href="#history"
-          className={activeSection === "history" ? "active" : ""}
-          onClick={(event) => {
-            event.preventDefault();
-            setActiveSection("history");
-          }}
-        >
-          áž”áŸ’ážšážœážáŸ’ážáž·ážŸáŸ†ážŽáž¾
-        </a>
-        <a
-          href="#approval"
-          className={activeSection === "approval" ? "active" : ""}
-          onClick={(event) => {
-            event.preventDefault();
-            setActiveSection("approval");
-          }}
-        >
-          áž€áž¶ážšáž¢áž“áž»áž˜áŸáž
+        <a href="#history" className="active">
+          ប្រវត្តិសំណើ
         </a>
         <div className="admin-actions admin-dashboard-actions-bar">
-          <button type="button" className="admin-access-btn admin" onClick={onBackToMain}>
-            Main Page
-          </button>
+          {onBackToMain ? (
+            <button type="button" className="admin-access-btn admin" onClick={onBackToMain}>
+              ទំព័រដើម
+            </button>
+          ) : null}
           <button type="button" className="admin-access-btn admin" onClick={onLogout}>
-            Logout
+            ចាកចេញ
           </button>
         </div>
       </nav>
 
       <main className="page-main admin-dashboard-main">
         <HistorySection
-          isActive={activeSection === "history"}
+          isActive
           reports={historyReports}
           onClearHistory={handleClearHistory}
-          onOpenPdf={handleOpenPdf}
-        />
-        <ApprovalSection
-          isActive={activeSection === "approval"}
-          reports={historyReports}
-          onUpdateStatus={handleUpdateApprovalStatus}
           onOpenPdf={handleOpenPdf}
         />
       </main>
