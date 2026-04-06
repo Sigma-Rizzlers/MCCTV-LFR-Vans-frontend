@@ -971,11 +971,10 @@ export default function MissionRequestForm({
 	                  />
 	                </label>
 	                <label className="field">
-	                  <span>រយៈពេល</span>
+	                  <span>រយៈពេល​ធ្វើដំណើរទៅដល់ទីតាំង</span>
 	                  <input
-	                    type="text"
+	                    type="time"
 	                    name="travelDuration"
-	                    placeholder="បញ្ចូលរយៈពេល"
 	                    value={formData.travelDuration}
 	                    onChange={onChange}
 	                    required
@@ -1683,7 +1682,6 @@ export default function MissionRequestForm({
     </section>
   );
 }
-
 
 
 

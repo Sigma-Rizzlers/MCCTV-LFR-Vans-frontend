@@ -1,4 +1,4 @@
-﻿@keyframes fadeIn {
+@keyframes fadeIn {
   from {
     opacity: 0;
     transform: translateY(8px);
@@ -22,6 +22,22 @@
   .approval-grid,
   .policy-layout {
     grid-template-columns: 1fr;
+  }
+
+  .mission-panel-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .mission-file-card,
+  .file-review-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .mission-file-actions,
+  .file-review-actions {
+    width: 100%;
+    justify-content: flex-start;
   }
 
   .field-grid {
