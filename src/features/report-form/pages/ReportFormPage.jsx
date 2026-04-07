@@ -208,7 +208,13 @@ export default function ReportFormPage({
   function handleChange(event) {
     const { name, value } = event.target;
     let nextValue = value;
-    if (
+    if (name === "travelDuration") {
+      if (!value) {
+        nextValue = "";
+      } else {
+        nextValue = String(Math.min(24, Math.max(1, Number(value) || 1)));
+      }
+    } else if (
       name === "vehicleCount" ||
       name === "vehiclePlanCount" ||
       name === "vehicleActualCount" ||

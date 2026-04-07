@@ -28,6 +28,26 @@ function toText(value) {
   return String(value ?? "").trim();
 }
 
+function formatMissionTime(value) {
+  const text = toText(value);
+  if (!text) {
+    return "-";
+  }
+
+  const date = new Date(text);
+  if (Number.isNaN(date.getTime())) {
+    return text;
+  }
+
+  return new Intl.DateTimeFormat("km-KH", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit"
+  }).format(date);
+}
+
 function getFileExtension(fileName) {
   const normalizedFileName = toText(fileName);
   const segments = normalizedFileName.split(".");
@@ -149,7 +169,7 @@ function MissionPanelCard({ panel, filePreview, onReviewFile }) {
   const overviewItems = [
     { label: "កម្មវិធី", value: panel.missionTitle || "-" },
     { label: "ទីតាំង", value: panel.missionPlace || "-" },
-    { label: "ពេលវេលា", value: panel.missionTime || "-" },
+    { label: "ពេលវេលា", value: formatMissionTime(panel.missionTime) },
     { label: "តាមរយៈ", value: panel.missionVia || "-" }
   ];
   const fileStatusText = getFileStatusText(filePreview);
@@ -158,9 +178,7 @@ function MissionPanelCard({ panel, filePreview, onReviewFile }) {
     <div className="bundle-card mission-panel-card">
       <div className="bundle-header mission-panel-header">
         <div>
-          <p className="mission-panel-kicker">ព័ត៌មានកម្មវិធីពីអ្នកគ្រប់គ្រង</p>
           <h2>ព័ត៌មានកម្មវិធី</h2>
-          <p>ព័ត៌មានកម្មវិធីនេះត្រូវបានភ្ជាប់ពីផ្ទាំងអ្នកគ្រប់គ្រង ដើម្បីឲ្យទំព័រអ្នកប្រើប្រាស់បង្ហាញបានត្រឹមត្រូវ។</p>
         </div>
         <div className="mission-panel-highlight">
           <span className="mission-panel-highlight-label">អ្នកចូលរួម</span>
@@ -206,7 +224,6 @@ function DefaultBundleCard() {
     <div className="bundle-card mission-panel-card mission-panel-empty">
       <div className="bundle-header mission-panel-header">
         <div>
-          <p className="mission-panel-kicker">ព័ត៌មានកម្មវិធីពីអ្នកគ្រប់គ្រង</p>
           <h2>ព័ត៌មានកម្មវិធី</h2>
           <p>មិនទាន់មានព័ត៌មានកម្មវិធី</p>
         </div>

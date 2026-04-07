@@ -291,7 +291,7 @@
   padding: 16px;
   border-radius: var(--radius-md);
   border: 1px solid rgba(92, 53, 6, 0.12);
-  background: linear-gradient(135deg, rgba(242, 181, 42, 0.12), rgba(248, 217, 139, 0.25));
+  background: #ffffff;
 }
 
 .van-item h3 {
