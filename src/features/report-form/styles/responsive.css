@@ -81,30 +81,74 @@
     width: 100%;
   }
 
-  .brand-main {
-    gap: 10px;
+  .report-topbar {
+    padding-top: 10px;
+    padding-bottom: 14px;
   }
 
-  .brand-title {
-    font-size: clamp(24px, 4.4vw, 34px);
+  .report-topbar::after {
+    bottom: 6px;
+    height: 76px;
+    background-size: auto, 260px 86px;
   }
 
-  .brand-title-en {
-    font-size: clamp(14px, 2.6vw, 20px);
+  .report-topbar-shell {
+    min-height: 0;
+    padding: 0 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .report-header-nav {
+    position: static;
+    max-width: none;
+    justify-content: center;
+    width: 100%;
+  }
+
+  .report-header-nav::after {
+    left: 50%;
+    right: auto;
+    transform: translateX(-50%);
+  }
+
+  .report-header-links,
+  .report-header-actions {
+    justify-content: center;
+  }
+
+  .report-header-actions {
+    padding-left: 0;
+  }
+
+  .report-header-actions::before {
+    display: none;
+  }
+
+  .report-brand {
+    margin-top: 4px;
+  }
+
+  .report-brand-main {
+    gap: 12px;
+  }
+
+  .report-seal {
+    width: 62px;
+    height: 62px;
+  }
+
+  .report-brand .brand-title {
+    font-size: clamp(22px, 4vw, 30px);
+  }
+
+  .report-brand .brand-title-en {
+    font-size: 14px;
   }
 
   .brand-title-system {
-    font-size: clamp(15px, 2.7vw, 23px);
-  }
-
-  .brand-title-sub {
-    font-size: clamp(18px, 3.2vw, 28px);
-    margin-top: 10px;
-  }
-
-  .seal {
-    width: 82px;
-    height: 82px;
+    font-size: clamp(16px, 2.4vw, 22px);
   }
 }
 
@@ -118,6 +162,21 @@
   .topbar {
     padding-top: 18px;
     padding-bottom: 22px;
+  }
+
+  .report-topbar {
+    padding-top: 8px;
+    padding-bottom: 12px;
+  }
+
+  .report-topbar::after {
+    bottom: 5px;
+    height: 66px;
+    background-size: auto, 220px 78px;
+  }
+
+  .report-topbar-shell {
+    padding: 0 12px;
   }
 
   .member-modal-header {
@@ -161,31 +220,60 @@
     padding: 8px 0;
   }
 
-  .brand {
-    gap: 12px;
+  .report-header-nav {
+    width: 100%;
+    gap: 10px 14px;
   }
 
-  .brand-main {
+  .report-header-links,
+  .report-header-actions {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .report-header-actions {
+    flex-direction: row;
+    align-items: center;
+  }
+
+  .report-brand-main {
+    flex-direction: column;
     gap: 8px;
   }
 
-  .brand-title {
+  .report-brand-text {
+    align-items: center;
+    text-align: center;
+  }
+
+  .report-brand .brand-title-kh {
+    align-self: center;
+    text-align: center;
+  }
+
+  .report-brand .brand-title {
     font-size: 24px;
   }
 
-  .brand-title-en {
+  .report-brand .brand-title-en,
+  .brand-title-system {
+    text-align: center;
+    font-size: 16px;
+  }
+
+  .report-seal {
+    width: 56px;
+    height: 56px;
+  }
+
+  .report-header-link,
+  .report-header-nav .admin-access-btn {
     font-size: 14px;
   }
 
-  .brand-title-system {
-    text-align: left;
-    font-size: 15px;
-  }
-
-  .brand-title-sub {
-    text-align: center;
-    font-size: 18px;
-    margin-top: 8px;
+  .report-header-nav .admin-role-badge {
+    width: auto;
+    font-size: 11px;
   }
 
   .hero-content h1 {
@@ -200,4 +288,5 @@
   .intro-title {
     letter-spacing: 2px;
   }
+
 }
