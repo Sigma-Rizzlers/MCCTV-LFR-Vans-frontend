@@ -30,7 +30,7 @@
 .step-5 .step-4-section { display: none; }
 .phase-grid { display: grid; grid-template-columns: 1fr; gap: 10px; margin: 10px 0 18px; }
 .form-step-bundle .bundle-card { margin-bottom: 0; }
-.phase-card { border: 2px solid rgba(242, 181, 42, 0.9); border-radius: 8px; padding: 14px; background: #fffaf2; }
+.phase-card { border: 2px solid rgba(242, 181, 42, 0.9); border-radius: 8px; padding: 14px; background: #ffffff; }
 .phase-header { margin-bottom: 10px; }
 .phase-header h3 { margin: 0 0 4px; font-family: var(--font-kh-heading); font-size: 22px; line-height: 1.2; color: #c98712; }
 .phase-header p { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.5; }
@@ -45,12 +45,15 @@
 .field input, .field textarea, .field select { width: 100%; padding: 12px 14px; border-radius: 12px; border: 1px solid rgba(92, 53, 6, 0.18); font-family: var(--font-kh-sans); font-size: 14px; line-height: 1.45; background: #fffaf2; }
 .field input:focus, .field textarea:focus, .field select:focus { outline: none; border-color: var(--gold-500); box-shadow: 0 0 0 3px rgba(242, 181, 42, 0.2); }
 .field input.input-error { border-color: #c63b2f; box-shadow: 0 0 0 3px rgba(198, 59, 47, 0.12); }
+.compact-duration-field .duration-input-wrap { display: flex; align-items: stretch; width: min(100%, 190px); }
+.compact-duration-field .duration-input-wrap input { border-top-right-radius: 0; border-bottom-right-radius: 0; }
+.duration-input-addon { display: inline-flex; align-items: center; justify-content: center; padding: 0 14px; border: 1px solid rgba(92, 53, 6, 0.18); border-left: 0; border-top-right-radius: 12px; border-bottom-right-radius: 12px; background: #f7edd8; color: #5c3506; white-space: nowrap; }
 .field-error { margin: 0; font-size: 12px; font-weight: 600; color: #9f2419; }
 .field.full { grid-column: 1 / -1; }
 .meal-phase-card { display: grid; gap: 16px; }
 .meal-select-wrap { max-width: 320px; }
 .meal-select-field { gap: 6px; }
-.meal-panel { padding: 16px; border: 1px solid rgba(242, 181, 42, 0.55); border-radius: 14px; background: linear-gradient(180deg, #fffdf8 0%, #fff5e4 100%); }
+.meal-panel { padding: 16px; border: 1px solid rgba(242, 181, 42, 0.55); border-radius: 14px; background: #ffffff; }
 .meal-panel-header { margin-bottom: 12px; }
 .meal-panel-header h4 { margin: 0 0 4px; font-family: var(--font-kh-heading); font-size: 20px; line-height: 1.2; color: #8f5d06; }
 .meal-panel-header p { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.5; }
@@ -58,7 +61,7 @@
 .upload-block { margin-top: 12px; }
 .upload-label { margin-bottom: 8px; color: #c98712; font-weight: 700; }
 .upload-label-dark { color: #3d2402; }
-.upload-area { position: relative; display: flex; align-items: center; justify-content: center; gap: 14px; min-height: 110px; border: 1px solid rgba(92, 53, 6, 0.25); border-radius: 6px; background: #fff7e9; color: #5b4a2a; font-weight: 600; cursor: pointer; }
+.upload-area { position: relative; display: flex; align-items: center; justify-content: center; gap: 14px; min-height: 110px; border: 1px solid rgba(92, 53, 6, 0.25); border-radius: 6px; background: #ffffff; color: #5b4a2a; font-weight: 600; cursor: pointer; }
 .upload-area input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
 .upload-icon { width: 64px; height: 64px; border: 2px solid rgba(92, 53, 6, 0.45); border-radius: 50%; display: grid; place-items: center; font-size: 32px; line-height: 1; color: rgba(92, 53, 6, 0.65); }
 .upload-text { font-size: 14px; }

@@ -970,15 +970,23 @@ export default function MissionRequestForm({
 	                    required
 	                  />
 	                </label>
-	                <label className="field">
+	                <label className="field compact-duration-field">
 	                  <span>រយៈពេល​ធ្វើដំណើរទៅដល់ទីតាំង</span>
-	                  <input
-	                    type="time"
-	                    name="travelDuration"
-	                    value={formData.travelDuration}
-	                    onChange={onChange}
-	                    required
-                  />
+	                  <div className="duration-input-wrap">
+	                    <input
+	                      type="number"
+	                      name="travelDuration"
+	                      min="1"
+	                      max="24"
+	                      step="1"
+	                      inputMode="numeric"
+	                      placeholder="1-24"
+	                      value={formData.travelDuration}
+	                      onChange={onChange}
+	                      required
+	                    />
+	                    <span className="duration-input-addon">ម៉ោង</span>
+	                  </div>
                 </label>
               </div>
             </section>
@@ -1274,9 +1282,8 @@ export default function MissionRequestForm({
                 <label className="field">
                   <span>រយៈពេលនៃការអនុវត្តន៍ (ត្រួតពិនិត្យ)</span>
                   <input
-                    type="text"
+                    type="time"
                     name="implementationDurationCheck"
-                    placeholder="ត្រួតពិនិត្យ"
                     value={formData.implementationDurationCheck}
                     onChange={onChange}
                     required
@@ -1285,9 +1292,8 @@ export default function MissionRequestForm({
                 <label className="field">
                   <span>រយៈពេលនៃការអនុវត្តន៍ (គ្រប់គ្រង)</span>
                   <input
-                    type="text"
+                    type="time"
                     name="implementationDurationManage"
-                    placeholder="គ្រប់គ្រង"
                     value={formData.implementationDurationManage}
                     onChange={onChange}
                     required

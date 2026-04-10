@@ -295,9 +295,8 @@ export default function AdminDashboardPage({ onBackToMain, onLogout }) {
                 <label className="field">
                   <span>ពេលវេលា</span>
                   <input
-                    type="text"
+                    type="datetime-local"
                     name="missionTime"
-                    placeholder="ឧ. 08:00 ព្រឹក - 11:30 ថ្ងៃទី 31/03/2026"
                     value={missionData.missionTime}
                     onChange={handleMissionChange}
                   />
