@@ -11,6 +11,7 @@ export default function ReportHeader({
   const isAuthenticated = authRole !== "guest";
   const isPrivilegedUser = authRole === "admin" || authRole === "super_admin";
   const isStandardUser = authRole === "user";
+  const hasNavLinks = Array.isArray(navItems) && navItems.length > 0;
   const dashboardLabel = authRole === "super_admin" ? "Super Admin Dashboard" : "Admin Dashboard";
   const roleLabel =
     authRole === "super_admin"
@@ -24,24 +25,26 @@ export default function ReportHeader({
   return (
     <header className="topbar report-topbar">
       <div className="report-topbar-shell">
-        <nav className="report-header-nav" aria-label="Primary navigation">
-          <div className="report-header-links">
-            {navItems.map((item) => (
-              <a
-                key={item.id}
-                href={`#${item.id}`}
-                className={`report-header-link ${activeSection === item.id ? "active" : ""}`.trim()}
-                onClick={(event) => {
-                  event.preventDefault();
-                  onSectionChange(item.id);
-                }}
-              >
-                {item.label}
-              </a>
-            ))}
-          </div>
+        <nav className={`report-header-nav ${hasNavLinks ? "has-links" : "no-links"}`} aria-label="Primary navigation">
+          {hasNavLinks ? (
+            <div className="report-header-links">
+              {navItems.map((item) => (
+                <a
+                  key={item.id}
+                  href={`#${item.id}`}
+                  className={`report-header-link ${activeSection === item.id ? "active" : ""}`.trim()}
+                  onClick={(event) => {
+                    event.preventDefault();
+                    onSectionChange(item.id);
+                  }}
+                >
+                  {item.label}
+                </a>
+              ))}
+            </div>
+          ) : null}
 
-          <div className="report-header-actions">
+          <div className={`report-header-actions ${hasNavLinks ? "" : "no-links"}`.trim()}>
             {isPrivilegedUser ? (
               <button
                 type="button"

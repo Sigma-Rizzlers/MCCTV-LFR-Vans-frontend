@@ -25,16 +25,15 @@
   }
 
   .mission-panel-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: 1fr;
   }
 
-  .mission-file-card,
+  .mission-panel-file-section,
   .file-review-header {
-    flex-direction: column;
-    align-items: flex-start;
+    grid-template-columns: 1fr;
   }
 
-  .mission-file-actions,
+  .mission-panel-section-actions,
   .file-review-actions {
     width: 100%;
     justify-content: flex-start;
@@ -150,6 +149,12 @@
   .brand-title-system {
     font-size: clamp(16px, 2.4vw, 22px);
   }
+
+  .report-page .page-main::before {
+    width: 100vw;
+    top: 0;
+    bottom: 0;
+  }
 }
 
 @media (max-width: 640px) {
@@ -176,7 +181,14 @@
   }
 
   .report-topbar-shell {
+    min-height: 0;
     padding: 0 12px;
+  }
+
+  .report-page .page-main::before {
+    width: 100vw;
+    background-position: center top;
+    opacity: 0.88;
   }
 
   .member-modal-header {

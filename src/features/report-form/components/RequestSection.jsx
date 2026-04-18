@@ -166,44 +166,49 @@ function FilePreviewOverlay({ isOpen, fileName, fileUrl, isImage, isPdf, onClose
 
 function MissionPanelCard({ panel, filePreview, onReviewFile }) {
   const hasRequestPlanFile = Boolean(panel.requestPlanFileName);
+  const formattedMissionTime = formatMissionTime(panel.missionTime);
   const overviewItems = [
     { label: "កម្មវិធី", value: panel.missionTitle || "-" },
     { label: "ទីតាំង", value: panel.missionPlace || "-" },
-    { label: "ពេលវេលា", value: formatMissionTime(panel.missionTime) },
+    { label: "អ្នកចូលរួម", value: panel.participantCount || "-" },
     { label: "តាមរយៈ", value: panel.missionVia || "-" }
   ];
   const fileStatusText = getFileStatusText(filePreview);
 
   return (
-    <div className="bundle-card mission-panel-card">
-      <div className="bundle-header mission-panel-header">
-        <div>
-          <h2>ព័ត៌មានកម្មវិធី</h2>
-        </div>
-        <div className="mission-panel-highlight">
-          <span className="mission-panel-highlight-label">អ្នកចូលរួម</span>
-          <strong className="mission-panel-highlight-value">{panel.participantCount || "-"}</strong>
-        </div>
+    <section className="phase-card mission-panel-card">
+      <div className="phase-header mission-panel-header">
+        <h3>ព័ត៌មានកម្មវិធី</h3>
+        <p>ព័ត៌មានដែលបានភ្ជាប់ពីផ្ទាំងគ្រប់គ្រងសម្រាប់បង្ហាញក្នុងសំណើនេះ។</p>
       </div>
 
-      <div className="mission-panel-grid">
+      <div className="field-grid mission-panel-grid">
         {overviewItems.map((item) => (
-          <article className="mission-panel-item" key={item.label}>
-            <span className="mission-panel-item-label">{item.label}</span>
-            <strong className="mission-panel-item-value">{item.value}</strong>
+          <article className="field mission-panel-field" key={item.label}>
+            <span>{item.label}</span>
+            <div className="mission-panel-field-value">{item.value}</div>
           </article>
         ))}
       </div>
 
-      {hasRequestPlanFile ? (
-        <section className="mission-file-card">
-          <div className="mission-file-copy">
-            <span className="mission-file-badge">{getFileBadgeLabel(panel.requestPlanFileName)}</span>
-            <h3>ឯកសារស្នើសុំផែនការ កំលាំង និងសម្ភារៈបច្ចេកទេស</h3>
-            <p className="mission-file-name">{panel.requestPlanFileName}</p>
-            <p className={`mission-file-note${filePreview.error ? " error" : ""}`}>{fileStatusText}</p>
+      {panel.missionTime ? (
+        <section className="mission-panel-section">
+          <div className="field mission-panel-section-copy">
+            <span>ពេលវេលា</span>
+            <div className="mission-panel-section-value">{formattedMissionTime}</div>
+            <p className="mission-panel-section-note">កាលបរិច្ឆេទ និងម៉ោងដែលបានកំណត់សម្រាប់កម្មវិធី</p>
           </div>
-          <div className="mission-file-actions">
+        </section>
+      ) : null}
+
+      {hasRequestPlanFile ? (
+        <section className="mission-panel-section mission-panel-file-section">
+          <div className="field mission-panel-section-copy">
+            <span>ឯកសារស្នើសុំផែនការ កំលាំង និងសម្ភារៈបច្ចេកទេស</span>
+            <div className="mission-panel-section-value mission-panel-file-name">{panel.requestPlanFileName}</div>
+            <p className={`mission-panel-section-note${filePreview.error ? " error" : ""}`}>{fileStatusText}</p>
+          </div>
+          <div className="mission-panel-section-actions">
             <button
               className="primary"
               type="button"
@@ -215,20 +220,18 @@ function MissionPanelCard({ panel, filePreview, onReviewFile }) {
           </div>
         </section>
       ) : null}
-    </div>
+    </section>
   );
 }
 
 function DefaultBundleCard() {
   return (
-    <div className="bundle-card mission-panel-card mission-panel-empty">
-      <div className="bundle-header mission-panel-header">
-        <div>
-          <h2>ព័ត៌មានកម្មវិធី</h2>
-          <p>មិនទាន់មានព័ត៌មានកម្មវិធី</p>
-        </div>
+    <section className="phase-card mission-panel-card mission-panel-empty">
+      <div className="phase-header mission-panel-header">
+        <h3>ព័ត៌មានកម្មវិធី</h3>
+        <p>មិនទាន់មានព័ត៌មានកម្មវិធី</p>
       </div>
-    </div>
+    </section>
   );
 }
 

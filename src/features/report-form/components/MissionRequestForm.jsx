@@ -11,18 +11,23 @@ const stepOneMissionFieldNames = ["missionTitle", "departureDate", "returnDate",
 const stepOneProfileFieldNames = ["name", "phone", "gender", "role"];
 const stepOneForceFieldNames = ["planCount", "actualCount"];
 const stepOnePersonalFieldNames = [...stepOneProfileFieldNames, ...stepOneForceFieldNames];
-const stepTwoFieldNames = [
+const stepOneTransportFieldNames = [
   "vehicleBrand",
   "vehiclePlate",
   "vehicleCount",
   "vehiclePlanCount",
-  "vehicleActualCount",
+  "vehicleActualCount"
+];
+const stepTwoFieldNames = [
   "equipmentType",
   "equipmentCount",
   "equipmentPlanCount",
-  "equipmentActualCount"
+  "equipmentActualCount",
+  "departDate",
+  "arriveDate",
+  "routeDistance",
+  "travelDuration"
 ];
-const stepThreeFieldNames = ["departDate", "arriveDate", "routeDistance", "travelDuration"];
 const stepFourFieldNames = [
   "meetingParticipantsCount",
   "meetingParticipantsFemale",
@@ -259,8 +264,8 @@ export default function MissionRequestForm({
   const activeMealConfig = mealSections.find((section) => section.id === activeMealSection) ?? mealSections[0];
   const stepOneVisibleFieldNames = hidePersonalFields ? stepOneForceFieldNames : stepOnePersonalFieldNames;
   const stepOneFieldNames = hideMissionSection
-    ? [...stepOneVisibleFieldNames, ...stepTwoFieldNames]
-    : [...stepOneMissionFieldNames, ...stepOneVisibleFieldNames, ...stepTwoFieldNames];
+    ? [...stepOneVisibleFieldNames, ...stepOneTransportFieldNames]
+    : [...stepOneMissionFieldNames, ...stepOneVisibleFieldNames, ...stepOneTransportFieldNames];
   const activeMealFieldNames = mealSectionFieldNames[activeMealSection] ?? mealSectionFieldNames.breakfast;
 
   const activeMember = members[activeMemberIndex];
@@ -498,12 +503,12 @@ export default function MissionRequestForm({
       }
       resetMemberState();
       resetVehicleState();
-      resetEquipmentState();
       return;
     }
 
     if (activeStep === 2) {
-      onReset(stepThreeFieldNames, { resetStatus: true });
+      onReset(stepTwoFieldNames, { resetStatus: true });
+      resetEquipmentState();
       return;
     }
 
@@ -842,7 +847,7 @@ export default function MissionRequestForm({
                 </label>
               </div>
             </section>
-            <section className="phase-card step-1-section">
+            <section className="phase-card step-2-section">
               <div className="phase-header">
                 <h3>សម្ភារៈបច្ចេកទេស</h3>
                 <p>សូមបំពេញព័ត៌មានសម្ភារៈដែលត្រូវប្រើក្នុងបេសកកម្ម។</p>

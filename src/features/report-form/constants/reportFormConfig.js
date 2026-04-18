@@ -57,8 +57,6 @@
   returnIssue: ""
 };
 
-export const reportNavItems = [
-  { id: "request", label: "ស្នើសុំរថយន្ត" }
-];
+export const reportNavItems = [];
 
 export const initialStatusText = "រួចរាល់សម្រាប់បង្កើតឯកសារ PDF";

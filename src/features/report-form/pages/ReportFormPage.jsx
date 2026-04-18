@@ -431,7 +431,7 @@ export default function ReportFormPage({
   }
 
   return (
-    <div className="page notranslate" translate="no" lang="km">
+    <div className="page report-page notranslate" translate="no" lang="km">
       <ReportHeader
         activeSection={activeSection}
         navItems={reportNavItems}

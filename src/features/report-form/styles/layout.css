@@ -7,6 +7,33 @@
     linear-gradient(180deg, #fffdf8 0%, #f9f2e6 50%, #fffdf8 100%);
 }
 
+.report-page {
+  background: linear-gradient(180deg, #fffdfa 0%, #fffefb 100%);
+}
+
+.report-page .page-main {
+  position: relative;
+  z-index: 0;
+  isolation: isolate;
+  max-width: 780px;
+  padding: 26px 20px 72px;
+  min-height: calc(100vh - 220px);
+}
+
+.report-page .page-main::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 0;
+  bottom: 0;
+  width: 100vw;
+  transform: translateX(-50%);
+  background: url("/report-wave-background.svg") center top / cover no-repeat;
+  pointer-events: none;
+  opacity: 0.9;
+  z-index: -1;
+}
+
 .intro-screen {
   position: fixed;
   inset: 0;
@@ -170,6 +197,14 @@
   padding-left: 20px;
 }
 
+.report-header-nav.no-links {
+  gap: 0;
+}
+
+.report-header-actions.no-links {
+  padding-left: 0;
+}
+
 .report-header-actions::before {
   content: "";
   position: absolute;
@@ -178,6 +213,10 @@
   bottom: 2px;
   width: 1px;
   background: linear-gradient(180deg, transparent, rgba(187, 138, 52, 0.38), transparent);
+}
+
+.report-header-actions.no-links::before {
+  display: none;
 }
 
 .report-header-link {
