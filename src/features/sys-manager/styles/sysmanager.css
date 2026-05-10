@@ -108,6 +108,23 @@
   font-weight: 700;
 }
 
+.sys-nav-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  margin-left: 8px;
+  border-radius: 999px;
+  background: #9a7840;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+  vertical-align: middle;
+}
+
 /* ── Main content ── */
 .sys-manager-main {
   flex: 1;
