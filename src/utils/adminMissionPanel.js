@@ -53,9 +53,25 @@ function loadHistoryRaw() {
   if (typeof window === "undefined") return [];
   try {
     const raw = window.localStorage.getItem(adminMissionHistoryKey);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed.filter((p) => p && p.missionCode) : [];
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return parsed.filter((p) => p && p.missionCode);
+      }
+    }
+    // Migration: seed history from old single-panel key if no history yet
+    const oldRaw = window.localStorage.getItem(adminMissionPanelKey);
+    if (!oldRaw) return [];
+    const oldPanel = JSON.parse(oldRaw);
+    if (!oldPanel || typeof oldPanel !== "object") return [];
+    const migrated = [{
+      ...oldPanel,
+      missionCode: oldPanel.missionCode || generateMissionCode(),
+      savedAt: oldPanel.savedAt || new Date().toISOString(),
+      isActive: true,
+    }];
+    window.localStorage.setItem(adminMissionHistoryKey, JSON.stringify(migrated));
+    return migrated;
   } catch {
     return [];
   }
