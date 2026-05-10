@@ -6,6 +6,7 @@ import PdfTemplate from "../components/PdfTemplate";
 import UserProfileSection from "../components/UserProfileSection";
 import "../styles/index.css";
 import { loadUserProfile, saveUserProfile } from "../../../utils/userProfileStorage";
+import { loadAdminMissionPanel } from "../../../utils/adminMissionPanel";
 
 const cambodiaPhoneRegex = /^(?:0\d{8,9}|0\d{2}-\d{3}-\d{3,4})$/;
 const phoneErrorMessage =
@@ -119,6 +120,20 @@ function sanitizeEquipmentItems(items) {
     .filter((item) => item.type || item.quantity);
 }
 
+function sanitizeAdminPanelForReport(rawPanel) {
+  if (!rawPanel || typeof rawPanel !== "object") {
+    return null;
+  }
+
+  return {
+    missionTitle: toText(rawPanel.missionTitle),
+    missionPlace: toText(rawPanel.missionPlace),
+    missionTime: toText(rawPanel.missionTime),
+    participantCount: toText(rawPanel.participantCount),
+    missionVia: toText(rawPanel.missionVia)
+  };
+}
+
 function sanitizeReport(rawReport) {
   if (!rawReport || typeof rawReport !== "object") {
     return null;
@@ -142,7 +157,9 @@ function sanitizeReport(rawReport) {
     implementationImageName: toText(rawReport.implementationImageName),
     members: sanitizeMembers(rawReport.members),
     vehicles: sanitizeVehicles(rawReport.vehicles),
-    equipmentItems: sanitizeEquipmentItems(rawReport.equipmentItems)
+    equipmentItems: sanitizeEquipmentItems(rawReport.equipmentItems),
+    adminPanel: sanitizeAdminPanelForReport(rawReport.adminPanel),
+    submitterUsername: toText(rawReport.submitterUsername)
   };
 }
 
@@ -191,6 +208,7 @@ export default function ReportFormPage({
   const [statusText, setStatusText] = useState(initialStatusText);
   const [phoneError, setPhoneError] = useState("");
   const [submittedReport, setSubmittedReport] = useState(null);
+  const [successInfo, setSuccessInfo] = useState(null);
   const [historyReports, setHistoryReports] = useState(() => loadHistoryFromStorage());
 
   useEffect(() => {
@@ -338,33 +356,32 @@ export default function ReportFormPage({
     event.preventDefault();
 
     const nextProfilePhoneError = validatePhone(formData.phone);
-    const isProfileMissing =
-      !toText(formData.name) ||
-      !toText(formData.phone) ||
-      !toText(formData.gender) ||
-      !toText(formData.role);
-
-    if (isProfileMissing || nextProfilePhoneError) {
-      const nextDraft = {
-        name: toText(formData.name) || savedProfile.name,
-        phone: toText(formData.phone) || savedProfile.phone,
-        gender: toText(formData.gender) || savedProfile.gender,
-        role: toText(formData.role) || savedProfile.role,
-        supportFile: supportFile || createSupportFileReference(savedProfile)
-      };
-
-      setProfileDraft(nextDraft);
-      setProfilePhoneError(nextProfilePhoneError);
-      setProfileStatusText("សូមបំពេញព័ត៌មានផ្ទាល់ខ្លួនជាមុនសិន");
-      setActiveSection("profile");
-      return;
+    if (nextProfilePhoneError) {
+      setPhoneError(nextProfilePhoneError);
     }
+
+    const adminPanel = loadAdminMissionPanel();
+    const mergedFormData = adminPanel
+      ? {
+          ...formData,
+          missionTitle: adminPanel.missionTitle || formData.missionTitle,
+          missionPlace: adminPanel.missionPlace || formData.missionPlace,
+          mission: adminPanel.missionVia || formData.mission
+        }
+      : formData;
+
+    const submitterUsername =
+      typeof window !== "undefined"
+        ? String(window.sessionStorage.getItem("mcctv:session-username") ?? "").trim()
+        : "";
 
     const now = new Date();
     const nextReport = sanitizeReport({
       requestId: createRequestId(now),
       submittedAt: now.toISOString(),
-      formData: { ...formData },
+      formData: { ...mergedFormData },
+      adminPanel,
+      submitterUsername,
       supportFileName: supportFile?.name ?? "",
       lodgingImageName: lodgingImage?.name ?? "",
       breakfastImageName: breakfastImage?.name ?? "",
@@ -380,11 +397,18 @@ export default function ReportFormPage({
       return;
     }
 
-    setSubmittedReport(nextReport);
-    setHistoryReports((current) => [nextReport, ...current].slice(0, maxHistoryEntries));
+    const nextHistoryReports = [nextReport, ...historyReports].slice(0, maxHistoryEntries);
 
+    try {
+      window.localStorage.setItem(historyStorageKey, JSON.stringify(nextHistoryReports));
+    } catch (error) {
+      console.error(error);
+    }
+
+    setHistoryReports(nextHistoryReports);
     setPhoneError("");
     setStatusText("បានបញ្ជូនសំណើររបស់អ្នកដោយជោគជ័យ");
+    setSuccessInfo({ requestId: nextReport.requestId, report: nextReport });
   }
 
   function handleReset(fieldNames = null, options = {}) {
@@ -483,6 +507,45 @@ export default function ReportFormPage({
       </main>
 
       <footer className="footer">© 2026 អគ្គនាយកដ្ឋានបច្ចេកវិទ្យាឌីជីថល និងផ្សព្វផ្សាយអប់រំ - ប្រព័ន្ធស្នើសុំរថយន្តបេសកកម្ម</footer>
+
+      {successInfo ? (
+        <div className="pdf-preview-overlay" role="dialog" aria-modal="true" aria-labelledby="successTitle">
+          <div className="pdf-preview-shell" style={{ maxWidth: "480px", textAlign: "center" }}>
+            <div style={{ padding: "2rem 2rem 1.5rem" }}>
+              <div style={{ fontSize: "3rem", marginBottom: "0.75rem" }}>✅</div>
+              <h2 id="successTitle" style={{ marginBottom: "0.5rem", fontSize: "1.25rem" }}>
+                បានបញ្ជូនដោយជោគជ័យ!
+              </h2>
+              <p style={{ color: "#666", marginBottom: "0.25rem", fontSize: "0.9rem" }}>
+                សំណើរបស់អ្នកត្រូវបានរក្សាទុក និងផ្ញើទៅអ្នកគ្រប់គ្រងរួចរាល់។
+              </p>
+              <p style={{ fontWeight: "600", marginBottom: "1.5rem", fontSize: "0.9rem" }}>
+                លេខសំណើ៖ {successInfo.requestId}
+              </p>
+              <div style={{ display: "flex", gap: "0.75rem", justifyContent: "center", flexWrap: "wrap" }}>
+                <button
+                  className="primary"
+                  type="button"
+                  onClick={() => {
+                    setSubmittedReport(successInfo.report);
+                    setSuccessInfo(null);
+                  }}
+                >
+                  មើល PDF
+                </button>
+                <button
+                  className="ghost"
+                  type="button"
+                  onClick={() => setSuccessInfo(null)}
+                >
+                  បិទ
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
       <PdfTemplate report={submittedReport} onClose={() => setSubmittedReport(null)} />
     </div>
   );

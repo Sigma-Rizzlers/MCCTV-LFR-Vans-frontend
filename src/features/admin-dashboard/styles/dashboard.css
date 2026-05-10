@@ -259,6 +259,115 @@
   margin-top: 8px;
 }
 
+.admin-hero-stats {
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
+}
+
+.admin-stat-card {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 24px 28px;
+  background: linear-gradient(135deg, #fffdf8 0%, #fff8e8 100%);
+  border: 1px solid rgba(199, 145, 44, 0.28);
+  border-left: 4px solid #c78612;
+  border-radius: 12px;
+  box-shadow: 0 4px 16px rgba(120, 78, 20, 0.08);
+  transition: box-shadow 0.2s;
+}
+
+.admin-stat-card:hover {
+  box-shadow: 0 6px 24px rgba(120, 78, 20, 0.14);
+}
+
+.admin-stat-icon {
+  font-size: 36px;
+  line-height: 1;
+  flex-shrink: 0;
+  opacity: 0.85;
+}
+
+.admin-stat-body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.admin-stat-value {
+  font-size: 42px;
+  font-weight: 800;
+  line-height: 1;
+  color: #7a4f0d;
+}
+
+.admin-stat-label {
+  font-size: 15px;
+  font-weight: 600;
+  color: #a07428;
+  margin-top: 0;
+}
+
+@media (max-width: 600px) {
+  .admin-hero-stats {
+    grid-template-columns: 1fr;
+  }
+}
+
+.admin-table-toolbar {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.admin-table-search {
+  padding: 8px 13px;
+  border: 1px solid rgba(199, 145, 44, 0.4);
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: var(--font-kh-sans);
+  background: #fff;
+  color: #2f2413;
+  outline: none;
+  min-width: 220px;
+}
+
+.admin-table-search:focus {
+  border-color: #c78612;
+  box-shadow: 0 0 0 2px rgba(199, 134, 18, 0.15);
+}
+
+.table-result-count {
+  font-family: var(--font-kh-sans);
+  font-size: 13px;
+  color: #9a7840;
+  margin-bottom: 10px;
+}
+
+.table-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(199, 145, 44, 0.14);
+}
+
+.pagination-info {
+  font-family: var(--font-kh-sans);
+  font-size: 14px;
+  color: #7a5820;
+  min-width: 100px;
+  text-align: center;
+}
+
+.pagination-btn {
+  min-width: 80px;
+}
+
 .admin-dashboard-empty {
   margin: 0;
   color: var(--muted);

@@ -4,8 +4,24 @@ const MEMBER_LIMIT = 49;
 const VEHICLE_LIMIT = 30;
 const EQUIPMENT_LIMIT = 30;
 const memberPhoneRegex = /^(?:0\d{8,9}|0\d{2}-\d{3}-\d{3,4})$/;
+const standardPlateRegex = /^2[A-Z]{2}-\d{4}$/;
 const emptyMemberError = { name: "", phone: "", gender: "", role: "" };
 const emptyVehicleError = { brand: "", plate: "" };
+
+function filterPlateValue(value, plateType) {
+  if (plateType === "cambodia") {
+    return value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 8);
+  }
+  return value.toUpperCase().replace(/[^A-Z0-9-]/g, "").slice(0, 8);
+}
+
+function getPlateError(plate, plateType) {
+  if (!plate.trim()) return "";
+  if (plateType === "standard") {
+    return standardPlateRegex.test(plate) ? "" : "ស្លាក់លេខត្រូវជា 2XX-XXXX (ឧ. 2AB-1234)";
+  }
+  return /^[A-Z0-9]{1,8}$/.test(plate) ? "" : "ស្លាក់លេខអតិបរមា 8 តួ (អក្សរ និងលេខ)";
+}
 const emptyEquipmentError = { type: "", quantity: "" };
 const stepOneMissionFieldNames = ["missionTitle", "departureDate", "returnDate", "missionPlace", "mission"];
 const stepOneProfileFieldNames = ["name", "phone", "gender", "role"];
@@ -70,10 +86,7 @@ function createMemberList() {
 }
 
 function createEmptyVehicle() {
-  return {
-    brand: "",
-    plate: ""
-  };
+  return { brand: "", plate: "", plateType: "" };
 }
 
 function createVehicleList() {
@@ -203,6 +216,8 @@ export default function MissionRequestForm({
   const [activeVehicleIndex, setActiveVehicleIndex] = useState(0);
   const [vehicles, setVehicles] = useState(() => createVehicleList());
   const [vehicleErrors, setVehicleErrors] = useState(emptyVehicleError);
+  const [vehiclePlateType, setVehiclePlateType] = useState("");
+  const [vehiclePlateError, setVehiclePlateError] = useState("");
   const [isEquipmentModalOpen, setIsEquipmentModalOpen] = useState(false);
   const [activeEquipmentIndex, setActiveEquipmentIndex] = useState(0);
   const [equipmentItems, setEquipmentItems] = useState(() => createEquipmentList());
@@ -371,11 +386,17 @@ export default function MissionRequestForm({
     const { name, value } = event.target;
     setVehicles((current) => {
       const next = [...current];
-      next[activeVehicleIndex] = { ...next[activeVehicleIndex], [name]: value };
+      const cur = next[activeVehicleIndex];
+      if (name === "plateType") {
+        next[activeVehicleIndex] = { ...cur, plateType: value, plate: "" };
+      } else if (name === "plate") {
+        next[activeVehicleIndex] = { ...cur, plate: filterPlateValue(value, cur.plateType || "standard") };
+      } else {
+        next[activeVehicleIndex] = { ...cur, [name]: value };
+      }
       return next;
     });
-
-    setVehicleErrors((current) => ({ ...current, [name]: "" }));
+    setVehicleErrors((current) => ({ ...current, plate: name === "plateType" ? "" : (name === "plate" ? "" : current.plate), brand: name === "brand" ? "" : current.brand }));
   }
 
   function handleVehicleDelete(vehicleIndex) {
@@ -503,6 +524,8 @@ export default function MissionRequestForm({
       }
       resetMemberState();
       resetVehicleState();
+      setVehiclePlateType("");
+      setVehiclePlateError("");
       return;
     }
 
@@ -554,7 +577,23 @@ export default function MissionRequestForm({
   }
 
   function handleFormSubmit(event) {
-    onSubmit(event, { members, vehicles, equipmentItems });
+    const primaryVehicle = {
+      brand: (formData.vehicleBrand || "").trim(),
+      plate: (formData.vehiclePlate || "").trim()
+    };
+    const vehiclesWithPrimary =
+      primaryVehicle.brand || primaryVehicle.plate ? [primaryVehicle, ...vehicles] : vehicles;
+
+    const primaryEquipment = {
+      type: (formData.equipmentType || "").trim(),
+      quantity: String(formData.equipmentCount ?? "").trim()
+    };
+    const equipmentWithPrimary =
+      primaryEquipment.type || primaryEquipment.quantity
+        ? [primaryEquipment, ...equipmentItems]
+        : equipmentItems;
+
+    onSubmit(event, { members, vehicles: vehiclesWithPrimary, equipmentItems: equipmentWithPrimary });
   }
 
   return (
@@ -808,17 +847,40 @@ export default function MissionRequestForm({
                     </div>
                   </div>
                 </div>
-                <label className="field">
+                <div className="field">
                   <span>ស្លាកលេខ</span>
-                  <input
-                    type="text"
-                    name="vehiclePlate"
-	                    placeholder="បញ្ចូលស្លាកលេខ"
-	                    value={formData.vehiclePlate}
-	                    onChange={onChange}
-	                    required
-	                  />
-                </label>
+                  {!vehiclePlateType ? (
+                    <select
+                      defaultValue=""
+                      onChange={(e) => {
+                        if (e.target.value) {
+                          setVehiclePlateType(e.target.value);
+                          setVehiclePlateError("");
+                          onChange({ target: { name: "vehiclePlate", value: "" } });
+                        }
+                      }}
+                    >
+                      <option value="">ជ្រើសប្រភេទស្លាក...</option>
+                      <option value="standard">ស្លាកលេខ (2XX-XXXX)</option>
+                      <option value="cambodia">កម្ពុជា (អតិបរមា 8 តួ)</option>
+                    </select>
+                  ) : (
+                    <input
+                      type="text"
+                      name="vehiclePlate"
+                      placeholder={vehiclePlateType === "cambodia" ? "អតិបរមា 8 តួ" : "ឧ. 2AB-1234"}
+                      value={formData.vehiclePlate}
+                      onChange={(e) => {
+                        const filtered = filterPlateValue(e.target.value, vehiclePlateType);
+                        setVehiclePlateError(getPlateError(filtered, vehiclePlateType));
+                        onChange({ target: { name: "vehiclePlate", value: filtered } });
+                      }}
+                      className={vehiclePlateError ? "input-error" : ""}
+                      required
+                    />
+                  )}
+                  {vehiclePlateError && <p className="field-error">{vehiclePlateError}</p>}
+                </div>
                 <label className="field">
                   <span>ចំនួនជាក់ស្តែង</span>
                   <input
@@ -1438,7 +1500,7 @@ export default function MissionRequestForm({
                 <button className="ghost" type="button" onClick={() => setActiveStep(4)}>
                   ត្រឡប់
                 </button>
-                <button className="primary" type="submit">
+                <button className="primary" type="button" onClick={handleFormSubmit}>
                   បញ្ជូន និងបង្កើត PDF
                 </button>
                 <button className="ghost" type="button" onClick={handleCurrentStepReset}>
@@ -1593,19 +1655,31 @@ export default function MissionRequestForm({
                   />
                   {vehicleErrors.brand ? <p className="field-error">{vehicleErrors.brand}</p> : null}
                 </label>
-                <label className="field">
+                <div className="field">
                   <span>ស្លាកលេខ</span>
-                  <input
-                    type="text"
-                    name="plate"
-                    placeholder="បញ្ចូលស្លាកលេខ"
-                    value={activeVehicle.plate}
-                    onChange={handleVehicleChange}
-                    className={vehicleErrors.plate ? "input-error" : ""}
-                    required
-                  />
+                  {!activeVehicle.plateType ? (
+                    <select
+                      name="plateType"
+                      defaultValue=""
+                      onChange={handleVehicleChange}
+                    >
+                      <option value="">ជ្រើសប្រភេទស្លាក...</option>
+                      <option value="standard">ស្លាកលេខ (2XX-XXXX)</option>
+                      <option value="cambodia">កម្ពុជា (អតិបរមា 8 តួ)</option>
+                    </select>
+                  ) : (
+                    <input
+                      type="text"
+                      name="plate"
+                      placeholder={activeVehicle.plateType === "cambodia" ? "អតិបរមា 8 តួ" : "ឧ. 2AB-1234"}
+                      value={activeVehicle.plate}
+                      onChange={handleVehicleChange}
+                      className={vehicleErrors.plate ? "input-error" : ""}
+                      required
+                    />
+                  )}
                   {vehicleErrors.plate ? <p className="field-error">{vehicleErrors.plate}</p> : null}
-                </label>
+                </div>
               </div>
             </section>
 

@@ -1,20 +1,18 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import "../../report-form/styles/layout.css";
 import "../../report-form/styles/request.css";
 import "../../report-form/styles/form.css";
 import "../../report-form/styles/responsive.css";
 import "../../report-form/styles/pdf.css";
 import "../styles/dashboard.css";
+import "../../sys-manager/styles/sysmanager.css";
 import { loadAdminMissionPanel, sanitizeAdminMissionPanel, saveAdminMissionPanel } from "../../../utils/adminMissionPanel";
 import {
   clearAdminMissionFile,
   createAdminMissionFileKey,
   saveAdminMissionFile
 } from "../../../utils/adminMissionFileStore";
-import PdfTemplate from "../../report-form/components/PdfTemplate";
 
-const historyStorageKey = "mcctv:mission-request-history";
-const fallbackText = "-";
 const initialMissionData = {
   missionTitle: "",
   missionPlace: "",
@@ -27,101 +25,25 @@ const initialMissionData = {
   requestPlanFileType: ""
 };
 
-function toText(value) {
-  return String(value ?? "").trim();
-}
-
-function getParticipantCount(report) {
-  const memberCount = Array.isArray(report?.members)
-    ? report.members.filter(
-        (member) => toText(member?.name) || toText(member?.phone) || toText(member?.role)
-      ).length
-    : 0;
-
-  if (memberCount > 0) {
-    return memberCount;
-  }
-
-  return toText(report?.formData?.name) ? 1 : 0;
-}
-
-function normalizeDashboardRow(report) {
-  if (!report || typeof report !== "object") {
-    return null;
-  }
-
-  const requestId = toText(report.requestId);
-  if (!requestId) {
-    return null;
-  }
-
-  const formData = report.formData && typeof report.formData === "object" ? report.formData : {};
-  const program = toText(formData.missionTitle) || toText(formData.mission) || fallbackText;
-  const location = toText(formData.missionPlace) || fallbackText;
-  const via = toText(formData.role) || toText(formData.name) || fallbackText;
-
-  return {
-    requestId,
-    program,
-    location,
-    participantCount: getParticipantCount(report),
-    via
-  };
-}
-
-function loadDashboardReports() {
-  if (typeof window === "undefined") {
-    return [];
-  }
-
-  try {
-    const rawValue = window.localStorage.getItem(historyStorageKey);
-    if (!rawValue) {
-      return [];
-    }
-
-    const parsed = JSON.parse(rawValue);
-    if (!Array.isArray(parsed)) {
-      return [];
-    }
-
-    return parsed.filter(
-      (report) =>
-        report &&
-        typeof report === "object" &&
-        toText(report.requestId) &&
-        toText(report.submittedAt)
-    );
-  } catch (error) {
-    console.error(error);
-    return [];
-  }
-}
-
-function countUniqueLocations(rows) {
-  return new Set(
-    rows
-      .map((row) => row.location)
-      .filter((location) => location && location !== fallbackText)
-  ).size;
+function formatDateTime(value) {
+  if (!value) return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return String(value);
+  return new Intl.DateTimeFormat("km-KH", {
+    year: "numeric", month: "2-digit", day: "2-digit",
+    hour: "2-digit", minute: "2-digit"
+  }).format(date);
 }
 
 export default function AdminDashboardPage({ onBackToMain, onLogout }) {
   const [missionData, setMissionData] = useState(initialMissionData);
+  const [savedPanel, setSavedPanel] = useState(() => loadAdminMissionPanel());
   const [missionStatusText, setMissionStatusText] = useState("");
-  const [selectedReport, setSelectedReport] = useState(null);
   const requestPlanFileInputRef = useRef(null);
-  const dashboardReports = useMemo(() => loadDashboardReports(), []);
-  const dashboardRows = useMemo(() => dashboardReports.map(normalizeDashboardRow).filter(Boolean), [dashboardReports]);
-  const totalParticipants = dashboardRows.reduce((sum, row) => sum + row.participantCount, 0);
-  const totalLocations = countUniqueLocations(dashboardRows);
 
   useEffect(() => {
     const storedMissionPanel = loadAdminMissionPanel();
-    if (!storedMissionPanel) {
-      return;
-    }
-
+    if (!storedMissionPanel) return;
     setMissionData((current) => ({ ...current, ...storedMissionPanel }));
   }, []);
 
@@ -205,6 +127,7 @@ export default function AdminDashboardPage({ onBackToMain, onLogout }) {
       }
     }
 
+    setSavedPanel(loadAdminMissionPanel());
     setMissionStatusText("បានបង្កើតដោយជោគជ័យ។ ព័ត៌មានបេសកកម្មនៅទំព័រដើមត្រូវបានអាប់ដេត។");
   }
 
@@ -216,6 +139,7 @@ export default function AdminDashboardPage({ onBackToMain, onLogout }) {
 
     setMissionData(initialMissionData);
     saveAdminMissionPanel(null);
+    setSavedPanel(null);
 
     for (const fileKey of fileKeys) {
       try {
@@ -232,41 +156,47 @@ export default function AdminDashboardPage({ onBackToMain, onLogout }) {
   }
 
   return (
-    <div className="page admin-dashboard-page notranslate" translate="no" lang="km">
-      <header className="topbar">
-        <div className="brand">
-          <div className="brand-main">
-            <div className="seal">
-              <img className="brand-logo" src="/about-moi-logo.png" alt="Ministry of Interior logo" />
-            </div>
-            <div className="brand-text">
-              <div className="brand-title brand-title-kh">ផ្ទាំងគ្រប់គ្រងអ្នកគ្រប់គ្រង</div>
-              <div className="brand-title-en brand-title-system">ផ្ទាំងគ្រប់គ្រងរដ្ឋបាលក្រសួងមហាផ្ទៃ</div>
-            </div>
+    <div className="sys-manager-page notranslate" translate="no" lang="km">
+      <header className="sys-manager-topbar">
+        <div className="sys-manager-brand">
+          <img
+            className="sys-manager-logo"
+            src="/about-moi-logo.png"
+            alt="Ministry of Interior logo"
+            onError={(e) => { e.currentTarget.src = "/logo.png"; }}
+          />
+          <div>
+            <div className="sys-manager-brand-title">ផ្ទាំងគ្រប់គ្រងអ្នកគ្រប់គ្រង</div>
+            <div className="sys-manager-brand-sub">Admin Dashboard</div>
           </div>
-          <div className="brand-title-en brand-title-sub">តាមដានបេសកកម្ម និងទិន្នន័យសំណើ</div>
+        </div>
+        <div style={{ display: "flex", gap: "10px" }}>
+          {onBackToMain ? (
+            <button type="button" className="ghost" onClick={onBackToMain}>ទំព័រដើម</button>
+          ) : null}
+          <button type="button" className="ghost" onClick={onLogout}>ចាកចេញ</button>
         </div>
       </header>
 
-      <nav className="nav admin-dashboard-nav">
-        <a href="#overview" className="active">
-          ទិដ្ឋភាពទូទៅ
-        </a>
-        <div className="admin-actions admin-dashboard-actions-bar">
-          {onBackToMain ? (
-            <button type="button" className="admin-access-btn admin" onClick={onBackToMain}>
-              ទំព័រដើម
-            </button>
-          ) : null}
-          <button type="button" className="admin-access-btn admin" onClick={onLogout}>
-            ចាកចេញ
-          </button>
-        </div>
-      </nav>
+      <div className="sys-manager-body">
+        <aside className="sys-manager-sidebar">
+          <div className="sys-sidebar-section-label">ការគ្រប់គ្រង</div>
+          <nav className="sys-manager-nav">
+            <button type="button" className="sys-nav-item active">ពត៌មានកម្មវិធី</button>
+          </nav>
+        </aside>
 
-      <main className="page-main admin-dashboard-main">
-        <section id="mission-panel" className="bundle">
-          <div className="bundle-card admin-dashboard-card">
+        <main className="sys-manager-main">
+          <div className="sys-manager-content-header">
+            <h2 className="sys-manager-content-title">ពត៌មានកម្មវិធី</h2>
+            {savedPanel?.savedAt && (
+              <span style={{ fontSize: 13, color: "#9a7840" }}>
+                រក្សាទុកចុងក្រោយ: {formatDateTime(savedPanel.savedAt)}
+              </span>
+            )}
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 280px", gap: "20px", alignItems: "start" }}>
             <section className="phase-card phase-mission admin-mission-card">
               <div className="phase-header admin-mission-main-header">
                 <h3>ពត៌មានកម្មវិធី</h3>
@@ -322,26 +252,12 @@ export default function AdminDashboardPage({ onBackToMain, onLogout }) {
                   />
                 </label>
               </div>
-              <div className="actions">
-                <button className="primary" type="button" onClick={handleCreateMissionPanel}>
-                  បង្កើត
-                </button>
-                <button className="ghost" type="button" onClick={handleClearMissionPanel}>
-                  សម្អាត
-                </button>
-                <div className="status">{missionStatusText}</div>
-              </div>
-            </section>
-
-            <section className="phase-card admin-mission-card admin-mission-upload-card">
-              <div className="phase-header admin-mission-upload-header">
+              <div className="phase-header admin-mission-upload-header" style={{ marginTop: "16px" }}>
                 <h3>ឯកសារស្នើសុំផែនការ កំលាំង និងសម្ភារៈបច្ចេកទេស</h3>
               </div>
               <div className="upload-block admin-mission-upload-block">
                 <label className="upload-area" htmlFor="requestPlanFile">
-                  <span className="upload-icon" aria-hidden="true">
-                    ↑
-                  </span>
+                  <span className="upload-icon" aria-hidden="true">↑</span>
                   <span className="upload-text">បញ្ចូលឯកសារ</span>
                   <input
                     id="requestPlanFile"
@@ -360,80 +276,74 @@ export default function AdminDashboardPage({ onBackToMain, onLogout }) {
                   </div>
                 ) : null}
               </div>
+              <div className="actions">
+                <button className="primary" type="button" onClick={handleCreateMissionPanel}>
+                  បង្កើត
+                </button>
+                <button className="ghost" type="button" onClick={handleClearMissionPanel}>
+                  សម្អាត
+                </button>
+                <div className="status">{missionStatusText}</div>
+              </div>
             </section>
-          </div>
-        </section>
 
-        <section id="overview" className="hero admin-dashboard-hero">
-          <div className="hero-stats">
-            <div className="stat-card">
-              <div className="stat-value">{dashboardRows.length}</div>
-              <div className="stat-label">សំណើសរុប</div>
-            </div>
-            <div className="stat-card">
-              <div className="stat-value">{totalParticipants}</div>
-              <div className="stat-label">ចំនួនអ្នកចូលរួម</div>
-            </div>
-            <div className="stat-card">
-              <div className="stat-value">{totalLocations}</div>
-              <div className="stat-label">ទីតាំងសរុប</div>
+            {/* Preview panel */}
+            <div className="sys-overview-panel" style={{ position: "sticky", top: "20px" }}>
+              <h3 className="sys-panel-title">ព័ត៌មានដែលបានរក្សាទុក</h3>
+              {!savedPanel ? (
+                <p className="sys-reports-empty" style={{ padding: "16px 18px" }}>
+                  មិនទាន់មានទិន្នន័យ — សូមបំពេញហើយចុច «បង្កើត»
+                </p>
+              ) : (
+                <dl className="sys-panel-dl">
+                  {savedPanel.savedAt && (
+                    <div className="sys-panel-dl-row sys-panel-dl-row--meta">
+                      <dt>រក្សាទុកនៅ</dt>
+                      <dd>{formatDateTime(savedPanel.savedAt)}</dd>
+                    </div>
+                  )}
+                  {savedPanel.missionTitle && (
+                    <div className="sys-panel-dl-row">
+                      <dt>កម្មវិធី</dt>
+                      <dd>{savedPanel.missionTitle}</dd>
+                    </div>
+                  )}
+                  {savedPanel.missionPlace && (
+                    <div className="sys-panel-dl-row">
+                      <dt>ទីតាំង</dt>
+                      <dd>{savedPanel.missionPlace}</dd>
+                    </div>
+                  )}
+                  {savedPanel.missionTime && (
+                    <div className="sys-panel-dl-row">
+                      <dt>ពេលវេលា</dt>
+                      <dd>{formatDateTime(savedPanel.missionTime)}</dd>
+                    </div>
+                  )}
+                  {savedPanel.participantCount && (
+                    <div className="sys-panel-dl-row">
+                      <dt>អ្នកចូលរួម</dt>
+                      <dd>{savedPanel.participantCount} នាក់</dd>
+                    </div>
+                  )}
+                  {savedPanel.missionVia && (
+                    <div className="sys-panel-dl-row">
+                      <dt>តាមរយៈ</dt>
+                      <dd>{savedPanel.missionVia}</dd>
+                    </div>
+                  )}
+                  {savedPanel.requestPlanFileName && (
+                    <div className="sys-panel-dl-row">
+                      <dt>ឯកសារ</dt>
+                      <dd>{savedPanel.requestPlanFileName}</dd>
+                    </div>
+                  )}
+                </dl>
+              )}
             </div>
           </div>
-        </section>
-
-        <section id="request-summary" className="bundle">
-          <div className="bundle-card admin-dashboard-card">
-            <div className="bundle-header admin-dashboard-card-header">
-              <div>
-                <h2>ទិន្នន័យសំណើរបេសកកម្ម</h2>
-                <p>ទិដ្ឋភាពទូទៅនៃកំណត់ត្រាសំណើដែលបានរក្សាទុកក្នុងប្រព័ន្ធ។</p>
-              </div>
-            </div>
-
-            {dashboardRows.length === 0 ? (
-              <p className="admin-dashboard-empty">មិនទាន់មានទិន្នន័យសម្រាប់បង្ហាញទេ។</p>
-            ) : (
-              <div className="admin-dashboard-table-wrap">
-                <table className="admin-dashboard-table">
-                  <thead>
-                    <tr>
-                      <th>កម្មវិធី</th>
-                      <th>ទីតាំង</th>
-                      <th>ចំនួនអ្នកចូលរួម</th>
-                      <th>តាមរយៈ</th>
-                      <th>ឯកសារ PDF</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {dashboardRows.map((row) => (
-                      <tr key={row.requestId}>
-                        <td>{row.program}</td>
-                        <td>{row.location}</td>
-                        <td>{row.participantCount}</td>
-                        <td>{row.via}</td>
-                        <td>
-                          <button
-                            type="button"
-                            className="ghost"
-                            onClick={() =>
-                              setSelectedReport(
-                                dashboardReports.find((report) => report.requestId === row.requestId) ?? null
-                              )
-                            }
-                          >
-                            មើល PDF
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-        </section>
-      </main>
-      <PdfTemplate report={selectedReport} onClose={() => setSelectedReport(null)} />
+        </main>
+      </div>
     </div>
   );
 }

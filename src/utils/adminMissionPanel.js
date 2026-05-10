@@ -88,9 +88,10 @@ export function saveAdminMissionPanel(rawPanel) {
   }
 
   try {
-    window.localStorage.setItem(adminMissionPanelKey, JSON.stringify(sanitizedPanel));
+    const withTimestamp = { ...sanitizedPanel, savedAt: new Date().toISOString() };
+    window.localStorage.setItem(adminMissionPanelKey, JSON.stringify(withTimestamp));
     emitAdminMissionPanelUpdated();
-    return sanitizedPanel;
+    return withTimestamp;
   } catch (error) {
     console.error(error);
     return null;
