@@ -1,4 +1,5 @@
 const adminMissionPanelKey = "mcctv:admin-mission-panel";
+const adminMissionHistoryKey = "mcctv:mission-panel-history";
 const adminMissionPanelUpdatedEvent = "mcctv:admin-mission-panel-updated";
 
 function toText(value) {
@@ -6,17 +7,21 @@ function toText(value) {
 }
 
 function emitAdminMissionPanelUpdated() {
-  if (typeof window === "undefined") {
-    return;
-  }
-
+  if (typeof window === "undefined") return;
   window.dispatchEvent(new Event(adminMissionPanelUpdatedEvent));
 }
 
+function generateMissionCode() {
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = String(now.getMonth() + 1).padStart(2, "0");
+  const d = String(now.getDate()).padStart(2, "0");
+  const rand = Math.random().toString(36).slice(2, 6).toUpperCase();
+  return `MSN-${y}${m}${d}-${rand}`;
+}
+
 export function sanitizeAdminMissionPanel(rawPanel) {
-  if (!rawPanel || typeof rawPanel !== "object") {
-    return null;
-  }
+  if (!rawPanel || typeof rawPanel !== "object") return null;
 
   const missionTitle = toText(rawPanel.missionTitle);
   const missionPlace = toText(rawPanel.missionPlace);
@@ -32,86 +37,107 @@ export function sanitizeAdminMissionPanel(rawPanel) {
   const requestPlanFileType = toText(rawPanel.requestPlanFileType);
 
   if (
-    !missionTitle &&
-    !missionPlace &&
-    !missionTime &&
-    !participantCount &&
-    !missionVia &&
-    !requestPlanFileName &&
-    !requestPlanFileDataUrl &&
-    !requestPlanFileKey
+    !missionTitle && !missionPlace && !missionTime && !participantCount &&
+    !missionVia && !requestPlanFileName && !requestPlanFileDataUrl && !requestPlanFileKey
   ) {
     return null;
   }
 
   return {
-    missionTitle,
-    missionPlace,
-    missionTime,
-    participantCount,
-    missionVia,
-    requestPlanFileName,
-    requestPlanFileDataUrl,
-    requestPlanFileKey,
-    requestPlanFileType
+    missionTitle, missionPlace, missionTime, participantCount, missionVia,
+    requestPlanFileName, requestPlanFileDataUrl, requestPlanFileKey, requestPlanFileType
   };
 }
 
-export function loadAdminMissionPanel() {
-  if (typeof window === "undefined") {
-    return null;
-  }
-
+function loadHistoryRaw() {
+  if (typeof window === "undefined") return [];
   try {
-    const rawValue = window.localStorage.getItem(adminMissionPanelKey);
-    if (!rawValue) {
-      return null;
-    }
+    const raw = window.localStorage.getItem(adminMissionHistoryKey);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed.filter((p) => p && p.missionCode) : [];
+  } catch {
+    return [];
+  }
+}
 
+function writeHistory(history) {
+  window.localStorage.setItem(adminMissionHistoryKey, JSON.stringify(history));
+  const active = history.find((p) => p.isActive) ?? null;
+  if (active) {
+    window.localStorage.setItem(adminMissionPanelKey, JSON.stringify(active));
+  } else {
+    window.localStorage.removeItem(adminMissionPanelKey);
+  }
+  emitAdminMissionPanelUpdated();
+}
+
+export function loadMissionHistory() {
+  return loadHistoryRaw();
+}
+
+export function loadAdminMissionPanel() {
+  if (typeof window === "undefined") return null;
+  try {
+    const history = loadHistoryRaw();
+    if (history.length > 0) {
+      return history.find((p) => p.isActive) ?? null;
+    }
+    // fallback for data saved before history was introduced
+    const rawValue = window.localStorage.getItem(adminMissionPanelKey);
+    if (!rawValue) return null;
     return sanitizeAdminMissionPanel(JSON.parse(rawValue));
-  } catch (error) {
-    console.error(error);
+  } catch {
     return null;
   }
 }
 
 export function saveAdminMissionPanel(rawPanel) {
-  if (typeof window === "undefined") {
-    return null;
-  }
+  if (typeof window === "undefined") return null;
 
   const sanitizedPanel = sanitizeAdminMissionPanel(rawPanel);
   if (!sanitizedPanel) {
-    window.localStorage.removeItem(adminMissionPanelKey);
-    emitAdminMissionPanelUpdated();
+    const history = loadHistoryRaw().map((p) => ({ ...p, isActive: false }));
+    writeHistory(history);
     return null;
   }
 
+  const missionCode = generateMissionCode();
+  const entry = {
+    ...sanitizedPanel,
+    missionCode,
+    savedAt: new Date().toISOString(),
+    isActive: true,
+  };
+
   try {
-    const withTimestamp = { ...sanitizedPanel, savedAt: new Date().toISOString() };
-    window.localStorage.setItem(adminMissionPanelKey, JSON.stringify(withTimestamp));
-    emitAdminMissionPanelUpdated();
-    return withTimestamp;
+    const history = loadHistoryRaw().map((p) => ({ ...p, isActive: false }));
+    history.unshift(entry);
+    writeHistory(history);
+    return entry;
   } catch (error) {
     console.error(error);
     return null;
   }
 }
 
+export function activateMissionPanel(missionCode) {
+  const history = loadHistoryRaw().map((p) => ({ ...p, isActive: p.missionCode === missionCode }));
+  writeHistory(history);
+  return history.find((p) => p.isActive) ?? null;
+}
+
+export function deleteMissionFromHistory(missionCode) {
+  const history = loadHistoryRaw().filter((p) => p.missionCode !== missionCode);
+  writeHistory(history);
+}
+
 export function subscribeAdminMissionPanel(listener) {
-  if (typeof window === "undefined") {
-    return () => {};
-  }
+  if (typeof window === "undefined") return () => {};
 
-  const handleChange = () => {
-    listener(loadAdminMissionPanel());
-  };
-
+  const handleChange = () => { listener(loadAdminMissionPanel()); };
   const handleStorage = (event) => {
-    if (event.key && event.key !== adminMissionPanelKey) {
-      return;
-    }
-
+    if (event.key && event.key !== adminMissionPanelKey && event.key !== adminMissionHistoryKey) return;
     handleChange();
   };
 

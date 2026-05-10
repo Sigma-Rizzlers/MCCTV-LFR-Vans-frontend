@@ -6,7 +6,14 @@ import "../../report-form/styles/responsive.css";
 import "../../report-form/styles/pdf.css";
 import "../styles/dashboard.css";
 import "../../sys-manager/styles/sysmanager.css";
-import { loadAdminMissionPanel, sanitizeAdminMissionPanel, saveAdminMissionPanel } from "../../../utils/adminMissionPanel";
+import {
+  loadAdminMissionPanel,
+  loadMissionHistory,
+  sanitizeAdminMissionPanel,
+  saveAdminMissionPanel,
+  activateMissionPanel,
+  deleteMissionFromHistory,
+} from "../../../utils/adminMissionPanel";
 import {
   clearAdminMissionFile,
   createAdminMissionFileKey,
@@ -38,8 +45,14 @@ function formatDateTime(value) {
 export default function AdminDashboardPage({ onBackToMain, onLogout }) {
   const [missionData, setMissionData] = useState(initialMissionData);
   const [savedPanel, setSavedPanel] = useState(() => loadAdminMissionPanel());
+  const [missionHistory, setMissionHistory] = useState(() => loadMissionHistory());
   const [missionStatusText, setMissionStatusText] = useState("");
   const requestPlanFileInputRef = useRef(null);
+
+  function refreshState() {
+    setSavedPanel(loadAdminMissionPanel());
+    setMissionHistory(loadMissionHistory());
+  }
 
   useEffect(() => {
     const storedMissionPanel = loadAdminMissionPanel();
@@ -106,9 +119,8 @@ export default function AdminDashboardPage({ onBackToMain, onLogout }) {
   }
 
   async function handleCreateMissionPanel() {
-    const previousSavedPanel = loadAdminMissionPanel();
-    const savedPanel = saveAdminMissionPanel(missionData);
-    if (!savedPanel) {
+    const created = saveAdminMissionPanel(missionData);
+    if (!created) {
       setMissionStatusText(
         sanitizeAdminMissionPanel(missionData)
           ? "មិនអាចរក្សាទុកឯកសារនេះបានទេ។ សូមសាកល្បងឯកសារដែលមានទំហំតូចជាងនេះ។"
@@ -117,42 +129,54 @@ export default function AdminDashboardPage({ onBackToMain, onLogout }) {
       return;
     }
 
-    const previousFileKey = previousSavedPanel?.requestPlanFileKey || "";
-    const nextFileKey = savedPanel.requestPlanFileKey || "";
-    if (previousFileKey && previousFileKey !== nextFileKey) {
-      try {
-        await clearAdminMissionFile(previousFileKey);
-      } catch (error) {
-        console.error(error);
-      }
-    }
-
-    setSavedPanel(loadAdminMissionPanel());
-    setMissionStatusText("បានបង្កើតដោយជោគជ័យ។ ព័ត៌មានបេសកកម្មនៅទំព័រដើមត្រូវបានអាប់ដេត។");
+    refreshState();
+    setMissionStatusText(`បានបង្កើតដោយជោគជ័យ — លេខបេសកកម្ម: ${created.missionCode}`);
   }
 
   async function handleClearMissionPanel() {
-    const savedMissionPanel = loadAdminMissionPanel();
-    const fileKeys = new Set(
-      [savedMissionPanel?.requestPlanFileKey, missionData.requestPlanFileKey].filter(Boolean)
-    );
+    const currentFileKey = missionData.requestPlanFileKey;
 
     setMissionData(initialMissionData);
-    saveAdminMissionPanel(null);
-    setSavedPanel(null);
+    if (requestPlanFileInputRef.current) {
+      requestPlanFileInputRef.current.value = "";
+    }
 
-    for (const fileKey of fileKeys) {
+    if (currentFileKey) {
+      const savedMissionPanel = loadAdminMissionPanel();
+      const savedFileKey = savedMissionPanel?.requestPlanFileKey || "";
+      if (currentFileKey !== savedFileKey) {
+        try {
+          await clearAdminMissionFile(currentFileKey);
+        } catch (error) {
+          console.error(error);
+        }
+      }
+    }
+
+    setMissionStatusText("បានសម្អាតសំណុំបែបបទ។");
+  }
+
+  function handleActivateMission(missionCode) {
+    activateMissionPanel(missionCode);
+    refreshState();
+    const activated = loadAdminMissionPanel();
+    if (activated) {
+      setMissionData((current) => ({ ...current, ...activated }));
+    }
+    setMissionStatusText(`បានដំណើរការ — ${missionCode}`);
+  }
+
+  async function handleDeleteHistoryMission(missionCode, fileKey) {
+    deleteMissionFromHistory(missionCode);
+    if (fileKey) {
       try {
         await clearAdminMissionFile(fileKey);
       } catch (error) {
         console.error(error);
       }
     }
-
-    if (requestPlanFileInputRef.current) {
-      requestPlanFileInputRef.current.value = "";
-    }
-    setMissionStatusText("បានសម្អាត។ ព័ត៌មាននៅទំព័រដើមត្រឡប់ទៅលំនាំដើមវិញ។");
+    refreshState();
+    setMissionStatusText("");
   }
 
   return (
@@ -232,7 +256,7 @@ export default function AdminDashboardPage({ onBackToMain, onLogout }) {
                   />
                 </label>
                 <label className="field">
-                  <span>ទំហអ្នកចូលរួម</span>
+                  <span>ទំហំអ្នកចូលរួម</span>
                   <input
                     type="number"
                     name="participantCount"
@@ -296,6 +320,24 @@ export default function AdminDashboardPage({ onBackToMain, onLogout }) {
                 </p>
               ) : (
                 <dl className="sys-panel-dl">
+                  {savedPanel.missionCode && (
+                    <div className="sys-panel-dl-row sys-panel-dl-row--meta">
+                      <dt>លេខបេសកកម្ម</dt>
+                      <dd>
+                        <span style={{
+                          fontFamily: "monospace",
+                          background: "#9a7840",
+                          color: "#fff",
+                          padding: "2px 8px",
+                          borderRadius: "4px",
+                          fontSize: 12,
+                          letterSpacing: "0.5px"
+                        }}>
+                          {savedPanel.missionCode}
+                        </span>
+                      </dd>
+                    </div>
+                  )}
                   {savedPanel.savedAt && (
                     <div className="sys-panel-dl-row sys-panel-dl-row--meta">
                       <dt>រក្សាទុកនៅ</dt>
@@ -342,6 +384,76 @@ export default function AdminDashboardPage({ onBackToMain, onLogout }) {
               )}
             </div>
           </div>
+
+          {/* Mission history */}
+          {missionHistory.length > 0 && (
+            <section className="phase-card phase-mission admin-mission-card" style={{ marginTop: "20px" }}>
+              <div className="phase-header admin-mission-main-header">
+                <h3>ប្រវត្តិបេសកកម្ម</h3>
+                <span style={{ fontSize: 13, color: "#9a7840" }}>{missionHistory.length} កំណត់ត្រា</span>
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: "10px", marginTop: "12px" }}>
+                {missionHistory.map((panel) => (
+                  <div
+                    key={panel.missionCode}
+                    style={{
+                      border: panel.isActive ? "1.5px solid #9a7840" : "1px solid #e6dccb",
+                      borderRadius: "8px",
+                      padding: "10px 14px",
+                      background: panel.isActive ? "#fffbeb" : "#fafaf8",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "12px",
+                      flexWrap: "wrap"
+                    }}
+                  >
+                    <span style={{
+                      fontFamily: "monospace",
+                      background: panel.isActive ? "#9a7840" : "#e6dccb",
+                      color: panel.isActive ? "#fff" : "#5b4a2a",
+                      padding: "2px 8px",
+                      borderRadius: "4px",
+                      fontSize: 12,
+                      letterSpacing: "0.5px",
+                      flexShrink: 0
+                    }}>
+                      {panel.missionCode}
+                    </span>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontWeight: 600, fontSize: 14, color: "#3d2402", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                        {panel.missionTitle || "—"}
+                      </div>
+                      <div style={{ fontSize: 12, color: "#7a694d", marginTop: 2 }}>
+                        {[panel.missionPlace, formatDateTime(panel.savedAt)].filter(Boolean).join(" · ")}
+                      </div>
+                    </div>
+                    {panel.isActive ? (
+                      <span style={{ fontSize: 12, color: "#2f8d43", fontWeight: 700, flexShrink: 0 }}>
+                        ● កំពុងប្រើ
+                      </span>
+                    ) : (
+                      <button
+                        type="button"
+                        className="ghost"
+                        style={{ fontSize: 12, padding: "4px 10px", flexShrink: 0 }}
+                        onClick={() => handleActivateMission(panel.missionCode)}
+                      >
+                        ដំណើរការ
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      className="ghost"
+                      style={{ fontSize: 12, padding: "4px 10px", color: "#b3261e", flexShrink: 0 }}
+                      onClick={() => handleDeleteHistoryMission(panel.missionCode, panel.requestPlanFileKey)}
+                    >
+                      លុប
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
         </main>
       </div>
     </div>

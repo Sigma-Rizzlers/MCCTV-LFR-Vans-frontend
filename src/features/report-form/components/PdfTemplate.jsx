@@ -29,13 +29,15 @@ function createPdfFileName(requestId) {
   return `MCCTV-request-${safeId || "unknown"}.pdf`;
 }
 
-function ReportSections({ report }) {
-  const { formData = {}, vehicles, equipmentItems, adminPanel } = report;
-  const filledVehicles = Array.isArray(vehicles) ? vehicles : [];
-  const filledEquipment = Array.isArray(equipmentItems) ? equipmentItems : [];
+function buildReportSections(report) {
+  const fd = report?.formData;
+  const formData = (fd && typeof fd === "object") ? fd : {};
+  const filledVehicles = Array.isArray(report?.vehicles) ? report.vehicles : [];
+  const filledEquipment = Array.isArray(report?.equipmentItems) ? report.equipmentItems : [];
+  const adminPanel = report?.adminPanel;
 
   return (
-    <section className="pdf-grid">
+    <section key="report-sections" className="pdf-grid">
       <section className="pdf-panel pdf-panel-full">
         <h3>ព័ត៌មានបេសកកម្ម</h3>
         <table className="pdf-member-table">
@@ -338,7 +340,7 @@ export default function PdfTemplate({ report, reports: reportsProp, onClose, onD
         {!isCombined && (
           <article id="pdfTemplate" className="pdf-document">
             {missionHeader}
-            <ReportSections report={primary} />
+            {buildReportSections(primary)}
             {pdfFooter}
           </article>
         )}
@@ -420,7 +422,7 @@ export default function PdfTemplate({ report, reports: reportsProp, onClose, onD
                     </span>
                   </div>
                 </div>
-                <ReportSections report={r} />
+                {buildReportSections(r)}
               </div>
             ))}
             {pdfFooter}
