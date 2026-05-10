@@ -229,7 +229,8 @@ export default function PdfTemplate({ report, reports: reportsProp, onClose, onD
   if (!allReports.length) return null;
 
   const primary = allReports[0];
-  const { requestId, submittedAt, adminPanel = {} } = primary;
+  const { requestId, submittedAt } = primary;
+  const adminPanel = (primary?.adminPanel && typeof primary.adminPanel === "object") ? primary.adminPanel : {};
   const pdfTitleText = "បង្កាន់ដៃសំណើរថយន្តបេសកកម្ម";
 
   async function handleSavePdfFile() {
