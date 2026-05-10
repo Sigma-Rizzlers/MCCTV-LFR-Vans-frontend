@@ -23,45 +23,47 @@ function formatDate(value) {
   return new Intl.DateTimeFormat("km-KH", { year: "numeric", month: "2-digit", day: "2-digit" }).format(date);
 }
 
-function getParticipantCount(report) {
-  const memberCount = Array.isArray(report?.members)
-    ? report.members.filter(
-        (member) => toText(member?.name) || toText(member?.phone) || toText(member?.role)
-      ).length
-    : 0;
-
-  if (memberCount > 0) return memberCount;
-  return toText(report?.formData?.name) ? 1 : 0;
+function getMissionKey(report) {
+  const title = toText(report.adminPanel?.missionTitle || report.formData?.missionTitle || "");
+  const time = toText(report.adminPanel?.missionTime || "");
+  return (title || time) ? `${title}|${time}` : report.requestId;
 }
 
-function normalizeDashboardRow(report) {
-  if (!report || typeof report !== "object") return null;
+function groupReportsByMission(reports) {
+  const map = new Map();
+  for (const report of reports) {
+    const key = getMissionKey(report);
+    if (!map.has(key)) map.set(key, []);
+    map.get(key).push(report);
+  }
+  return Array.from(map.values());
+}
 
-  const requestId = toText(report.requestId);
-  if (!requestId) return null;
-
-  const formData = report.formData && typeof report.formData === "object" ? report.formData : {};
-  const adminPanel = report.adminPanel && typeof report.adminPanel === "object" ? report.adminPanel : {};
-
+function normalizeMissionGroup(group) {
+  if (!group.length) return null;
+  const first = group[0];
+  const formData = first.formData || {};
+  const adminPanel = first.adminPanel || {};
   const program = toText(adminPanel.missionTitle || formData.missionTitle || formData.mission) || fallbackText;
   const location = toText(adminPanel.missionPlace || formData.missionPlace) || fallbackText;
-  const date = toText(formData.departureDate) || toText(report.submittedAt) || fallbackText;
+  const date = toText(formData.departureDate) || toText(first.submittedAt) || fallbackText;
   const rawDuration = toText(formData.travelDuration);
   const duration = rawDuration ? `${rawDuration} ម៉ោង` : fallbackText;
-
   return {
-    requestId,
+    key: first.requestId,
     program,
     location,
-    participantCount: getParticipantCount(report),
+    unitCount: group.length,
     date,
-    duration
+    duration,
+    reports: group,
+    participantCount: Number(adminPanel.participantCount) || 0,
   };
 }
 
-function countUniqueLocations(rows) {
+function countUniqueLocations(groups) {
   return new Set(
-    rows.map((row) => row.location).filter((loc) => loc && loc !== fallbackText)
+    groups.map((g) => g.location).filter((loc) => loc && loc !== fallbackText)
   ).size;
 }
 
@@ -87,31 +89,35 @@ function loadDashboardReports() {
 
 export default function SuperAdminDashboardPage({ onBackToMain, onLogout }) {
   const [refreshKey, setRefreshKey] = useState(0);
-  const [selectedReport, setSelectedReport] = useState(null);
+  const [selectedReports, setSelectedReports] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
 
   const dashboardReports = useMemo(() => loadDashboardReports(), [refreshKey]);
-  const dashboardRows = useMemo(
-    () => dashboardReports.map(normalizeDashboardRow).filter(Boolean),
+  const missionGroups = useMemo(
+    () => groupReportsByMission(dashboardReports).map(normalizeMissionGroup).filter(Boolean),
     [dashboardReports]
   );
-  const totalLocations = countUniqueLocations(dashboardRows);
+  const totalLocations = useMemo(() => countUniqueLocations(missionGroups), [missionGroups]);
   const totalParticipants = useMemo(
-    () => dashboardRows.reduce((sum, r) => sum + (Number(r.participantCount) || 0), 0),
-    [dashboardRows]
+    () => missionGroups.reduce((sum, g) => sum + g.participantCount, 0),
+    [missionGroups]
   );
 
-  const filteredRows = useMemo(() => {
+  const filteredGroups = useMemo(() => {
     const q = searchQuery.toLowerCase();
     const fromMs = dateFrom ? new Date(dateFrom).getTime() : null;
     const toMs = dateTo ? new Date(dateTo + "T23:59:59").getTime() : null;
-    return dashboardRows.filter((r) => {
-      if (q && !(r.requestId.toLowerCase().includes(q) || r.program.toLowerCase().includes(q) || r.location.toLowerCase().includes(q))) return false;
+    return missionGroups.filter((g) => {
+      if (q && !(
+        g.program.toLowerCase().includes(q) ||
+        g.location.toLowerCase().includes(q) ||
+        g.reports.some((r) => r.requestId.toLowerCase().includes(q))
+      )) return false;
       if (fromMs || toMs) {
-        const rowMs = new Date(r.date).getTime();
+        const rowMs = new Date(g.date).getTime();
         if (!isNaN(rowMs)) {
           if (fromMs && rowMs < fromMs) return false;
           if (toMs && rowMs > toMs) return false;
@@ -119,41 +125,21 @@ export default function SuperAdminDashboardPage({ onBackToMain, onLogout }) {
       }
       return true;
     });
-  }, [dashboardRows, searchQuery, dateFrom, dateTo]);
+  }, [missionGroups, searchQuery, dateFrom, dateTo]);
 
-  const totalPages = Math.max(1, Math.ceil(filteredRows.length / ROWS_PER_PAGE));
-  const pagedRows = filteredRows.slice((currentPage - 1) * ROWS_PER_PAGE, currentPage * ROWS_PER_PAGE);
+  const totalPages = Math.max(1, Math.ceil(filteredGroups.length / ROWS_PER_PAGE));
+  const pagedGroups = filteredGroups.slice((currentPage - 1) * ROWS_PER_PAGE, currentPage * ROWS_PER_PAGE);
 
   useEffect(() => {
     setCurrentPage(1);
   }, [searchQuery, dateFrom, dateTo]);
 
-  function handleDeleteReport(requestId) {
-    if (typeof window === "undefined") return;
-    try {
-      const raw = window.localStorage.getItem(historyStorageKey);
-      if (!raw) return;
-      const parsed = JSON.parse(raw);
-      if (!Array.isArray(parsed)) return;
-      const next = parsed.filter((r) => r?.requestId !== requestId);
-      window.localStorage.setItem(historyStorageKey, JSON.stringify(next));
-    } catch (error) {
-      console.error(error);
-    }
-    setSelectedReport(null);
-    setRefreshKey((k) => k + 1);
-  }
-
   useEffect(() => {
     function handleStorageChange(event) {
-      if (event.key === historyStorageKey) {
-        setRefreshKey((k) => k + 1);
-      }
+      if (event.key === historyStorageKey) setRefreshKey((k) => k + 1);
     }
     function handleVisibilityChange() {
-      if (document.visibilityState === "visible") {
-        setRefreshKey((k) => k + 1);
-      }
+      if (document.visibilityState === "visible") setRefreshKey((k) => k + 1);
     }
     window.addEventListener("storage", handleStorageChange);
     document.addEventListener("visibilitychange", handleVisibilityChange);
@@ -162,6 +148,25 @@ export default function SuperAdminDashboardPage({ onBackToMain, onLogout }) {
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
   }, []);
+
+  function handleDeleteReports(requestIds) {
+    if (typeof window === "undefined") return;
+    const idSet = new Set(Array.isArray(requestIds) ? requestIds : [requestIds]);
+    try {
+      const raw = window.localStorage.getItem(historyStorageKey);
+      if (!raw) return;
+      const parsed = JSON.parse(raw);
+      if (!Array.isArray(parsed)) return;
+      window.localStorage.setItem(
+        historyStorageKey,
+        JSON.stringify(parsed.filter((r) => !idSet.has(r?.requestId)))
+      );
+    } catch (error) {
+      console.error(error);
+    }
+    setSelectedReports(null);
+    setRefreshKey((k) => k + 1);
+  }
 
   return (
     <div className="sys-manager-page notranslate" translate="no" lang="km">
@@ -197,8 +202,8 @@ export default function SuperAdminDashboardPage({ onBackToMain, onLogout }) {
         <main className="sys-manager-main">
           <div className="sys-stat-row" style={{ gridTemplateColumns: "repeat(3, 1fr)", marginBottom: "24px" }}>
             <div className="sys-stat-card">
-              <div className="sys-stat-value">{dashboardRows.length}</div>
-              <div className="sys-stat-label">សំណើសរុប</div>
+              <div className="sys-stat-value">{missionGroups.length}</div>
+              <div className="sys-stat-label">បេសកកម្មសរុប</div>
             </div>
             <div className="sys-stat-card">
               <div className="sys-stat-value">{totalLocations}</div>
@@ -215,7 +220,7 @@ export default function SuperAdminDashboardPage({ onBackToMain, onLogout }) {
             <div className="sys-manager-toolbar">
               <input
                 className="sys-search-input sys-search-input--wide"
-                placeholder="ស្វែងរក PDF..."
+                placeholder="ស្វែងរក..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
@@ -245,12 +250,12 @@ export default function SuperAdminDashboardPage({ onBackToMain, onLogout }) {
           </div>
 
           {(searchQuery || dateFrom || dateTo) && (
-            <p className="sys-result-count">{filteredRows.length} លទ្ធផល</p>
+            <p className="sys-result-count">{filteredGroups.length} លទ្ធផល</p>
           )}
 
-          {dashboardRows.length === 0 ? (
+          {missionGroups.length === 0 ? (
             <p className="sys-table-empty">មិនទាន់មានទិន្នន័យសម្រាប់បង្ហាញទេ។</p>
-          ) : filteredRows.length === 0 ? (
+          ) : filteredGroups.length === 0 ? (
             <p className="sys-table-empty">រកមិនឃើញ</p>
           ) : (
             <>
@@ -258,7 +263,6 @@ export default function SuperAdminDashboardPage({ onBackToMain, onLogout }) {
                 <table className="sys-table">
                   <thead>
                     <tr>
-                      <th>លេខកូដ</th>
                       <th>កម្មវិធី</th>
                       <th>ទីតាំង</th>
                       <th>ចំនួនអង្គភាពចូលរួម</th>
@@ -268,23 +272,18 @@ export default function SuperAdminDashboardPage({ onBackToMain, onLogout }) {
                     </tr>
                   </thead>
                   <tbody>
-                    {pagedRows.map((row) => (
-                      <tr key={row.requestId} className="sys-table-row">
-                        <td>{row.requestId}</td>
-                        <td>{row.program}</td>
-                        <td>{row.location}</td>
-                        <td>{row.participantCount}</td>
-                        <td>{formatDate(row.date)}</td>
-                        <td>{row.duration}</td>
+                    {pagedGroups.map((group) => (
+                      <tr key={group.key} className="sys-table-row">
+                        <td>{group.program}</td>
+                        <td>{group.location}</td>
+                        <td>{group.unitCount}</td>
+                        <td>{formatDate(group.date)}</td>
+                        <td>{group.duration}</td>
                         <td>
                           <button
                             type="button"
                             className="ghost sys-action-btn"
-                            onClick={() =>
-                              setSelectedReport(
-                                dashboardReports.find((r) => r.requestId === row.requestId) ?? null
-                              )
-                            }
+                            onClick={() => setSelectedReports(group.reports)}
                           >
                             មើល PDF
                           </button>
@@ -324,9 +323,13 @@ export default function SuperAdminDashboardPage({ onBackToMain, onLogout }) {
       </div>
 
       <PdfTemplate
-        report={selectedReport}
-        onClose={() => setSelectedReport(null)}
-        onDelete={selectedReport ? () => handleDeleteReport(selectedReport.requestId) : undefined}
+        reports={selectedReports}
+        onClose={() => setSelectedReports(null)}
+        onDelete={
+          selectedReports
+            ? () => handleDeleteReports(selectedReports.map((r) => r.requestId))
+            : undefined
+        }
       />
     </div>
   );
