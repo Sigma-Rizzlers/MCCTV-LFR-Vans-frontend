@@ -217,9 +217,9 @@ function ReportSections({ report }) {
   );
 }
 
-export default function PdfTemplate({ report, reports: reportsProp, onClose, onDelete }) {
+export default function PdfTemplate({ report, reports: reportsProp, onClose, onDelete, initialMode }) {
   const [isSavingFile, setIsSavingFile] = useState(false);
-  const [pdfMode, setPdfMode] = useState("summary");
+  const [pdfMode, setPdfMode] = useState(initialMode ?? "summary");
 
   const allReports = reportsProp?.length ? reportsProp : (report ? [report] : []);
   const isCombined = allReports.length > 1;
@@ -249,45 +249,41 @@ export default function PdfTemplate({ report, reports: reportsProp, onClose, onD
     }
   }
 
-  function MissionHeader() {
-    return (
-      <header className="pdf-document-header">
-        <div className="pdf-header-main">
-          <div className="pdf-seal">
-            <img className="pdf-logo" src="/about-moi-logo.png" alt="Ministry of Interior logo" />
-          </div>
-          <div>
-            <h2 id="pdfTitle" className="pdf-main-title">{pdfTitleText}</h2>
-            <div className="pdf-main-subtitle">អង្គភាពប្រតិបត្តិការ MCCTV - ប្រព័ន្ធគ្រប់គ្រងកញ្ចប់រថយន្ត</div>
-          </div>
+  const missionHeader = (
+    <header className="pdf-document-header">
+      <div className="pdf-header-main">
+        <div className="pdf-seal">
+          <img className="pdf-logo" src="/about-moi-logo.png" alt="Ministry of Interior logo" />
         </div>
-        <div className="pdf-request-box">
-          {isCombined ? (
-            <>
-              <div className="pdf-request-label">ចំនួនអង្គភាព</div>
-              <div className="pdf-request-id">{allReports.length} អង្គភាព</div>
-              <div className="pdf-request-time">{adminPanel.missionTitle || "-"}</div>
-            </>
-          ) : (
-            <>
-              <div className="pdf-request-label">លេខសំណើ</div>
-              <div className="pdf-request-id">{requestId}</div>
-              <div className="pdf-request-time">បង្កើត៖ {formatDateTime(submittedAt)}</div>
-            </>
-          )}
+        <div>
+          <h2 id="pdfTitle" className="pdf-main-title">{pdfTitleText}</h2>
+          <div className="pdf-main-subtitle">អង្គភាពប្រតិបត្តិការ MCCTV - ប្រព័ន្ធគ្រប់គ្រងកញ្ចប់រថយន្ត</div>
         </div>
-      </header>
-    );
-  }
+      </div>
+      <div className="pdf-request-box">
+        {isCombined ? (
+          <>
+            <div className="pdf-request-label">ចំនួនអង្គភាព</div>
+            <div className="pdf-request-id">{allReports.length} អង្គភាព</div>
+            <div className="pdf-request-time">{adminPanel.missionTitle || "-"}</div>
+          </>
+        ) : (
+          <>
+            <div className="pdf-request-label">លេខសំណើ</div>
+            <div className="pdf-request-id">{requestId}</div>
+            <div className="pdf-request-time">បង្កើត៖ {formatDateTime(submittedAt)}</div>
+          </>
+        )}
+      </div>
+    </header>
+  );
 
-  function PdfFooter() {
-    return (
-      <footer className="pdf-document-footer">
-        <span>បង្កើតដោយប្រព័ន្ធ MCCTV Fleet</span>
-        <span>{formatDateTime(new Date().toISOString())}</span>
-      </footer>
-    );
-  }
+  const pdfFooter = (
+    <footer className="pdf-document-footer">
+      <span>បង្កើតដោយប្រព័ន្ធ MCCTV Fleet</span>
+      <span>{formatDateTime(new Date().toISOString())}</span>
+    </footer>
+  );
 
   return (
     <div className="pdf-preview-overlay" role="dialog" aria-modal="true" aria-labelledby="pdfTitle">
@@ -341,16 +337,16 @@ export default function PdfTemplate({ report, reports: reportsProp, onClose, onD
         {/* ── Single report ── */}
         {!isCombined && (
           <article id="pdfTemplate" className="pdf-document">
-            <MissionHeader />
+            {missionHeader}
             <ReportSections report={primary} />
-            <PdfFooter />
+            {pdfFooter}
           </article>
         )}
 
         {/* ── Combined: Summary ── */}
         {isCombined && pdfMode === "summary" && (
           <article id="pdfTemplate" className="pdf-document">
-            <MissionHeader />
+            {missionHeader}
             <section className="pdf-grid">
               <section className="pdf-panel pdf-panel-full">
                 <h3>ព័ត៌មានបេសកកម្ម</h3>
@@ -395,14 +391,14 @@ export default function PdfTemplate({ report, reports: reportsProp, onClose, onD
                 </table>
               </section>
             </section>
-            <PdfFooter />
+            {pdfFooter}
           </article>
         )}
 
         {/* ── Combined: Full per-unit ── */}
         {isCombined && pdfMode === "full" && (
           <article id="pdfTemplate" className="pdf-document">
-            <MissionHeader />
+            {missionHeader}
             {allReports.map((r, i) => (
               <div key={r.requestId}>
                 <div style={{
@@ -427,7 +423,7 @@ export default function PdfTemplate({ report, reports: reportsProp, onClose, onD
                 <ReportSections report={r} />
               </div>
             ))}
-            <PdfFooter />
+            {pdfFooter}
           </article>
         )}
       </div>

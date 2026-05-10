@@ -90,6 +90,7 @@ function loadDashboardReports() {
 export default function SuperAdminDashboardPage({ onBackToMain, onLogout }) {
   const [refreshKey, setRefreshKey] = useState(0);
   const [selectedReports, setSelectedReports] = useState(null);
+  const [pdfInitialMode, setPdfInitialMode] = useState("summary");
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [dateFrom, setDateFrom] = useState("");
@@ -263,6 +264,7 @@ export default function SuperAdminDashboardPage({ onBackToMain, onLogout }) {
                 <table className="sys-table">
                   <thead>
                     <tr>
+                      <th>លេខកូដ</th>
                       <th>កម្មវិធី</th>
                       <th>ទីតាំង</th>
                       <th>ចំនួនអង្គភាពចូលរួម</th>
@@ -274,18 +276,26 @@ export default function SuperAdminDashboardPage({ onBackToMain, onLogout }) {
                   <tbody>
                     {pagedGroups.map((group) => (
                       <tr key={group.key} className="sys-table-row">
+                        <td style={{ fontSize: 12, whiteSpace: "nowrap" }}>{group.reports[0]?.requestId ?? "-"}</td>
                         <td>{group.program}</td>
                         <td>{group.location}</td>
                         <td>{group.unitCount}</td>
                         <td>{formatDate(group.date)}</td>
                         <td>{group.duration}</td>
-                        <td>
+                        <td style={{ whiteSpace: "nowrap" }}>
                           <button
                             type="button"
                             className="ghost sys-action-btn"
-                            onClick={() => setSelectedReports(group.reports)}
+                            onClick={() => { setSelectedReports(group.reports); setPdfInitialMode("summary"); }}
                           >
-                            មើល PDF
+                            PDF សង្ខេប
+                          </button>
+                          <button
+                            type="button"
+                            className="ghost sys-action-btn"
+                            onClick={() => { setSelectedReports(group.reports); setPdfInitialMode("full"); }}
+                          >
+                            PDF លម្អិត
                           </button>
                         </td>
                       </tr>
@@ -323,7 +333,9 @@ export default function SuperAdminDashboardPage({ onBackToMain, onLogout }) {
       </div>
 
       <PdfTemplate
+        key={(selectedReports?.[0]?.requestId ?? "none") + "-" + pdfInitialMode}
         reports={selectedReports}
+        initialMode={pdfInitialMode}
         onClose={() => setSelectedReports(null)}
         onDelete={
           selectedReports
