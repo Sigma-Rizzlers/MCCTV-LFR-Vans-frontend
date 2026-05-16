@@ -235,7 +235,7 @@ function DefaultBundleCard() {
   );
 }
 
-export default function RequestSection({ isActive, formProps }) {
+export default function RequestSection({ isActive, formProps, formKey }) {
   const [missionPanel, setMissionPanel] = useState(() => loadAdminMissionPanel() || fallbackMissionPanel);
   const [filePreview, setFilePreview] = useState(emptyFilePreviewState);
   const [isFilePreviewOpen, setIsFilePreviewOpen] = useState(false);
@@ -365,7 +365,7 @@ export default function RequestSection({ isActive, formProps }) {
   return (
     <>
       <section id="request" className={`page-section ${isActive ? "active" : ""}`}>
-        <MissionRequestForm {...formProps} missionPanelContent={missionPanelContent} />
+        <MissionRequestForm key={formKey ?? "new"} {...formProps} missionPanelContent={missionPanelContent} />
       </section>
       <FilePreviewOverlay
         isOpen={isFilePreviewOpen}

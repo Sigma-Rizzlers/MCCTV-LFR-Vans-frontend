@@ -1,7 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { initialReportForm, initialStatusText, reportNavItems } from "../constants/reportFormConfig";
 import ReportHeader from "../components/ReportHeader";
 import RequestSection from "../components/RequestSection";
+import HistorySection from "../components/HistorySection";
 import PdfTemplate from "../components/PdfTemplate";
 import UserProfileSection from "../components/UserProfileSection";
 import "../styles/index.css";
@@ -37,7 +38,6 @@ function createProfileDraft(profile) {
 
 function getInitialUserState() {
   const savedProfile = loadUserProfile();
-
   return {
     savedProfile,
     profileDraft: createProfileDraft(savedProfile),
@@ -59,10 +59,7 @@ function createRequestId(date) {
 
 function validatePhone(value) {
   const normalizedValue = value.trim();
-  if (!normalizedValue) {
-    return "";
-  }
-
+  if (!normalizedValue) return "";
   return cambodiaPhoneRegex.test(normalizedValue) ? "" : phoneErrorMessage;
 }
 
@@ -78,10 +75,7 @@ function sanitizeFormData(formData) {
 }
 
 function sanitizeMembers(members) {
-  if (!Array.isArray(members)) {
-    return [];
-  }
-
+  if (!Array.isArray(members)) return [];
   return members
     .map((member) => {
       const name = toText(member?.name);
@@ -95,36 +89,21 @@ function sanitizeMembers(members) {
 }
 
 function sanitizeVehicles(vehicles) {
-  if (!Array.isArray(vehicles)) {
-    return [];
-  }
-
+  if (!Array.isArray(vehicles)) return [];
   return vehicles
-    .map((vehicle) => ({
-      brand: toText(vehicle?.brand),
-      plate: toText(vehicle?.plate)
-    }))
+    .map((vehicle) => ({ brand: toText(vehicle?.brand), plate: toText(vehicle?.plate) }))
     .filter((vehicle) => vehicle.brand || vehicle.plate);
 }
 
 function sanitizeEquipmentItems(items) {
-  if (!Array.isArray(items)) {
-    return [];
-  }
-
+  if (!Array.isArray(items)) return [];
   return items
-    .map((item) => ({
-      type: toText(item?.type),
-      quantity: toText(item?.quantity)
-    }))
+    .map((item) => ({ type: toText(item?.type), quantity: toText(item?.quantity) }))
     .filter((item) => item.type || item.quantity);
 }
 
 function sanitizeAdminPanelForReport(rawPanel) {
-  if (!rawPanel || typeof rawPanel !== "object") {
-    return null;
-  }
-
+  if (!rawPanel || typeof rawPanel !== "object") return null;
   return {
     missionTitle: toText(rawPanel.missionTitle),
     missionPlace: toText(rawPanel.missionPlace),
@@ -135,19 +114,15 @@ function sanitizeAdminPanelForReport(rawPanel) {
 }
 
 function sanitizeReport(rawReport) {
-  if (!rawReport || typeof rawReport !== "object") {
-    return null;
-  }
-
+  if (!rawReport || typeof rawReport !== "object") return null;
   const requestId = toText(rawReport.requestId);
   const submittedAt = toText(rawReport.submittedAt);
-  if (!requestId || !submittedAt) {
-    return null;
-  }
+  if (!requestId || !submittedAt) return null;
 
   return {
     requestId,
     submittedAt,
+    lastEditedAt: toText(rawReport.lastEditedAt),
     formData: sanitizeFormData(rawReport.formData),
     supportFileName: toText(rawReport.supportFileName),
     lodgingImageName: toText(rawReport.lodgingImageName),
@@ -159,31 +134,36 @@ function sanitizeReport(rawReport) {
     vehicles: sanitizeVehicles(rawReport.vehicles),
     equipmentItems: sanitizeEquipmentItems(rawReport.equipmentItems),
     adminPanel: sanitizeAdminPanelForReport(rawReport.adminPanel),
-    submitterUsername: toText(rawReport.submitterUsername)
+    submitterUsername: toText(rawReport.submitterUsername),
+    editHistory: Array.isArray(rawReport.editHistory) ? rawReport.editHistory : []
   };
 }
 
 function loadHistoryFromStorage() {
-  if (typeof window === "undefined") {
-    return [];
-  }
-
+  if (typeof window === "undefined") return [];
   try {
     const rawValue = window.localStorage.getItem(historyStorageKey);
-    if (!rawValue) {
-      return [];
-    }
-
+    if (!rawValue) return [];
     const parsed = JSON.parse(rawValue);
-    if (!Array.isArray(parsed)) {
-      return [];
-    }
-
+    if (!Array.isArray(parsed)) return [];
     return parsed.map(sanitizeReport).filter(Boolean).slice(0, maxHistoryEntries);
   } catch (error) {
     console.error(error);
     return [];
   }
+}
+
+function saveHistoryToStorage(reports) {
+  try {
+    window.localStorage.setItem(historyStorageKey, JSON.stringify(reports));
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+function getCurrentUsername() {
+  if (typeof window === "undefined") return "";
+  return String(window.sessionStorage.getItem("mcctv:session-username") ?? "").trim();
 }
 
 export default function ReportFormPage({
@@ -210,75 +190,45 @@ export default function ReportFormPage({
   const [submittedReport, setSubmittedReport] = useState(null);
   const [successInfo, setSuccessInfo] = useState(null);
   const [historyReports, setHistoryReports] = useState(() => loadHistoryFromStorage());
+  const [editingReportId, setEditingReportId] = useState(null);
+
+  const currentUsername = useMemo(getCurrentUsername, []);
+  const editingReport = useMemo(
+    () => historyReports.find((r) => r.requestId === editingReportId) ?? null,
+    [historyReports, editingReportId]
+  );
 
   useEffect(() => {
-    if (typeof window === "undefined") {
-      return;
-    }
-
-    try {
-      window.localStorage.setItem(historyStorageKey, JSON.stringify(historyReports));
-    } catch (error) {
-      console.error(error);
-    }
+    if (typeof window === "undefined") return;
+    saveHistoryToStorage(historyReports);
   }, [historyReports]);
 
   function handleChange(event) {
     const { name, value } = event.target;
     let nextValue = value;
     if (name === "travelDuration") {
-      if (!value) {
-        nextValue = "";
-      } else {
-        nextValue = String(Math.min(24, Math.max(1, Number(value) || 1)));
-      }
-    } else if (
-      name === "vehicleCount" ||
-      name === "vehiclePlanCount" ||
-      name === "vehicleActualCount" ||
-      name === "equipmentCount" ||
-      name === "equipmentPlanCount" ||
-      name === "equipmentActualCount" ||
-      name === "planCount" ||
-      name === "actualCount" ||
-      name === "meetingParticipantsCount" ||
-      name === "meetingParticipantsFemale" ||
-      name === "lodgingCount" ||
-      name === "lodgingFemale" ||
-      name === "breakfastCount" ||
-      name === "breakfastFemale" ||
-      name === "lunchCount" ||
-      name === "lunchFemale" ||
-      name === "dinnerCount" ||
-      name === "dinnerFemale" ||
-      name === "implementationPlanTotal" ||
-      name === "implementationPlanFemale" ||
-      name === "implementationActualTotal" ||
-      name === "implementationActualFemale"
-    ) {
-      if (!value) {
-        nextValue = "";
-      } else {
-        nextValue = String(Math.min(50, Math.max(0, Number(value) || 0)));
-      }
+      nextValue = !value ? "" : String(Math.min(24, Math.max(1, Number(value) || 1)));
+    } else if ([
+      "vehicleCount", "vehiclePlanCount", "vehicleActualCount",
+      "equipmentCount", "equipmentPlanCount", "equipmentActualCount",
+      "planCount", "actualCount",
+      "meetingParticipantsCount", "meetingParticipantsFemale",
+      "lodgingCount", "lodgingFemale",
+      "breakfastCount", "breakfastFemale",
+      "lunchCount", "lunchFemale",
+      "dinnerCount", "dinnerFemale",
+      "implementationPlanTotal", "implementationPlanFemale",
+      "implementationActualTotal", "implementationActualFemale"
+    ].includes(name)) {
+      nextValue = !value ? "" : String(Math.min(50, Math.max(0, Number(value) || 0)));
     }
-
     setFormData((current) => ({ ...current, [name]: nextValue }));
-
-    if (name === "phone") {
-      setPhoneError(validatePhone(value));
-    }
-
-    if (name === "planCount" || name === "actualCount") {
-      setStatusText(initialStatusText);
-    }
+    if (name === "phone") setPhoneError(validatePhone(value));
+    if (name === "planCount" || name === "actualCount") setStatusText(initialStatusText);
   }
 
   function handleOpenProfile() {
-    if (activeSection === "profile") {
-      return;
-    }
-
+    if (activeSection === "profile") return;
     const nextDraft = {
       name: toText(formData.name) || savedProfile.name,
       phone: toText(formData.phone) || savedProfile.phone,
@@ -286,11 +236,14 @@ export default function ReportFormPage({
       role: toText(formData.role) || savedProfile.role,
       supportFile: supportFile || createSupportFileReference(savedProfile)
     };
-
     setProfileDraft(nextDraft);
     setProfilePhoneError(validatePhone(nextDraft.phone));
     setProfileStatusText("");
     setActiveSection("profile");
+  }
+
+  function handleOpenMySubmissions() {
+    setActiveSection("mysubmissions");
   }
 
   function handleBackToRequest() {
@@ -300,22 +253,14 @@ export default function ReportFormPage({
   }
 
   function handleSectionChange(nextSection) {
-    if (nextSection === activeSection) {
-      return;
-    }
-
-    setActiveSection(nextSection);
+    if (nextSection !== activeSection) setActiveSection(nextSection);
   }
 
   function handleProfileFieldChange(event) {
     const { name, value } = event.target;
-
     setProfileDraft((current) => ({ ...current, [name]: value }));
     setProfileStatusText("");
-
-    if (name === "phone") {
-      setProfilePhoneError(validatePhone(value));
-    }
+    if (name === "phone") setProfilePhoneError(validatePhone(value));
   }
 
   function handleProfileSupportFileChange(file) {
@@ -330,19 +275,13 @@ export default function ReportFormPage({
 
   function handleProfileSubmit(event) {
     event.preventDefault();
-
     const nextPhoneError = validatePhone(profileDraft.phone);
-    if (nextPhoneError) {
-      setProfilePhoneError(nextPhoneError);
-      return;
-    }
-
+    if (nextPhoneError) { setProfilePhoneError(nextPhoneError); return; }
     const nextSavedProfile = saveUserProfile({
       ...profileDraft,
       supportFileName: profileDraft.supportFile?.name ?? ""
     });
     const nextSupportFile = profileDraft.supportFile || createSupportFileReference(nextSavedProfile);
-
     setSavedProfile(nextSavedProfile);
     setProfileDraft(createProfileDraft(nextSavedProfile));
     setFormData((current) => ({ ...current, ...pickProfileFields(nextSavedProfile) }));
@@ -352,13 +291,26 @@ export default function ReportFormPage({
     setProfileStatusText("បានរក្សាទុកព័ត៌មានផ្ទាល់ខ្លួនរួចរាល់");
   }
 
+  function handleStartEdit(reportId) {
+    const target = historyReports.find((r) => r.requestId === reportId);
+    if (!target) return;
+    setEditingReportId(reportId);
+    setFormData({ ...initialReportForm, ...(target.formData ?? {}) });
+    setActiveSection("request");
+    setStatusText(initialStatusText);
+    setPhoneError("");
+  }
+
+  function handleCancelEdit() {
+    setEditingReportId(null);
+    setFormData({ ...initialReportForm, ...pickProfileFields(savedProfile) });
+    setSupportFile(createSupportFileReference(savedProfile));
+    setStatusText(initialStatusText);
+    setPhoneError("");
+  }
+
   function handleSubmit(event, payload = {}) {
     event.preventDefault();
-
-    const nextProfilePhoneError = validatePhone(formData.phone);
-    if (nextProfilePhoneError) {
-      setPhoneError(nextProfilePhoneError);
-    }
 
     const adminPanel = loadAdminMissionPanel();
     const mergedFormData = adminPanel
@@ -370,18 +322,52 @@ export default function ReportFormPage({
         }
       : formData;
 
-    const submitterUsername =
-      typeof window !== "undefined"
-        ? String(window.sessionStorage.getItem("mcctv:session-username") ?? "").trim()
-        : "";
-
     const now = new Date();
+
+    // ── Edit mode: update existing report in-place ──
+    if (editingReportId) {
+      const targetIndex = historyReports.findIndex((r) => r.requestId === editingReportId);
+      if (targetIndex === -1) return;
+
+      const existing = historyReports[targetIndex];
+      const snapshot = {
+        editedAt: now.toISOString(),
+        formData: existing.formData,
+        vehicles: existing.vehicles,
+        equipmentItems: existing.equipmentItems
+      };
+      const updated = {
+        ...existing,
+        formData: sanitizeFormData(mergedFormData),
+        vehicles: sanitizeVehicles(payload.vehicles ?? []),
+        equipmentItems: sanitizeEquipmentItems(payload.equipmentItems ?? []),
+        members: sanitizeMembers(payload.members ?? existing.members),
+        lastEditedAt: now.toISOString(),
+        editHistory: [...(existing.editHistory ?? []), snapshot]
+      };
+
+      const nextHistory = [...historyReports];
+      nextHistory[targetIndex] = updated;
+      saveHistoryToStorage(nextHistory);
+      setHistoryReports(nextHistory);
+      setEditingReportId(null);
+      setFormData({ ...initialReportForm, ...pickProfileFields(savedProfile) });
+      setSupportFile(createSupportFileReference(savedProfile));
+      setStatusText(initialStatusText);
+      setSuccessInfo({ requestId: editingReportId, report: updated, isEdit: true });
+      return;
+    }
+
+    // ── New submission ──
+    const nextPhoneError = validatePhone(formData.phone);
+    if (nextPhoneError) setPhoneError(nextPhoneError);
+
     const nextReport = sanitizeReport({
       requestId: createRequestId(now),
       submittedAt: now.toISOString(),
       formData: { ...mergedFormData },
       adminPanel,
-      submitterUsername,
+      submitterUsername: currentUsername,
       supportFileName: supportFile?.name ?? "",
       lodgingImageName: lodgingImage?.name ?? "",
       breakfastImageName: breakfastImage?.name ?? "",
@@ -390,25 +376,18 @@ export default function ReportFormPage({
       implementationImageName: implementationImage?.name ?? "",
       members: payload.members,
       vehicles: payload.vehicles,
-      equipmentItems: payload.equipmentItems
+      equipmentItems: payload.equipmentItems,
+      editHistory: []
     });
 
-    if (!nextReport) {
-      return;
-    }
+    if (!nextReport) return;
 
     const nextHistoryReports = [nextReport, ...historyReports].slice(0, maxHistoryEntries);
-
-    try {
-      window.localStorage.setItem(historyStorageKey, JSON.stringify(nextHistoryReports));
-    } catch (error) {
-      console.error(error);
-    }
-
+    saveHistoryToStorage(nextHistoryReports);
     setHistoryReports(nextHistoryReports);
     setPhoneError("");
     setStatusText("បានបញ្ជូនសំណើររបស់អ្នកដោយជោគជ័យ");
-    setSuccessInfo({ requestId: nextReport.requestId, report: nextReport });
+    setSuccessInfo({ requestId: nextReport.requestId, report: nextReport, isEdit: false });
   }
 
   function handleReset(fieldNames = null, options = {}) {
@@ -422,13 +401,11 @@ export default function ReportFormPage({
     if (isPartialReset) {
       setFormData((current) => {
         const next = { ...current };
-
         fieldNames.forEach((fieldName) => {
           if (Object.prototype.hasOwnProperty.call(initialReportForm, fieldName)) {
             next[fieldName] = initialReportForm[fieldName];
           }
         });
-
         return next;
       });
     } else {
@@ -441,17 +418,9 @@ export default function ReportFormPage({
       setImplementationImage(null);
     }
 
-    if (resetStatus) {
-      setStatusText(initialStatusText);
-    }
-
-    if (clearPhoneError) {
-      setPhoneError("");
-    }
-
-    if (clearSubmittedReport) {
-      setSubmittedReport(null);
-    }
+    if (resetStatus) setStatusText(initialStatusText);
+    if (clearPhoneError) setPhoneError("");
+    if (clearSubmittedReport) setSubmittedReport(null);
   }
 
   return (
@@ -465,11 +434,13 @@ export default function ReportFormPage({
         onAdminLogout={onAdminLogout}
         onOpenAdminDashboard={onOpenAdminDashboard}
         onOpenProfile={authRole === "user" ? handleOpenProfile : undefined}
+        onOpenMySubmissions={authRole === "user" ? handleOpenMySubmissions : undefined}
       />
 
       <main className="page-main">
         <RequestSection
           isActive={activeSection === "request"}
+          formKey={editingReportId ?? "new"}
           formProps={{
             formData,
             supportFile,
@@ -490,7 +461,11 @@ export default function ReportFormPage({
             onImplementationImageChange: setImplementationImage,
             phoneError,
             hideMissionSection: true,
-            hidePersonalFields: true
+            hidePersonalFields: true,
+            initialVehicles: editingReport?.vehicles ?? null,
+            initialEquipmentItems: editingReport?.equipmentItems ?? null,
+            editingReportId,
+            onCancelEdit: editingReportId ? handleCancelEdit : null
           }}
         />
         <UserProfileSection
@@ -504,6 +479,16 @@ export default function ReportFormPage({
           onBack={handleBackToRequest}
           onSubmit={handleProfileSubmit}
         />
+        <HistorySection
+          isActive={activeSection === "mysubmissions"}
+          reports={historyReports}
+          currentUsername={currentUsername}
+          onOpenPdf={(requestId) => {
+            const r = historyReports.find((x) => x.requestId === requestId);
+            if (r) setSubmittedReport(r);
+          }}
+          onStartEdit={handleStartEdit}
+        />
       </main>
 
       <footer className="footer">© 2026 អគ្គនាយកដ្ឋានបច្ចេកវិទ្យាឌីជីថល និងផ្សព្វផ្សាយអប់រំ - ប្រព័ន្ធស្នើសុំរថយន្តបេសកកម្ម</footer>
@@ -512,12 +497,16 @@ export default function ReportFormPage({
         <div className="pdf-preview-overlay" role="dialog" aria-modal="true" aria-labelledby="successTitle">
           <div className="pdf-preview-shell" style={{ maxWidth: "480px", textAlign: "center" }}>
             <div style={{ padding: "2rem 2rem 1.5rem" }}>
-              <div style={{ fontSize: "3rem", marginBottom: "0.75rem" }}>✅</div>
+              <div style={{ fontSize: "3rem", marginBottom: "0.75rem" }}>
+                {successInfo.isEdit ? "✏️" : "✅"}
+              </div>
               <h2 id="successTitle" style={{ marginBottom: "0.5rem", fontSize: "1.25rem" }}>
-                បានបញ្ជូនដោយជោគជ័យ!
+                {successInfo.isEdit ? "បានកែប្រែដោយជោគជ័យ!" : "បានបញ្ជូនដោយជោគជ័យ!"}
               </h2>
               <p style={{ color: "#666", marginBottom: "0.25rem", fontSize: "0.9rem" }}>
-                សំណើរបស់អ្នកត្រូវបានរក្សាទុក និងផ្ញើទៅអ្នកគ្រប់គ្រងរួចរាល់។
+                {successInfo.isEdit
+                  ? "ការកែប្រែសំណើរបស់អ្នកត្រូវបានរក្សាទុក។"
+                  : "សំណើរបស់អ្នកត្រូវបានរក្សាទុក និងផ្ញើទៅអ្នកគ្រប់គ្រងរួចរាល់។"}
               </p>
               <p style={{ fontWeight: "600", marginBottom: "1.5rem", fontSize: "0.9rem" }}>
                 លេខសំណើ៖ {successInfo.requestId}
@@ -533,11 +522,7 @@ export default function ReportFormPage({
                 >
                   មើល PDF
                 </button>
-                <button
-                  className="ghost"
-                  type="button"
-                  onClick={() => setSuccessInfo(null)}
-                >
+                <button className="ghost" type="button" onClick={() => setSuccessInfo(null)}>
                   បិទ
                 </button>
               </div>

@@ -6,7 +6,8 @@ export default function ReportHeader({
   onAdminLogin,
   onAdminLogout,
   onOpenAdminDashboard,
-  onOpenProfile
+  onOpenProfile,
+  onOpenMySubmissions
 }) {
   const isAuthenticated = authRole !== "guest";
   const isPrivilegedUser = authRole === "admin" || authRole === "super_admin";
@@ -55,6 +56,11 @@ export default function ReportHeader({
               </button>
             ) : null}
 
+            {isStandardUser && onOpenMySubmissions ? (
+              <button type="button" className="admin-access-btn admin" onClick={onOpenMySubmissions}>
+                ការបញ្ជូនរបស់ខ្ញុំ
+              </button>
+            ) : null}
             {isStandardUser && onOpenProfile ? (
               <button type="button" className="admin-access-btn admin" onClick={onOpenProfile}>
                 កែប្រែព័ត៌មាន

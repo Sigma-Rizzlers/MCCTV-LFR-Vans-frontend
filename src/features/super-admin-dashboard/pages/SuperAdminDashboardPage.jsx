@@ -7,6 +7,7 @@ import "../../report-form/styles/pdf.css";
 import "../../admin-dashboard/styles/dashboard.css";
 import "../../sys-manager/styles/sysmanager.css";
 import PdfTemplate from "../../report-form/components/PdfTemplate";
+import { loadAccounts } from "../../../utils/accountStorage";
 
 const historyStorageKey = "mcctv:mission-request-history";
 const fallbackText = "-";
@@ -21,6 +22,16 @@ function formatDate(value) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
   return new Intl.DateTimeFormat("km-KH", { year: "numeric", month: "2-digit", day: "2-digit" }).format(date);
+}
+
+function formatDateTime(value) {
+  if (!value) return fallbackText;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return new Intl.DateTimeFormat("km-KH", {
+    year: "numeric", month: "2-digit", day: "2-digit",
+    hour: "2-digit", minute: "2-digit"
+  }).format(date);
 }
 
 function getMissionKey(report) {
@@ -67,6 +78,24 @@ function countUniqueLocations(groups) {
   ).size;
 }
 
+function getReportUnitName(report, accounts) {
+  const submitterUsername = toText(report?.submitterUsername);
+  const account = accounts.find((item) => item.username === submitterUsername);
+  return account?.unitName || submitterUsername || fallbackText;
+}
+
+function isGroupInDateRange(group, dateFrom, dateTo) {
+  const fromMs = dateFrom ? new Date(dateFrom).getTime() : null;
+  const toMs = dateTo ? new Date(dateTo + "T23:59:59").getTime() : null;
+  if (!fromMs && !toMs) return true;
+
+  const rowMs = new Date(group.date).getTime();
+  if (Number.isNaN(rowMs)) return true;
+  if (fromMs && rowMs < fromMs) return false;
+  if (toMs && rowMs > toMs) return false;
+  return true;
+}
+
 function loadDashboardReports() {
   if (typeof window === "undefined") return [];
   try {
@@ -95,38 +124,41 @@ export default function SuperAdminDashboardPage({ onBackToMain, onLogout }) {
   const [currentPage, setCurrentPage] = useState(1);
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
+  const [detailGroup, setDetailGroup] = useState(null);
+  const [deleteConfirmGroup, setDeleteConfirmGroup] = useState(null);
+  const [pdfMissionGroup, setPdfMissionGroup] = useState(null);
 
   const dashboardReports = useMemo(() => loadDashboardReports(), [refreshKey]);
+  const accounts = useMemo(() => loadAccounts(), [refreshKey]);
   const missionGroups = useMemo(
     () => groupReportsByMission(dashboardReports).map(normalizeMissionGroup).filter(Boolean),
     [dashboardReports]
   );
-  const totalLocations = useMemo(() => countUniqueLocations(missionGroups), [missionGroups]);
-  const totalParticipants = useMemo(
-    () => missionGroups.reduce((sum, g) => sum + g.participantCount, 0),
-    [missionGroups]
+  const dateFilteredGroups = useMemo(
+    () => missionGroups.filter((group) => isGroupInDateRange(group, dateFrom, dateTo)),
+    [missionGroups, dateFrom, dateTo]
+  );
+  const summaryStats = useMemo(
+    () => ({
+      totalMissions: dateFilteredGroups.length,
+      totalUnits: dateFilteredGroups.reduce((sum, group) => sum + group.unitCount, 0),
+      totalParticipants: dateFilteredGroups.reduce((sum, group) => sum + group.participantCount, 0),
+      totalLocations: countUniqueLocations(dateFilteredGroups)
+    }),
+    [dateFilteredGroups]
   );
 
   const filteredGroups = useMemo(() => {
     const q = searchQuery.toLowerCase();
-    const fromMs = dateFrom ? new Date(dateFrom).getTime() : null;
-    const toMs = dateTo ? new Date(dateTo + "T23:59:59").getTime() : null;
-    return missionGroups.filter((g) => {
+    return dateFilteredGroups.filter((g) => {
       if (q && !(
         g.program.toLowerCase().includes(q) ||
         g.location.toLowerCase().includes(q) ||
         g.reports.some((r) => r.requestId.toLowerCase().includes(q))
       )) return false;
-      if (fromMs || toMs) {
-        const rowMs = new Date(g.date).getTime();
-        if (!isNaN(rowMs)) {
-          if (fromMs && rowMs < fromMs) return false;
-          if (toMs && rowMs > toMs) return false;
-        }
-      }
       return true;
     });
-  }, [missionGroups, searchQuery, dateFrom, dateTo]);
+  }, [dateFilteredGroups, searchQuery]);
 
   const totalPages = Math.max(1, Math.ceil(filteredGroups.length / ROWS_PER_PAGE));
   const pagedGroups = filteredGroups.slice((currentPage - 1) * ROWS_PER_PAGE, currentPage * ROWS_PER_PAGE);
@@ -166,7 +198,21 @@ export default function SuperAdminDashboardPage({ onBackToMain, onLogout }) {
       console.error(error);
     }
     setSelectedReports(null);
+    setDetailGroup(null);
+    setDeleteConfirmGroup(null);
+    setPdfMissionGroup(null);
     setRefreshKey((k) => k + 1);
+  }
+
+  function openMissionPdf(group, mode) {
+    setSelectedReports(group.reports);
+    setPdfMissionGroup(group);
+    setPdfInitialMode(mode);
+  }
+
+  function confirmDeleteMission() {
+    if (!deleteConfirmGroup) return;
+    handleDeleteReports(deleteConfirmGroup.reports.map((report) => report.requestId));
   }
 
   return (
@@ -201,18 +247,22 @@ export default function SuperAdminDashboardPage({ onBackToMain, onLogout }) {
         </aside>
 
         <main className="sys-manager-main">
-          <div className="sys-stat-row" style={{ gridTemplateColumns: "repeat(3, 1fr)", marginBottom: "24px" }}>
+          <div className="sys-stat-row" style={{ marginBottom: "24px" }}>
             <div className="sys-stat-card">
-              <div className="sys-stat-value">{missionGroups.length}</div>
+              <div className="sys-stat-value">{summaryStats.totalMissions}</div>
               <div className="sys-stat-label">បេសកកម្មសរុប</div>
             </div>
             <div className="sys-stat-card">
-              <div className="sys-stat-value">{totalLocations}</div>
-              <div className="sys-stat-label">ទីតាំងសរុប</div>
+              <div className="sys-stat-value">{summaryStats.totalUnits}</div>
+              <div className="sys-stat-label">អង្គភាពចូលរួម</div>
             </div>
             <div className="sys-stat-card">
-              <div className="sys-stat-value">{totalParticipants}</div>
+              <div className="sys-stat-value">{summaryStats.totalParticipants}</div>
               <div className="sys-stat-label">អ្នកចូលរួមសរុប</div>
+            </div>
+            <div className="sys-stat-card">
+              <div className="sys-stat-value">{summaryStats.totalLocations}</div>
+              <div className="sys-stat-label">ទីតាំងសរុប</div>
             </div>
           </div>
 
@@ -253,9 +303,14 @@ export default function SuperAdminDashboardPage({ onBackToMain, onLogout }) {
           {(searchQuery || dateFrom || dateTo) && (
             <p className="sys-result-count">{filteredGroups.length} លទ្ធផល</p>
           )}
+          {filteredGroups.length > 0 ? (
+            <p className="superadmin-table-hint">ចុចលើជួរដេកណាមួយ ដើម្បីមើលព័ត៌មានលម្អិតរបស់អង្គភាពចូលរួម ដោយមិនចាំបាច់បើក PDF ជាមុន។</p>
+          ) : null}
 
           {missionGroups.length === 0 ? (
-            <p className="sys-table-empty">មិនទាន់មានទិន្នន័យសម្រាប់បង្ហាញទេ។</p>
+            <p className="sys-table-empty">
+              មិនទាន់មានទិន្នន័យសម្រាប់បង្ហាញទេ។ មុខងារចុចមើលលម្អិត និងបញ្ជាក់មុនលុប នឹងបង្ហាញនៅពេលមានសំណើបេសកកម្ម។
+            </p>
           ) : filteredGroups.length === 0 ? (
             <p className="sys-table-empty">រកមិនឃើញ</p>
           ) : (
@@ -270,13 +325,32 @@ export default function SuperAdminDashboardPage({ onBackToMain, onLogout }) {
                       <th>ចំនួនអង្គភាពចូលរួម</th>
                       <th>កាលបរិចេ្ចក</th>
                       <th>រយៈពេល</th>
-                      <th>ឯកសារ PDF</th>
+                      <th>សកម្មភាព</th>
                     </tr>
                   </thead>
                   <tbody>
                     {pagedGroups.map((group) => (
-                      <tr key={group.key} className="sys-table-row">
-                        <td style={{ fontSize: 12, whiteSpace: "nowrap" }}>{group.reports[0]?.requestId ?? "-"}</td>
+                      <tr
+                        key={group.key}
+                        className="sys-table-row superadmin-clickable-row"
+                        tabIndex={0}
+                        onClick={() => setDetailGroup(group)}
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter" || event.key === " ") {
+                            event.preventDefault();
+                            setDetailGroup(group);
+                          }
+                        }}
+                      >
+                        <td style={{ fontSize: 12, whiteSpace: "nowrap" }}>
+                          {group.reports[0]?.requestId ?? "-"}
+                          {group.reports.some((r) => r.editHistory?.length > 0) && (
+                            <span style={{
+                              marginLeft: 5, fontSize: 10, background: "#9a7840", color: "#fff",
+                              borderRadius: "3px", padding: "1px 5px", fontWeight: 700, verticalAlign: "middle"
+                            }}>កែ</span>
+                          )}
+                        </td>
                         <td>{group.program}</td>
                         <td>{group.location}</td>
                         <td>{group.unitCount}</td>
@@ -286,16 +360,32 @@ export default function SuperAdminDashboardPage({ onBackToMain, onLogout }) {
                           <button
                             type="button"
                             className="ghost sys-action-btn"
-                            onClick={() => { setSelectedReports(group.reports); setPdfInitialMode("summary"); }}
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              openMissionPdf(group, "summary");
+                            }}
                           >
                             PDF សង្ខេប
                           </button>
                           <button
                             type="button"
                             className="ghost sys-action-btn"
-                            onClick={() => { setSelectedReports(group.reports); setPdfInitialMode("full"); }}
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              openMissionPdf(group, "full");
+                            }}
                           >
                             PDF លម្អិត
+                          </button>
+                          <button
+                            type="button"
+                            className="ghost sys-action-btn sys-action-delete"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              setDeleteConfirmGroup(group);
+                            }}
+                          >
+                            លុប
                           </button>
                         </td>
                       </tr>
@@ -332,14 +422,115 @@ export default function SuperAdminDashboardPage({ onBackToMain, onLogout }) {
         </main>
       </div>
 
+      {detailGroup ? (
+        <div
+          className="superadmin-drawer-overlay"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="missionDetailTitle"
+          onClick={() => setDetailGroup(null)}
+        >
+          <aside className="superadmin-detail-drawer" onClick={(event) => event.stopPropagation()}>
+            <div className="superadmin-detail-header">
+              <div>
+                <p className="superadmin-detail-kicker">{detailGroup.reports[0]?.requestId ?? "-"}</p>
+                <h3 id="missionDetailTitle">{detailGroup.program}</h3>
+                <p>{[detailGroup.location, formatDate(detailGroup.date), `${detailGroup.unitCount} អង្គភាព`].join(" · ")}</p>
+              </div>
+              <button type="button" className="ghost" onClick={() => setDetailGroup(null)}>បិទ</button>
+            </div>
+
+            <div className="superadmin-detail-actions">
+              <button type="button" className="primary" onClick={() => openMissionPdf(detailGroup, "summary")}>
+                PDF សង្ខេប
+              </button>
+              <button type="button" className="ghost" onClick={() => openMissionPdf(detailGroup, "full")}>
+                PDF លម្អិត
+              </button>
+              <button type="button" className="ghost sys-action-delete" onClick={() => setDeleteConfirmGroup(detailGroup)}>
+                លុបបេសកកម្ម
+              </button>
+            </div>
+
+            <div className="superadmin-detail-list">
+              {detailGroup.reports.map((report, index) => (
+                <div className="superadmin-detail-item" key={report.requestId}>
+                  <div className="superadmin-detail-index">{index + 1}</div>
+                  <div>
+                    <strong>{getReportUnitName(report, accounts)}</strong>
+                    <span>{report.requestId}</span>
+                  </div>
+                  <div>{formatDateTime(report.submittedAt)}</div>
+                  <button
+                    type="button"
+                    className="ghost sys-action-btn"
+                    onClick={() => {
+                      setPdfInitialMode("summary");
+                      setPdfMissionGroup(null);
+                      setSelectedReports([report]);
+                    }}
+                  >
+                    មើល PDF
+                  </button>
+                </div>
+              ))}
+            </div>
+          </aside>
+        </div>
+      ) : null}
+
+      {deleteConfirmGroup ? (
+        <div className="sys-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="deleteMissionTitle">
+          <div className="sys-modal-card superadmin-delete-modal">
+            <div className="sys-modal-header">
+              <h3 id="deleteMissionTitle">លុបបេសកកម្ម</h3>
+              <button type="button" className="ghost" onClick={() => setDeleteConfirmGroup(null)}>បិទ</button>
+            </div>
+            <div className="sys-modal-body">
+              <p className="superadmin-delete-warning">
+                តើអ្នកពិតជាចង់លុបបេសកកម្មនេះមែនទេ?
+              </p>
+              <dl className="sys-panel-dl">
+                <div className="sys-panel-dl-row">
+                  <dt>លេខកូដ</dt>
+                  <dd>{deleteConfirmGroup.reports[0]?.requestId ?? "-"}</dd>
+                </div>
+                <div className="sys-panel-dl-row">
+                  <dt>កម្មវិធី</dt>
+                  <dd>{deleteConfirmGroup.program}</dd>
+                </div>
+                <div className="sys-panel-dl-row">
+                  <dt>ចំនួនសំណើ</dt>
+                  <dd>{deleteConfirmGroup.reports.length}</dd>
+                </div>
+              </dl>
+            </div>
+            <div className="sys-modal-footer">
+              <button type="button" className="ghost" onClick={() => setDeleteConfirmGroup(null)}>
+                បោះបង់
+              </button>
+              <button type="button" className="primary superadmin-delete-confirm" onClick={confirmDeleteMission}>
+                លុប
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
       <PdfTemplate
         key={(selectedReports?.[0]?.requestId ?? "none") + "-" + pdfInitialMode}
         reports={selectedReports}
         initialMode={pdfInitialMode}
-        onClose={() => setSelectedReports(null)}
+        onClose={() => {
+          setSelectedReports(null);
+          setPdfMissionGroup(null);
+        }}
         onDelete={
-          selectedReports
-            ? () => handleDeleteReports(selectedReports.map((r) => r.requestId))
+          selectedReports && pdfMissionGroup
+            ? () => {
+              setSelectedReports(null);
+              setDeleteConfirmGroup(pdfMissionGroup);
+            }
             : undefined
         }
       />

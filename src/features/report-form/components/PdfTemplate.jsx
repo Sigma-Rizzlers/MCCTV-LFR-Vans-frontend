@@ -222,6 +222,7 @@ function buildReportSections(report) {
 export default function PdfTemplate({ report, reports: reportsProp, onClose, onDelete, initialMode }) {
   const [isSavingFile, setIsSavingFile] = useState(false);
   const [pdfMode, setPdfMode] = useState(initialMode ?? "summary");
+  const [viewingVersion, setViewingVersion] = useState("current");
 
   const allReports = reportsProp?.length ? reportsProp : (report ? [report] : []);
   const isCombined = allReports.length > 1;
@@ -232,6 +233,13 @@ export default function PdfTemplate({ report, reports: reportsProp, onClose, onD
   const { requestId, submittedAt } = primary;
   const adminPanel = (primary?.adminPanel && typeof primary.adminPanel === "object") ? primary.adminPanel : {};
   const pdfTitleText = "បង្កាន់ដៃសំណើរថយន្តបេសកកម្ម";
+
+  // Version history (single-report only)
+  const editHistory = !isCombined && Array.isArray(primary.editHistory) ? primary.editHistory : [];
+  const hasVersions = editHistory.length > 0;
+  const displayReport = (hasVersions && viewingVersion !== "current")
+    ? { ...primary, ...editHistory[Number(viewingVersion)] }
+    : primary;
 
   async function handleSavePdfFile() {
     if (isSavingFile) return;
@@ -325,12 +333,7 @@ export default function PdfTemplate({ report, reports: reportsProp, onClose, onD
               type="button"
               className="ghost"
               style={{ color: "#b3261e", borderColor: "rgba(179,38,30,0.3)", marginLeft: "auto" }}
-              onClick={() => {
-                const msg = isCombined
-                  ? "តើអ្នកពិតជាចង់លុបសំណើទាំងអស់នៃបេសកកម្មនេះមែនទេ?"
-                  : "តើអ្នកពិតជាចង់លុបសំណើនេះមែនទេ?";
-                if (window.confirm(msg)) onDelete();
-              }}
+              onClick={onDelete}
             >
               {isCombined ? "លុបបេសកកម្ម" : "លុបសំណើ"}
             </button>
@@ -339,11 +342,37 @@ export default function PdfTemplate({ report, reports: reportsProp, onClose, onD
 
         {/* ── Single report ── */}
         {!isCombined && (
-          <article id="pdfTemplate" className="pdf-document">
-            {missionHeader}
-            {buildReportSections(primary)}
-            {pdfFooter}
-          </article>
+          <>
+            {hasVersions && (
+              <div style={{ display: "flex", gap: "6px", alignItems: "center", marginBottom: "8px", flexWrap: "wrap" }}>
+                <span style={{ fontSize: 13, color: "#666" }}>កំណែ:</span>
+                {editHistory.map((snap, i) => (
+                  <button
+                    key={i}
+                    type="button"
+                    className={viewingVersion === String(i) ? "primary" : "ghost"}
+                    style={{ fontSize: 12, padding: "3px 10px" }}
+                    onClick={() => setViewingVersion(String(i))}
+                  >
+                    V{i + 1} · {formatDateTime(snap.editedAt)}
+                  </button>
+                ))}
+                <button
+                  type="button"
+                  className={viewingVersion === "current" ? "primary" : "ghost"}
+                  style={{ fontSize: 12, padding: "3px 10px" }}
+                  onClick={() => setViewingVersion("current")}
+                >
+                  V{editHistory.length + 1} (បច្ចុប្បន្ន)
+                </button>
+              </div>
+            )}
+            <article id="pdfTemplate" className="pdf-document">
+              {missionHeader}
+              {buildReportSections(displayReport)}
+              {pdfFooter}
+            </article>
+          </>
         )}
 
         {/* ── Combined: Summary ── */}

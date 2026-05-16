@@ -203,7 +203,11 @@ export default function MissionRequestForm({
   phoneError,
   missionPanelContent = null,
   hideMissionSection = false,
-  hidePersonalFields = false
+  hidePersonalFields = false,
+  initialVehicles = null,
+  initialEquipmentItems = null,
+  editingReportId = null,
+  onCancelEdit = null
 }) {
   const [activeStep, setActiveStep] = useState(1);
   const [activeMealSection, setActiveMealSection] = useState("breakfast");
@@ -214,13 +218,29 @@ export default function MissionRequestForm({
   const [memberErrors, setMemberErrors] = useState(emptyMemberError);
   const [isVehicleModalOpen, setIsVehicleModalOpen] = useState(false);
   const [activeVehicleIndex, setActiveVehicleIndex] = useState(0);
-  const [vehicles, setVehicles] = useState(() => createVehicleList());
+  const [vehicles, setVehicles] = useState(() => {
+    const list = createVehicleList();
+    if (Array.isArray(initialVehicles)) {
+      initialVehicles.forEach((v, i) => {
+        if (i < VEHICLE_LIMIT) list[i] = { brand: String(v?.brand ?? ""), plate: String(v?.plate ?? ""), plateType: "" };
+      });
+    }
+    return list;
+  });
   const [vehicleErrors, setVehicleErrors] = useState(emptyVehicleError);
   const [vehiclePlateType, setVehiclePlateType] = useState("");
   const [vehiclePlateError, setVehiclePlateError] = useState("");
   const [isEquipmentModalOpen, setIsEquipmentModalOpen] = useState(false);
   const [activeEquipmentIndex, setActiveEquipmentIndex] = useState(0);
-  const [equipmentItems, setEquipmentItems] = useState(() => createEquipmentList());
+  const [equipmentItems, setEquipmentItems] = useState(() => {
+    const list = createEquipmentList();
+    if (Array.isArray(initialEquipmentItems)) {
+      initialEquipmentItems.forEach((e, i) => {
+        if (i < EQUIPMENT_LIMIT) list[i] = { type: String(e?.type ?? ""), quantity: String(e?.quantity ?? "") };
+      });
+    }
+    return list;
+  });
   const [equipmentErrors, setEquipmentErrors] = useState(emptyEquipmentError);
   const supportFileInputRef = useRef(null);
   const memberSupportFileInputRef = useRef(null);
@@ -601,8 +621,19 @@ export default function MissionRequestForm({
       <div className="form-card">
         <div className="form-header">
           <div>
-            <h2>បំពេញសំណើរថ្មី</h2>
-            <p>សូមបំពេញព័ត៌មានខាងក្រោម ដើម្បីបង្កើតសំណើរថយន្តជាឯកសារ PDF។</p>
+            <h2>{editingReportId ? "កែប្រែសំណើ" : "បំពេញសំណើរថ្មី"}</h2>
+            {editingReportId ? (
+              <p style={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
+                <span style={{ fontFamily: "monospace", fontSize: 13, color: "#9a7840" }}>{editingReportId}</span>
+                {onCancelEdit && (
+                  <button className="ghost" type="button" style={{ fontSize: 13, padding: "2px 10px" }} onClick={onCancelEdit}>
+                    បោះបង់
+                  </button>
+                )}
+              </p>
+            ) : (
+              <p>សូមបំពេញព័ត៌មានខាងក្រោម ដើម្បីបង្កើតសំណើរថយន្តជាឯកសារ PDF។</p>
+            )}
           </div>
         </div>
 
@@ -1501,7 +1532,7 @@ export default function MissionRequestForm({
                   ត្រឡប់
                 </button>
                 <button className="primary" type="button" onClick={handleFormSubmit}>
-                  បញ្ជូន និងបង្កើត PDF
+                  {editingReportId ? "រក្សាទុកការកែប្រែ" : "បញ្ជូន និងបង្កើត PDF"}
                 </button>
                 <button className="ghost" type="button" onClick={handleCurrentStepReset}>
                   សម្អាត
