@@ -10,12 +10,12 @@
   margin: 0 0 6px;
   font-family: var(--font-kh-heading);
   line-height: 1.15;
-  color: #5b3a0a;
+  color: #111111;
 }
 
 .section-header p {
   margin: 0;
-  color: var(--muted);
+  color: #555555;
 }
 
 .summary-cards {
@@ -36,13 +36,13 @@
 .summary-value {
   font-size: 28px;
   font-weight: 800;
-  color: #7a4c0c;
+  color: #111111;
 }
 
 .summary-label {
   margin-top: 6px;
   font-size: 13px;
-  color: var(--muted);
+  color: #555555;
 }
 
 .history-grid {
@@ -83,7 +83,7 @@
   margin: 0;
   font-family: var(--font-kh-heading);
   line-height: 1.2;
-  color: #5b3a0a;
+  color: #111111;
 }
 
 .pill {
@@ -197,7 +197,7 @@
 }
 
 .history-item-top strong {
-  color: #5b3a0a;
+  color: #111111;
   font-size: 12px;
   font-family: monospace;
   letter-spacing: 0.3px;
@@ -205,7 +205,7 @@
 
 .history-item-title {
   margin-top: 7px;
-  color: var(--navy-800);
+  color: #111111;
   font-weight: 700;
   font-size: 14px;
   line-height: 1.35;
@@ -213,7 +213,7 @@
 
 .history-item-meta {
   margin-top: 5px;
-  color: var(--muted);
+  color: #555555;
   font-size: 12px;
 }
 
@@ -235,13 +235,13 @@
 }
 
 .detail-row span {
-  color: var(--muted);
+  color: #555555;
   font-size: 13px;
   flex-shrink: 0;
 }
 
 .detail-row strong {
-  color: var(--navy-800);
+  color: #111111;
   text-align: right;
   font-size: 14px;
   line-height: 1.4;
@@ -358,5 +358,60 @@
   padding-left: 18px;
   color: var(--muted);
   line-height: 1.7;
+}
+
+/* ── Pagination ── */
+.pagination-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(199, 145, 44, 0.2);
+  flex-wrap: wrap;
+}
+
+.pagination-info {
+  font-size: 13px;
+  color: #555555;
+}
+
+.pagination-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pagination-btn {
+  min-width: 34px;
+  height: 34px;
+  padding: 0 10px;
+  border: 2px solid #c89318;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #111111;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pagination-btn:hover:not(:disabled) {
+  background: #c89318;
+  color: #ffffff;
+}
+
+.pagination-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.pagination-btn.active-page {
+  background: #c89318;
+  color: #ffffff;
 }
 

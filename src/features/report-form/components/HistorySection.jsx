@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { loadReportFiles, REPORT_FILE_FIELDS } from "../../../utils/reportFileStore";
 
+const ITEMS_PER_PAGE = 10;
+
 function formatDateTime(value) {
   if (!value) return "-";
   const date = new Date(value);
@@ -47,12 +49,22 @@ export default function HistorySection({
 
   // Nothing selected by default — user must click a report
   const [selectedRequestId, setSelectedRequestId] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
   const [fileUrls, setFileUrls] = useState({});
   const [loadingFiles, setLoadingFiles] = useState(false);
   const [lightboxUrl, setLightboxUrl] = useState(null);
   const fileUrlsRef = useRef({});
 
-  // Clear selection if the selected report is removed from the list
+  const totalPages = Math.max(1, Math.ceil(myReports.length / ITEMS_PER_PAGE));
+  const pagedReports = myReports.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
+
+  // Reset to page 1 when the report list changes
+  useEffect(() => {
+    setCurrentPage(1);
+    setSelectedRequestId("");
+  }, [myReports.length]);
+
+  // Clear selection if the selected report is no longer on the current page
   useEffect(() => {
     if (!selectedRequestId) return;
     const stillExists = myReports.some((r) => r.requestId === selectedRequestId);
@@ -147,56 +159,115 @@ export default function HistorySection({
         </div>
 
         {myReports.length ? (
-          <div className="history-list">
-            {myReports.map((report) => {
-              const isSelected = report.requestId === selectedRequestId;
-              const editCount = Array.isArray(report.editHistory) ? report.editHistory.length : 0;
-              return (
-                <button
-                  key={report.requestId}
-                  className={`history-item ${isSelected ? "active" : ""}`}
-                  type="button"
-                  onClick={() => handleSelectReport(report.requestId)}
-                >
-                  <div className="history-item-top">
-                    <strong>{report.requestId}</strong>
-                    <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                      {editCount > 0 && (
-                        <span style={{
-                          fontSize: 11,
-                          background: "#9a7840",
-                          color: "#fff",
-                          borderRadius: "4px",
-                          padding: "1px 6px",
-                          fontWeight: 700,
-                          flexShrink: 0
-                        }}>
-                          កែ {editCount}x
+          <>
+            <div className="history-list">
+              {pagedReports.map((report) => {
+                const isSelected = report.requestId === selectedRequestId;
+                const editCount = Array.isArray(report.editHistory) ? report.editHistory.length : 0;
+                return (
+                  <button
+                    key={report.requestId}
+                    className={`history-item ${isSelected ? "active" : ""}`}
+                    type="button"
+                    onClick={() => handleSelectReport(report.requestId)}
+                  >
+                    <div className="history-item-top">
+                      <strong>{report.requestId}</strong>
+                      <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                        {editCount > 0 && (
+                          <span style={{
+                            fontSize: 11, background: "#9a7840", color: "#fff",
+                            borderRadius: "4px", padding: "1px 6px", fontWeight: 700, flexShrink: 0
+                          }}>
+                            កែ {editCount}x
+                          </span>
+                        )}
+                        <span style={{ fontSize: 11, color: isSelected ? "#7a4c0c" : "#aaa", flexShrink: 0 }}>
+                          {isSelected ? "▲ បិទ" : "▼ មើល"}
                         </span>
-                      )}
-                      <span style={{
-                        fontSize: 11,
-                        color: isSelected ? "#7a4c0c" : "#aaa",
-                        flexShrink: 0
-                      }}>
-                        {isSelected ? "▲ បិទ" : "▼ មើល"}
-                      </span>
+                      </div>
                     </div>
-                  </div>
-                  <div className="history-item-title">{renderValue(report.formData?.missionTitle)}</div>
-                  <div className="history-item-meta">
-                    {formatDateTime(report.submittedAt)}
-                    {report.formData?.missionPlace ? ` · ${report.formData.missionPlace}` : ""}
-                  </div>
-                  {report.lastEditedAt && (
-                    <div style={{ marginTop: 4, fontSize: 11, color: "#b08030" }}>
-                      កែចុងក្រោយ: {formatDateTime(report.lastEditedAt)}
+                    <div className="history-item-title">{renderValue(report.formData?.missionTitle)}</div>
+                    <div className="history-item-meta">
+                      {formatDateTime(report.submittedAt)}
+                      {report.formData?.missionPlace ? ` · ${report.formData.missionPlace}` : ""}
                     </div>
-                  )}
-                </button>
-              );
-            })}
-          </div>
+                    {report.lastEditedAt && (
+                      <div style={{ marginTop: 4, fontSize: 11, color: "#888" }}>
+                        កែចុងក្រោយ: {formatDateTime(report.lastEditedAt)}
+                      </div>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="pagination-bar">
+                <span className="pagination-info">
+                  ទំព័រ {currentPage} / {totalPages} ({myReports.length} សំណើ)
+                </span>
+                <div className="pagination-controls">
+                  <button
+                    type="button"
+                    className="pagination-btn"
+                    disabled={currentPage === 1}
+                    onClick={() => { setCurrentPage(1); setSelectedRequestId(""); }}
+                    title="ទំព័រដំបូង"
+                  >
+                    «
+                  </button>
+                  <button
+                    type="button"
+                    className="pagination-btn"
+                    disabled={currentPage === 1}
+                    onClick={() => { setCurrentPage((p) => p - 1); setSelectedRequestId(""); }}
+                  >
+                    ‹ មុន
+                  </button>
+                  {Array.from({ length: totalPages }, (_, i) => i + 1)
+                    .filter((p) => p === 1 || p === totalPages || Math.abs(p - currentPage) <= 1)
+                    .reduce((acc, p, idx, arr) => {
+                      if (idx > 0 && p - arr[idx - 1] > 1) acc.push("…");
+                      acc.push(p);
+                      return acc;
+                    }, [])
+                    .map((item, idx) =>
+                      item === "…" ? (
+                        <span key={`ellipsis-${idx}`} style={{ padding: "0 4px", color: "#888" }}>…</span>
+                      ) : (
+                        <button
+                          key={item}
+                          type="button"
+                          className={`pagination-btn ${currentPage === item ? "active-page" : ""}`}
+                          onClick={() => { setCurrentPage(item); setSelectedRequestId(""); }}
+                        >
+                          {item}
+                        </button>
+                      )
+                    )}
+                  <button
+                    type="button"
+                    className="pagination-btn"
+                    disabled={currentPage === totalPages}
+                    onClick={() => { setCurrentPage((p) => p + 1); setSelectedRequestId(""); }}
+                  >
+                    បន្ទាប់ ›
+                  </button>
+                  <button
+                    type="button"
+                    className="pagination-btn"
+                    disabled={currentPage === totalPages}
+                    onClick={() => { setCurrentPage(totalPages); setSelectedRequestId(""); }}
+                    title="ទំព័រចុងក្រោយ"
+                  >
+                    »
+                  </button>
+                </div>
+              </div>
+            )}
+          </>
         ) : (
           <div className="empty">មិនទាន់មានសំណើនៅឡើយទេ។ សូមបំពេញសំណើថ្មី។</div>
         )}
@@ -239,7 +310,7 @@ export default function HistorySection({
           {/* Edit history timeline */}
           {editHistory.length > 0 && (
             <div style={{ marginTop: 14, borderTop: "1px solid rgba(199,145,44,0.25)", paddingTop: 10 }}>
-              <div style={{ fontSize: 13, fontWeight: 700, color: "#5b4a2a", marginBottom: 6 }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: "#111111", marginBottom: 6 }}>
                 ប្រវត្តិការកែប្រែ ({editHistory.length} ដង)
               </div>
               <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
@@ -270,7 +341,7 @@ export default function HistorySection({
           {/* File attachments */}
           {(loadingFiles || attachmentFields.length > 0) && (
             <div style={{ marginTop: 14, borderTop: "1px solid rgba(199,145,44,0.25)", paddingTop: 10 }}>
-              <div style={{ fontSize: 13, fontWeight: 700, color: "#5b4a2a", marginBottom: 8 }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: "#111111", marginBottom: 8 }}>
                 ឯកសារភ្ជាប់
               </div>
               {loadingFiles ? (
