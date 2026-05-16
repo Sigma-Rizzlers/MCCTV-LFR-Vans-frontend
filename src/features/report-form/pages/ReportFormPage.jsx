@@ -10,6 +10,7 @@ import "../../sys-manager/styles/sysmanager.css";
 import { loadUserProfile, saveUserProfile } from "../../../utils/userProfileStorage";
 import { loadAdminMissionPanel } from "../../../utils/adminMissionPanel";
 import { saveReportFile } from "../../../utils/reportFileStore";
+import { saveDraft, loadDraft, clearDraft } from "../../../utils/reportDraftStorage";
 
 const cambodiaPhoneRegex = /^(?:0\d{8,9}|0\d{2}-\d{3}-\d{3,4})$/;
 const phoneErrorMessage =
@@ -193,6 +194,11 @@ export default function ReportFormPage({
   const [successInfo, setSuccessInfo] = useState(null);
   const [historyReports, setHistoryReports] = useState(() => loadHistoryFromStorage());
   const [editingReportId, setEditingReportId] = useState(null);
+  const [draftToRestore, setDraftToRestore] = useState(() => {
+    if (authRole !== "user") return null;
+    return loadDraft(getCurrentUsername());
+  });
+  const [draftSavedAt, setDraftSavedAt] = useState(null);
 
   const currentUsername = useMemo(getCurrentUsername, []);
   const editingReport = useMemo(
@@ -208,6 +214,18 @@ export default function ReportFormPage({
     if (typeof window === "undefined") return;
     saveHistoryToStorage(historyReports);
   }, [historyReports]);
+
+  // Auto-save draft for user role (debounced 2 s, only when not in edit mode)
+  useEffect(() => {
+    if (authRole !== "user" || editingReportId) return;
+    const hasContent = Object.values(formData).some((v) => String(v ?? "").trim());
+    if (!hasContent) return;
+    const timer = setTimeout(() => {
+      saveDraft(currentUsername, formData);
+      setDraftSavedAt(new Date());
+    }, 2000);
+    return () => clearTimeout(timer);
+  }, [formData, authRole, editingReportId, currentUsername]);
 
   function handleChange(event) {
     const { name, value } = event.target;
@@ -313,6 +331,18 @@ export default function ReportFormPage({
     setSupportFile(createSupportFileReference(savedProfile));
     setStatusText(initialStatusText);
     setPhoneError("");
+  }
+
+  function handleRestoreDraft() {
+    if (!draftToRestore?.formData) return;
+    setFormData((current) => ({ ...current, ...draftToRestore.formData }));
+    setDraftToRestore(null);
+    setActiveSection("request");
+  }
+
+  function handleDiscardDraft() {
+    clearDraft(currentUsername);
+    setDraftToRestore(null);
   }
 
   function handleSubmit(event, payload = {}) {
@@ -423,6 +453,8 @@ export default function ReportFormPage({
       }
     }
 
+    clearDraft(currentUsername);
+    setDraftSavedAt(null);
     setPhoneError("");
     setStatusText("បានបញ្ជូនសំណើររបស់អ្នកដោយជោគជ័យ");
     setSuccessInfo({ requestId: nextReport.requestId, report: nextReport, isEdit: false });
@@ -592,6 +624,45 @@ export default function ReportFormPage({
           </aside>
 
           <main className="sys-manager-main">
+            {/* Draft restore banner */}
+            {draftToRestore && activeSection === "request" && !editingReportId && (
+              <div style={{
+                marginBottom: 16, padding: "12px 16px",
+                background: "#fffbea", border: "2px solid #c89318",
+                borderRadius: 12, display: "flex", alignItems: "center",
+                justifyContent: "space-between", gap: 12, flexWrap: "wrap"
+              }}>
+                <div>
+                  <div style={{ fontWeight: 700, color: "#111", fontSize: 14 }}>
+                    📝 មានព្រាងដែលបានរក្សាទុក
+                  </div>
+                  <div style={{ fontSize: 12, color: "#555", marginTop: 2 }}>
+                    រក្សាទុកនៅ {new Date(draftToRestore.savedAt).toLocaleString("km-KH")}
+                  </div>
+                </div>
+                <div style={{ display: "flex", gap: 8 }}>
+                  <button className="primary" type="button" style={{ fontSize: 13, padding: "7px 16px" }} onClick={handleRestoreDraft}>
+                    បន្តការបំពេញ
+                  </button>
+                  <button className="ghost" type="button" style={{ fontSize: 13, padding: "7px 14px" }} onClick={handleDiscardDraft}>
+                    លុបព្រាង
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Draft saved indicator */}
+            {draftSavedAt && activeSection === "request" && !editingReportId && (
+              <div style={{
+                marginBottom: 8, padding: "6px 12px",
+                background: "#f0faf3", border: "1px solid #b6dfc2",
+                borderRadius: 8, fontSize: 12, color: "#2f8d43", display: "inline-flex",
+                alignItems: "center", gap: 6
+              }}>
+                ✓ បានរក្សាទុកព្រាងនៅ {draftSavedAt.toLocaleTimeString("km-KH")}
+              </div>
+            )}
+
             <RequestSection
               isActive={activeSection === "request"}
               formKey={editingReportId ?? "new"}

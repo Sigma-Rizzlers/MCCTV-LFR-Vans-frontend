@@ -49,20 +49,42 @@ export default function HistorySection({
 
   // Nothing selected by default — user must click a report
   const [selectedRequestId, setSelectedRequestId] = useState("");
+  const [searchText, setSearchText] = useState("");
+  const [sortOrder, setSortOrder] = useState("newest");
   const [currentPage, setCurrentPage] = useState(1);
   const [fileUrls, setFileUrls] = useState({});
   const [loadingFiles, setLoadingFiles] = useState(false);
   const [lightboxUrl, setLightboxUrl] = useState(null);
   const fileUrlsRef = useRef({});
 
-  const totalPages = Math.max(1, Math.ceil(myReports.length / ITEMS_PER_PAGE));
-  const pagedReports = myReports.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
+  // Filter by search text, then sort
+  const filteredReports = useMemo(() => {
+    const q = searchText.trim().toLowerCase();
+    const base = q
+      ? myReports.filter((r) =>
+          r.requestId?.toLowerCase().includes(q) ||
+          r.formData?.missionTitle?.toLowerCase().includes(q) ||
+          r.formData?.missionPlace?.toLowerCase().includes(q)
+        )
+      : myReports;
+    return sortOrder === "oldest"
+      ? [...base].sort((a, b) => new Date(a.submittedAt) - new Date(b.submittedAt))
+      : [...base].sort((a, b) => new Date(b.submittedAt) - new Date(a.submittedAt));
+  }, [myReports, searchText, sortOrder]);
 
-  // Reset to page 1 when the report list changes
+  const totalPages = Math.max(1, Math.ceil(filteredReports.length / ITEMS_PER_PAGE));
+  const pagedReports = filteredReports.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
+
+  // Reset to page 1 when the report list or search changes
   useEffect(() => {
     setCurrentPage(1);
     setSelectedRequestId("");
   }, [myReports.length]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+    setSelectedRequestId("");
+  }, [searchText, sortOrder]);
 
   // Clear selection if the selected report is no longer on the current page
   useEffect(() => {
@@ -155,7 +177,42 @@ export default function HistorySection({
       <div className="history-card" style={{ marginBottom: 20 }}>
         <div className="list-header">
           <h3>បញ្ជីសំណើ</h3>
-          <span className="pill muted">{myReports.length} កំណត់ត្រា</span>
+          <span className="pill muted">{filteredReports.length}/{myReports.length} កំណត់ត្រា</span>
+        </div>
+
+        {/* Search & filter toolbar */}
+        <div style={{ display: "flex", gap: 10, marginBottom: 14, flexWrap: "wrap" }}>
+          <div style={{ flex: 1, minWidth: 180, position: "relative" }}>
+            <span style={{
+              position: "absolute", left: 11, top: "50%", transform: "translateY(-50%)",
+              color: "#999", fontSize: 15, pointerEvents: "none"
+            }}>🔍</span>
+            <input
+              type="text"
+              value={searchText}
+              onChange={(e) => setSearchText(e.target.value)}
+              placeholder="ស្វែងរកតាមឈ្មោះ, ទីកន្លែង, លេខ..."
+              style={{
+                width: "100%", padding: "8px 10px 8px 34px",
+                border: "2px solid #c89318", borderRadius: 8,
+                fontSize: 13, fontFamily: "inherit",
+                background: "#fff", color: "#111", outline: "none",
+                boxSizing: "border-box"
+              }}
+            />
+          </div>
+          <select
+            value={sortOrder}
+            onChange={(e) => setSortOrder(e.target.value)}
+            style={{
+              padding: "8px 12px", border: "2px solid #c89318",
+              borderRadius: 8, fontSize: 13, fontFamily: "inherit",
+              background: "#fff", color: "#111", cursor: "pointer", outline: "none"
+            }}
+          >
+            <option value="newest">ថ្មី → ចាស់</option>
+            <option value="oldest">ចាស់ → ថ្មី</option>
+          </select>
         </div>
 
         {myReports.length ? (
@@ -268,8 +325,10 @@ export default function HistorySection({
               </div>
             )}
           </>
-        ) : (
+        ) : myReports.length === 0 ? (
           <div className="empty">មិនទាន់មានសំណើនៅឡើយទេ។ សូមបំពេញសំណើថ្មី។</div>
+        ) : (
+          <div className="empty">រកមិនឃើញសំណើដែលត្រូវនឹង &ldquo;{searchText}&rdquo;។</div>
         )}
       </div>
 
