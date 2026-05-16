@@ -6,8 +6,10 @@ import HistorySection from "../components/HistorySection";
 import PdfTemplate from "../components/PdfTemplate";
 import UserProfileSection from "../components/UserProfileSection";
 import "../styles/index.css";
+import "../../sys-manager/styles/sysmanager.css";
 import { loadUserProfile, saveUserProfile } from "../../../utils/userProfileStorage";
 import { loadAdminMissionPanel } from "../../../utils/adminMissionPanel";
+import { saveReportFile } from "../../../utils/reportFileStore";
 
 const cambodiaPhoneRegex = /^(?:0\d{8,9}|0\d{2}-\d{3}-\d{3,4})$/;
 const phoneErrorMessage =
@@ -197,6 +199,10 @@ export default function ReportFormPage({
     () => historyReports.find((r) => r.requestId === editingReportId) ?? null,
     [historyReports, editingReportId]
   );
+  const myReportsCount = useMemo(
+    () => historyReports.filter((r) => !currentUsername || r.submitterUsername === currentUsername).length,
+    [historyReports, currentUsername]
+  );
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -350,6 +356,22 @@ export default function ReportFormPage({
       nextHistory[targetIndex] = updated;
       saveHistoryToStorage(nextHistory);
       setHistoryReports(nextHistory);
+
+      // Save any re-uploaded files to IndexedDB
+      const editFileEntries = [
+        ["support", supportFile],
+        ["lodging", lodgingImage],
+        ["breakfast", breakfastImage],
+        ["lunch", lunchImage],
+        ["dinner", dinnerImage],
+        ["implementation", implementationImage]
+      ];
+      for (const [fieldName, file] of editFileEntries) {
+        if (file instanceof Blob) {
+          saveReportFile(editingReportId, fieldName, file).catch(console.error);
+        }
+      }
+
       setEditingReportId(null);
       setFormData({ ...initialReportForm, ...pickProfileFields(savedProfile) });
       setSupportFile(createSupportFileReference(savedProfile));
@@ -385,6 +407,22 @@ export default function ReportFormPage({
     const nextHistoryReports = [nextReport, ...historyReports].slice(0, maxHistoryEntries);
     saveHistoryToStorage(nextHistoryReports);
     setHistoryReports(nextHistoryReports);
+
+    // Save uploaded files to IndexedDB
+    const newFileEntries = [
+      ["support", supportFile],
+      ["lodging", lodgingImage],
+      ["breakfast", breakfastImage],
+      ["lunch", lunchImage],
+      ["dinner", dinnerImage],
+      ["implementation", implementationImage]
+    ];
+    for (const [fieldName, file] of newFileEntries) {
+      if (file instanceof Blob) {
+        saveReportFile(nextReport.requestId, fieldName, file).catch(console.error);
+      }
+    }
+
     setPhoneError("");
     setStatusText("បានបញ្ជូនសំណើររបស់អ្នកដោយជោគជ័យ");
     setSuccessInfo({ requestId: nextReport.requestId, report: nextReport, isEdit: false });
@@ -423,76 +461,35 @@ export default function ReportFormPage({
     if (clearSubmittedReport) setSubmittedReport(null);
   }
 
-  return (
-    <div className="page report-page notranslate" translate="no" lang="km">
-      <ReportHeader
-        activeSection={activeSection}
-        navItems={reportNavItems}
-        onSectionChange={handleSectionChange}
-        authRole={authRole}
-        onAdminLogin={onAdminLogin}
-        onAdminLogout={onAdminLogout}
-        onOpenAdminDashboard={onOpenAdminDashboard}
-        onOpenProfile={authRole === "user" ? handleOpenProfile : undefined}
-        onOpenMySubmissions={authRole === "user" ? handleOpenMySubmissions : undefined}
-      />
+  const sharedFormProps = {
+    formData,
+    supportFile,
+    lodgingImage,
+    breakfastImage,
+    lunchImage,
+    dinnerImage,
+    implementationImage,
+    statusText,
+    onChange: handleChange,
+    onSubmit: handleSubmit,
+    onReset: handleReset,
+    onSupportFileChange: setSupportFile,
+    onLodgingImageChange: setLodgingImage,
+    onBreakfastImageChange: setBreakfastImage,
+    onLunchImageChange: setLunchImage,
+    onDinnerImageChange: setDinnerImage,
+    onImplementationImageChange: setImplementationImage,
+    phoneError,
+    hideMissionSection: true,
+    hidePersonalFields: true,
+    initialVehicles: editingReport?.vehicles ?? null,
+    initialEquipmentItems: editingReport?.equipmentItems ?? null,
+    editingReportId,
+    onCancelEdit: editingReportId ? handleCancelEdit : null
+  };
 
-      <main className="page-main">
-        <RequestSection
-          isActive={activeSection === "request"}
-          formKey={editingReportId ?? "new"}
-          formProps={{
-            formData,
-            supportFile,
-            lodgingImage,
-            breakfastImage,
-            lunchImage,
-            dinnerImage,
-            implementationImage,
-            statusText,
-            onChange: handleChange,
-            onSubmit: handleSubmit,
-            onReset: handleReset,
-            onSupportFileChange: setSupportFile,
-            onLodgingImageChange: setLodgingImage,
-            onBreakfastImageChange: setBreakfastImage,
-            onLunchImageChange: setLunchImage,
-            onDinnerImageChange: setDinnerImage,
-            onImplementationImageChange: setImplementationImage,
-            phoneError,
-            hideMissionSection: true,
-            hidePersonalFields: true,
-            initialVehicles: editingReport?.vehicles ?? null,
-            initialEquipmentItems: editingReport?.equipmentItems ?? null,
-            editingReportId,
-            onCancelEdit: editingReportId ? handleCancelEdit : null
-          }}
-        />
-        <UserProfileSection
-          isActive={activeSection === "profile"}
-          profileData={profileDraft}
-          phoneError={profilePhoneError}
-          statusText={profileStatusText}
-          onFieldChange={handleProfileFieldChange}
-          onSupportFileChange={handleProfileSupportFileChange}
-          onClearSupportFile={handleClearProfileSupportFile}
-          onBack={handleBackToRequest}
-          onSubmit={handleProfileSubmit}
-        />
-        <HistorySection
-          isActive={activeSection === "mysubmissions"}
-          reports={historyReports}
-          currentUsername={currentUsername}
-          onOpenPdf={(requestId) => {
-            const r = historyReports.find((x) => x.requestId === requestId);
-            if (r) setSubmittedReport(r);
-          }}
-          onStartEdit={handleStartEdit}
-        />
-      </main>
-
-      <footer className="footer">© 2026 អគ្គនាយកដ្ឋានបច្ចេកវិទ្យាឌីជីថល និងផ្សព្វផ្សាយអប់រំ - ប្រព័ន្ធស្នើសុំរថយន្តបេសកកម្ម</footer>
-
+  const sharedOverlays = (
+    <>
       {successInfo ? (
         <div className="pdf-preview-overlay" role="dialog" aria-modal="true" aria-labelledby="successTitle">
           <div className="pdf-preview-shell" style={{ maxWidth: "480px", textAlign: "center" }}>
@@ -530,8 +527,152 @@ export default function ReportFormPage({
           </div>
         </div>
       ) : null}
-
       <PdfTemplate report={submittedReport} onClose={() => setSubmittedReport(null)} />
+    </>
+  );
+
+  // Sidebar layout for authenticated user role
+  if (authRole === "user") {
+    return (
+      <div className="sys-manager-page notranslate" translate="no" lang="km">
+        <div className="sys-manager-topbar">
+          <div className="sys-manager-brand">
+            <img
+              src="/ministry-logo.png"
+              className="sys-manager-logo"
+              alt="Ministry of Interior logo"
+              onError={(e) => { e.currentTarget.src = "/logo.png"; }}
+            />
+            <div>
+              <div className="sys-manager-brand-title">ក្រសួងមហាផ្ទៃ</div>
+              <div className="sys-manager-brand-sub">MINISTRY OF INTERIOR</div>
+            </div>
+          </div>
+          <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+            <button
+              type="button"
+              className="ghost"
+              style={{ fontSize: 14 }}
+              onClick={onAdminLogout}
+            >
+              ចាកចេញ
+            </button>
+          </div>
+        </div>
+
+        <div className="sys-manager-body">
+          <aside className="sys-manager-sidebar">
+            <div className="sys-sidebar-section-label">ម៉ឺនុយ</div>
+            <nav className="sys-manager-nav">
+              <button
+                type="button"
+                className={`sys-nav-item ${activeSection === "request" ? "active" : ""}`}
+                onClick={() => { setActiveSection("request"); }}
+              >
+                ការបំពេញសំណើ
+              </button>
+              <button
+                type="button"
+                className={`sys-nav-item ${activeSection === "mysubmissions" ? "active" : ""}`}
+                onClick={() => setActiveSection("mysubmissions")}
+              >
+                ការបញ្ជូនរបស់ខ្ញុំ
+                {myReportsCount > 0 && (
+                  <span className="sys-nav-badge">{myReportsCount}</span>
+                )}
+              </button>
+              <button
+                type="button"
+                className={`sys-nav-item ${activeSection === "profile" ? "active" : ""}`}
+                onClick={handleOpenProfile}
+              >
+                ព័ត៌មានរបស់ខ្ញុំ
+              </button>
+            </nav>
+          </aside>
+
+          <main className="sys-manager-main">
+            <RequestSection
+              isActive={activeSection === "request"}
+              formKey={editingReportId ?? "new"}
+              formProps={sharedFormProps}
+            />
+            <HistorySection
+              isActive={activeSection === "mysubmissions"}
+              reports={historyReports}
+              currentUsername={currentUsername}
+              onOpenPdf={(requestId) => {
+                const r = historyReports.find((x) => x.requestId === requestId);
+                if (r) setSubmittedReport(r);
+              }}
+              onStartEdit={handleStartEdit}
+            />
+            <UserProfileSection
+              isActive={activeSection === "profile"}
+              profileData={profileDraft}
+              phoneError={profilePhoneError}
+              statusText={profileStatusText}
+              onFieldChange={handleProfileFieldChange}
+              onSupportFileChange={handleProfileSupportFileChange}
+              onClearSupportFile={handleClearProfileSupportFile}
+              onBack={handleBackToRequest}
+              onSubmit={handleProfileSubmit}
+            />
+          </main>
+        </div>
+
+        {sharedOverlays}
+      </div>
+    );
+  }
+
+  // Default layout for guest / admin / super_admin
+  return (
+    <div className="page report-page notranslate" translate="no" lang="km">
+      <ReportHeader
+        activeSection={activeSection}
+        navItems={reportNavItems}
+        onSectionChange={handleSectionChange}
+        authRole={authRole}
+        onAdminLogin={onAdminLogin}
+        onAdminLogout={onAdminLogout}
+        onOpenAdminDashboard={onOpenAdminDashboard}
+        onOpenProfile={undefined}
+        onOpenMySubmissions={undefined}
+      />
+
+      <main className="page-main">
+        <RequestSection
+          isActive={activeSection === "request"}
+          formKey={editingReportId ?? "new"}
+          formProps={sharedFormProps}
+        />
+        <UserProfileSection
+          isActive={activeSection === "profile"}
+          profileData={profileDraft}
+          phoneError={profilePhoneError}
+          statusText={profileStatusText}
+          onFieldChange={handleProfileFieldChange}
+          onSupportFileChange={handleProfileSupportFileChange}
+          onClearSupportFile={handleClearProfileSupportFile}
+          onBack={handleBackToRequest}
+          onSubmit={handleProfileSubmit}
+        />
+        <HistorySection
+          isActive={activeSection === "mysubmissions"}
+          reports={historyReports}
+          currentUsername={currentUsername}
+          onOpenPdf={(requestId) => {
+            const r = historyReports.find((x) => x.requestId === requestId);
+            if (r) setSubmittedReport(r);
+          }}
+          onStartEdit={handleStartEdit}
+        />
+      </main>
+
+      <footer className="footer">© 2026 អគ្គនាយកដ្ឋានបច្ចេកវិទ្យាឌីជីថល និងផ្សព្វផ្សាយអប់រំ - ប្រព័ន្ធស្នើសុំរថយន្តបេសកកម្ម</footer>
+
+      {sharedOverlays}
     </div>
   );
 }
