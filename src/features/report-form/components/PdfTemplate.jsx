@@ -412,7 +412,7 @@ export default function PdfTemplate({ report, reports: reportsProp, onClose, onD
                       <tr key={r.requestId}>
                         <td>{i + 1}</td>
                         <td style={{ fontSize: 11 }}>{r.requestId}</td>
-                        <td>{renderValue(r.formData?.name)}</td>
+                        <td>{r.submitterUsername || renderValue(r.formData?.name)}</td>
                         <td>{renderValue(r.formData?.planCount)} / {renderValue(r.formData?.actualCount)}</td>
                         <td>{renderValue(r.formData?.vehicleCount)}</td>
                         <td>{renderValue(r.formData?.equipmentActualCount)}</td>
@@ -446,7 +446,12 @@ export default function PdfTemplate({ report, reports: reportsProp, onClose, onD
                     fontSize: 13,
                     fontWeight: 600
                   }}>
-                    អង្គភាព {i + 1}: {renderValue(r.formData?.name)}
+                    អង្គភាព {i + 1}
+                    {(r.submitterUsername || r.formData?.name) && (
+                      <span style={{ marginLeft: "6px" }}>
+                        — {r.submitterUsername || r.formData?.name}
+                      </span>
+                    )}
                     <span style={{ fontWeight: 400, color: "#9a7840", marginLeft: "12px", fontSize: 12 }}>
                       {r.requestId} · {formatDateTime(r.submittedAt)}
                     </span>

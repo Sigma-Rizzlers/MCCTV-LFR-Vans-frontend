@@ -58,8 +58,8 @@ function normalizeMissionGroup(group) {
   const program = toText(adminPanel.missionTitle || formData.missionTitle || formData.mission) || fallbackText;
   const location = toText(adminPanel.missionPlace || formData.missionPlace) || fallbackText;
   const date = toText(formData.departureDate) || toText(first.submittedAt) || fallbackText;
-  const rawDuration = toText(formData.travelDuration);
-  const duration = rawDuration ? `${rawDuration} ម៉ោង` : fallbackText;
+  const missionTime = toText(adminPanel.missionTime);
+  const duration = missionTime ? formatDateTime(missionTime) : fallbackText;
   return {
     key: first.requestId,
     program,
