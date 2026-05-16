@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { exportReportToPdfBlob, openPrintFallbackFromElement, saveBlobToFile } from "../utils/pdfExport";
+import { loadReportFiles } from "../../../utils/reportFileStore";
 
 function formatDate(value) {
   if (!value) return "មិនបានបញ្ចូល";
@@ -29,12 +30,45 @@ function createPdfFileName(requestId) {
   return `MCCTV-request-${safeId || "unknown"}.pdf`;
 }
 
-function buildReportSections(report) {
+function renderFileAttachment(fileEntry, label) {
+  if (!fileEntry) return null;
+  const isImage = fileEntry.type?.startsWith("image/");
+  return (
+    <div style={{ marginTop: 10 }}>
+      <div style={{ fontSize: 11, fontWeight: 700, color: "#9a7840", marginBottom: 6 }}>{label}</div>
+      {isImage ? (
+        <img
+          src={fileEntry.url}
+          alt={label}
+          style={{
+            maxWidth: "100%", maxHeight: 260, objectFit: "contain",
+            borderRadius: 6, border: "1px solid rgba(199,145,44,0.3)", display: "block"
+          }}
+        />
+      ) : (
+        <a
+          href={fileEntry.url}
+          target="_blank"
+          rel="noreferrer"
+          download={fileEntry.name}
+          style={{ fontSize: 12, color: "#7a5820", display: "inline-flex", alignItems: "center", gap: 5 }}
+        >
+          <span>📎</span>
+          <span>{fileEntry.name}</span>
+        </a>
+      )}
+    </div>
+  );
+}
+
+function buildReportSections(report, fileUrls = {}) {
   const fd = report?.formData;
   const formData = (fd && typeof fd === "object") ? fd : {};
   const filledVehicles = Array.isArray(report?.vehicles) ? report.vehicles : [];
   const filledEquipment = Array.isArray(report?.equipmentItems) ? report.equipmentItems : [];
   const adminPanel = report?.adminPanel;
+
+  const hasMealImages = fileUrls.breakfast || fileUrls.lunch || fileUrls.dinner;
 
   return (
     <section key="report-sections" className="pdf-grid">
@@ -94,6 +128,7 @@ function buildReportSections(report) {
             <tr><th>ចំនួនស្រី</th><td>{renderValue(formData.lodgingFemale)}</td></tr>
           </tbody>
         </table>
+        {renderFileAttachment(fileUrls.lodging, "រូបភាពស្នាក់នៅ")}
       </section>
 
       <section className="pdf-panel pdf-panel-full">
@@ -132,6 +167,25 @@ function buildReportSections(report) {
             </tr>
           </tbody>
         </table>
+        {hasMealImages && (
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 12, marginTop: 12 }}>
+            {fileUrls.breakfast && (
+              <div>
+                {renderFileAttachment(fileUrls.breakfast, "អាហារព្រឹក")}
+              </div>
+            )}
+            {fileUrls.lunch && (
+              <div>
+                {renderFileAttachment(fileUrls.lunch, "អាហារថ្ងៃ")}
+              </div>
+            )}
+            {fileUrls.dinner && (
+              <div>
+                {renderFileAttachment(fileUrls.dinner, "អាហារល្ងាច")}
+              </div>
+            )}
+          </div>
+        )}
       </section>
 
       <section className="pdf-panel pdf-panel-full">
@@ -146,6 +200,7 @@ function buildReportSections(report) {
             <tr><th>រយៈពេលគ្រប់គ្រង</th><td>{renderValue(formData.implementationDurationManage)}</td></tr>
           </tbody>
         </table>
+        {renderFileAttachment(fileUrls.implementation, "រូបភាពអនុវត្ត")}
       </section>
 
       <section className="pdf-panel pdf-panel-full">
@@ -215,7 +270,87 @@ function buildReportSections(report) {
           <table className="pdf-member-table"><tbody><tr><td>មិនមានទិន្នន័យសម្ភារៈបន្ថែម។</td></tr></tbody></table>
         )}
       </section>
+
+      {fileUrls.support && (
+        <section className="pdf-panel pdf-panel-full">
+          <h3>ឯកសារផ្លូវការ</h3>
+          {renderFileAttachment(fileUrls.support, "ឯកសារភ្ជាប់")}
+        </section>
+      )}
     </section>
+  );
+}
+
+function useReportFileUrls(requestId) {
+  const [fileUrls, setFileUrls] = useState({});
+  const [loading, setLoading] = useState(false);
+  const fileUrlsRef = useRef({});
+
+  useEffect(() => {
+    Object.values(fileUrlsRef.current).forEach((f) => { if (f?.url) URL.revokeObjectURL(f.url); });
+    fileUrlsRef.current = {};
+    setFileUrls({});
+
+    if (!requestId) return;
+    let cancelled = false;
+    setLoading(true);
+
+    loadReportFiles(requestId).then((files) => {
+      if (cancelled) return;
+      const urls = {};
+      for (const [field, file] of Object.entries(files)) {
+        if (file instanceof Blob) {
+          urls[field] = { url: URL.createObjectURL(file), name: file.name ?? field, type: file.type ?? "" };
+        }
+      }
+      fileUrlsRef.current = urls;
+      setFileUrls(urls);
+      setLoading(false);
+    }).catch(() => {
+      if (!cancelled) setLoading(false);
+    });
+
+    return () => {
+      cancelled = true;
+      Object.values(fileUrlsRef.current).forEach((f) => { if (f?.url) URL.revokeObjectURL(f.url); });
+      fileUrlsRef.current = {};
+    };
+  }, [requestId]);
+
+  return { fileUrls, loading };
+}
+
+function UnitReportSection({ report, index }) {
+  const { fileUrls } = useReportFileUrls(report?.requestId);
+
+  return (
+    <div>
+      <div style={{
+        borderTop: index > 0 ? "2px solid #c9a96e" : "1px solid #e8d9be",
+        margin: index > 0 ? "24px 0 16px" : "16px 0",
+        paddingTop: index > 0 ? "16px" : 0
+      }}>
+        <div style={{
+          background: "#f5ebe0",
+          padding: "6px 14px",
+          borderRadius: "4px",
+          marginBottom: "4px",
+          fontSize: 13,
+          fontWeight: 600
+        }}>
+          អង្គភាព {index + 1}
+          {(report.submitterUsername || report.formData?.name) && (
+            <span style={{ marginLeft: "6px" }}>
+              — {report.submitterUsername || report.formData?.name}
+            </span>
+          )}
+          <span style={{ fontWeight: 400, color: "#9a7840", marginLeft: "12px", fontSize: 12 }}>
+            {report.requestId} · {formatDateTime(report.submittedAt)}
+          </span>
+        </div>
+      </div>
+      {buildReportSections(report, fileUrls)}
+    </div>
   );
 }
 
@@ -226,15 +361,17 @@ export default function PdfTemplate({ report, reports: reportsProp, onClose, onD
 
   const allReports = reportsProp?.length ? reportsProp : (report ? [report] : []);
   const isCombined = allReports.length > 1;
+  const primary = allReports[0] ?? null;
+
+  // Always call hooks before any conditional return
+  const { fileUrls: singleFileUrls, loading: filesLoading } = useReportFileUrls(!isCombined && primary ? primary.requestId : null);
 
   if (!allReports.length) return null;
 
-  const primary = allReports[0];
   const { requestId, submittedAt } = primary;
   const adminPanel = (primary?.adminPanel && typeof primary.adminPanel === "object") ? primary.adminPanel : {};
   const pdfTitleText = "បង្កាន់ដៃសំណើរថយន្តបេសកកម្ម";
 
-  // Version history (single-report only)
   const editHistory = !isCombined && Array.isArray(primary.editHistory) ? primary.editHistory : [];
   const hasVersions = editHistory.length > 0;
   const displayReport = (hasVersions && viewingVersion !== "current")
@@ -367,9 +504,29 @@ export default function PdfTemplate({ report, reports: reportsProp, onClose, onD
                 </button>
               </div>
             )}
+            {filesLoading && (
+              <div style={{
+                padding: "8px 14px", marginBottom: 8,
+                background: "rgba(200,147,24,0.08)", borderRadius: 6,
+                fontSize: 12, color: "#7a5820",
+                display: "flex", alignItems: "center", gap: 8
+              }}>
+                <span style={{ animation: "spin 1s linear infinite", display: "inline-block" }}>⏳</span>
+                កំពុងទាញរូបភាព និងឯកសារ...
+              </div>
+            )}
             <article id="pdfTemplate" className="pdf-document">
               {missionHeader}
-              {buildReportSections(displayReport)}
+              {buildReportSections(displayReport, singleFileUrls)}
+              {!filesLoading && Object.keys(singleFileUrls).length === 0 && (
+                <section style={{
+                  margin: "8px 0", padding: "10px 14px",
+                  background: "rgba(200,147,24,0.05)", borderRadius: 6,
+                  fontSize: 12, color: "#9a7840", textAlign: "center"
+                }}>
+                  មិនមានរូបភាព ឬឯកសារភ្ជាប់សម្រាប់សំណើនេះ
+                </section>
+              )}
               {pdfFooter}
             </article>
           </>
@@ -427,38 +584,12 @@ export default function PdfTemplate({ report, reports: reportsProp, onClose, onD
           </article>
         )}
 
-        {/* ── Combined: Full per-unit ── */}
+        {/* ── Combined: Full per-unit (each unit loads its own files) ── */}
         {isCombined && pdfMode === "full" && (
           <article id="pdfTemplate" className="pdf-document">
             {missionHeader}
             {allReports.map((r, i) => (
-              <div key={r.requestId}>
-                <div style={{
-                  borderTop: i > 0 ? "2px solid #c9a96e" : "1px solid #e8d9be",
-                  margin: i > 0 ? "24px 0 16px" : "16px 0",
-                  paddingTop: i > 0 ? "16px" : 0
-                }}>
-                  <div style={{
-                    background: "#f5ebe0",
-                    padding: "6px 14px",
-                    borderRadius: "4px",
-                    marginBottom: "4px",
-                    fontSize: 13,
-                    fontWeight: 600
-                  }}>
-                    អង្គភាព {i + 1}
-                    {(r.submitterUsername || r.formData?.name) && (
-                      <span style={{ marginLeft: "6px" }}>
-                        — {r.submitterUsername || r.formData?.name}
-                      </span>
-                    )}
-                    <span style={{ fontWeight: 400, color: "#9a7840", marginLeft: "12px", fontSize: 12 }}>
-                      {r.requestId} · {formatDateTime(r.submittedAt)}
-                    </span>
-                  </div>
-                </div>
-                {buildReportSections(r)}
-              </div>
+              <UnitReportSection key={r.requestId} report={r} index={i} />
             ))}
             {pdfFooter}
           </article>

@@ -7,9 +7,6 @@
 }
 
 .login-branding {
-  position: relative;
-  isolation: isolate;
-  overflow: hidden;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -17,66 +14,33 @@
   min-height: 154px;
   margin: 0 -18px 54px;
   padding: 18px 24px 30px;
-  background:
-    linear-gradient(180deg, rgba(255, 250, 240, 0.94) 0%, rgba(255, 248, 234, 0.74) 22%, rgba(255, 248, 237, 0.38) 100%),
-    url("/header-top-inspiration-strip.png") center top / auto 36px repeat-x,
-    linear-gradient(180deg, #fffaf0 0%, #fcf6ea 100%);
-  border-top: 1px solid rgba(201, 150, 58, 0.22);
-  border-bottom: 1px solid rgba(201, 150, 58, 0.44);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.84),
-    0 8px 20px rgba(120, 78, 20, 0.08);
-}
-
-.login-branding::before,
-.login-branding::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-}
-
-.login-branding::before {
-  background:
-    radial-gradient(circle at 18% 12%, rgba(255, 255, 255, 0.78) 0 1px, transparent 1.4px) 0 0 / 22px 22px,
-    linear-gradient(180deg, rgba(230, 204, 150, 0.12), transparent 38%);
-  opacity: 0.68;
-}
-
-.login-branding::after {
-  inset: auto 0 8px;
-  height: 88px;
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.38), rgba(246, 239, 223, 0.18)),
-    url("/header-stone-inspiration-strip.png") center / 300px 92px repeat-x;
-  opacity: 0.92;
-  filter: saturate(0.78) sepia(0.12) brightness(1.03);
-}
-
-.login-branding > * {
-  position: relative;
-  z-index: 1;
+  background-image:
+    linear-gradient(rgba(0, 0, 0, 0.38), rgba(0, 0, 0, 0.38)),
+    url('/1429925998.jpg');
+  background-size: 100% auto;
+  background-position: center top;
+  background-repeat: no-repeat;
+  border-bottom: 2px solid rgba(200, 147, 24, 0.55);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.28);
 }
 
 .login-brand-logo {
-  width: 72px;
-  height: 72px;
+  width: 100px;
+  height: 100px;
   padding: 4px;
   border-radius: 50%;
   object-fit: cover;
-  background: rgba(255, 250, 240, 0.82);
-  border: 1px solid rgba(199, 145, 44, 0.34);
-  box-shadow: 0 6px 16px rgba(120, 78, 20, 0.08);
+  background: rgba(255, 250, 240, 0.15);
+  border: 2px solid rgba(255, 255, 255, 0.75);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
 }
 
 .login-brand-title-kh {
   margin: 0;
   font-size: clamp(24px, 3.1vw, 42px);
   line-height: 1.04;
-  color: #b17816;
-  text-shadow:
-    0 1px 0 rgba(255, 255, 255, 0.86),
-    0 2px 4px rgba(93, 62, 16, 0.06);
+  color: #ffffff;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
 }
 
 .login-brand-title-en {
@@ -85,11 +49,9 @@
   font-size: clamp(18px, 2vw, 34px);
   font-weight: 800;
   line-height: 1.08;
-  color: #ac7618;
+  color: rgba(255, 255, 255, 0.85);
   letter-spacing: 0.03em;
-  text-shadow:
-    0 1px 0 rgba(255, 255, 255, 0.86),
-    0 2px 4px rgba(93, 62, 16, 0.06);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
 }
 
 .login-card-wrap {
@@ -289,15 +251,9 @@
     gap: 10px;
   }
 
-  .login-branding::after {
-    bottom: 6px;
-    height: 76px;
-    background-size: auto, 260px 86px;
-  }
-
   .login-brand-logo {
-    width: 62px;
-    height: 62px;
+    width: 84px;
+    height: 84px;
   }
 
   .login-card {
@@ -339,12 +295,6 @@
     min-height: 124px;
     margin-bottom: 32px;
     padding: 14px 14px 20px;
-  }
-
-  .login-branding::after {
-    bottom: 5px;
-    height: 66px;
-    background-size: auto, 220px 78px;
   }
 
   .login-brand-title-kh,

@@ -1,6 +1,7 @@
 import { Fragment, useMemo, useState } from "react";
 import { loadAccounts, createAccount, updateAccount, deleteAccount, getLastLogin } from "../../../utils/accountStorage";
 import { loadAdminMissionPanel } from "../../../utils/adminMissionPanel";
+import { addSysManagerAuditLog, loadSysManagerAuditLog } from "../../../utils/sysManagerAuditLog";
 import AdminDashboardPage from "../../admin-dashboard/pages/AdminDashboardPage";
 import SuperAdminDashboardPage from "../../super-admin-dashboard/pages/SuperAdminDashboardPage";
 import ReportFormPage from "../../report-form/pages/ReportFormPage";
@@ -62,6 +63,45 @@ function toText(value) {
   return String(value ?? "").trim();
 }
 
+function getMissionKey(report) {
+  const title = toText(report.adminPanel?.missionTitle || report.formData?.missionTitle || "");
+  const time = toText(report.adminPanel?.missionTime || "");
+  return title || time ? `${title}|${time}` : report.requestId;
+}
+
+function groupReportsByMission(reports) {
+  const map = new Map();
+  for (const report of reports) {
+    const key = getMissionKey(report);
+    if (!map.has(key)) map.set(key, []);
+    map.get(key).push(report);
+  }
+  return Array.from(map.values());
+}
+
+function normalizeMissionGroup(group) {
+  if (!group.length) return null;
+  const first = group[0];
+  const formData = first.formData || {};
+  const adminPanel = first.adminPanel || {};
+  const program = toText(adminPanel.missionTitle || formData.missionTitle || formData.mission) || "-";
+  const location = toText(adminPanel.missionPlace || formData.missionPlace) || "-";
+  const date = toText(formData.departureDate) || toText(first.submittedAt) || "-";
+  const travelDuration = toText(formData.travelDuration);
+  const duration = travelDuration ? `${travelDuration} ម៉ោង` : adminPanel.missionTime ? formatDateTime(adminPanel.missionTime) : "-";
+
+  return {
+    key: first.requestId,
+    program,
+    location,
+    unitCount: group.length,
+    date,
+    duration,
+    submittedAt: first.submittedAt,
+    reports: group
+  };
+}
+
 function normalizeReportRow(report, accounts) {
   const requestId = toText(report.requestId);
   if (!requestId) return null;
@@ -70,8 +110,8 @@ function normalizeReportRow(report, accounts) {
   const program = toText(adminPanel.missionTitle || formData.missionTitle || formData.mission) || "-";
   const location = toText(adminPanel.missionPlace || formData.missionPlace) || "-";
   const date = toText(formData.departureDate || report.submittedAt) || "-";
-  const rawDuration = toText(formData.travelDuration);
-  const duration = rawDuration ? `${rawDuration} ម៉ោង` : "-";
+  const travelDuration = toText(formData.travelDuration);
+  const duration = travelDuration ? `${travelDuration} ម៉ោង` : adminPanel.missionTime ? formatDateTime(adminPanel.missionTime) : "-";
   const submitterUsername = toText(report.submitterUsername);
   const account = accounts.find((a) => a.username === submitterUsername);
   const unitName = account?.unitName || submitterUsername || "-";
@@ -94,23 +134,27 @@ export default function SysManagerDashboardPage({ onLogout }) {
   const [accounts, setAccounts] = useState(() => loadAccounts());
   const [expandedAccountId, setExpandedAccountId] = useState(null);
   const [selectedReport, setSelectedReport] = useState(null);
+  const [selectedReports, setSelectedReports] = useState(null);
+  const [pdfInitialMode, setPdfInitialMode] = useState("summary");
   const [modalState, setModalState] = useState(null);
   const [formFields, setFormFields] = useState(emptyForm);
   const [formError, setFormError] = useState("");
   const [reportsRefreshKey, setReportsRefreshKey] = useState(0);
   const [viewingDashboard, setViewingDashboard] = useState(null);
   const [reportsPage, setReportsPage] = useState(1);
+  const [auditEntries, setAuditEntries] = useState(() => loadSysManagerAuditLog());
 
   const allReports = useMemo(() => loadAllReports(), [reportsRefreshKey]);
   const adminPanel = useMemo(() => loadAdminMissionPanel(), [reportsRefreshKey]);
 
   const isReportsView = activeMenu === "reports";
   const isOverview = activeMenu === "overview";
+  const isAuditView = activeMenu === "audit";
 
   const activeRoleFilter = accountMenuItems.find((m) => m.id === activeMenu)?.role ?? "user";
 
   const filteredAccounts = useMemo(() => {
-    if (isReportsView || isOverview) return [];
+    if (isReportsView || isOverview || isAuditView) return [];
     const q = searchQuery.toLowerCase();
     return accounts
       .filter((a) => a.role === activeRoleFilter)
@@ -118,7 +162,7 @@ export default function SysManagerDashboardPage({ onLogout }) {
         (a) =>
           !q || a.unitName.toLowerCase().includes(q) || a.username.toLowerCase().includes(q)
       );
-  }, [accounts, activeRoleFilter, searchQuery, isReportsView, isOverview]);
+  }, [accounts, activeRoleFilter, searchQuery, isReportsView, isOverview, isAuditView]);
 
   const reportRows = useMemo(() => {
     if (!isReportsView) return [];
@@ -137,9 +181,11 @@ export default function SysManagerDashboardPage({ onLogout }) {
   const reportsTotalPages = Math.max(1, Math.ceil(reportRows.length / ROWS_PER_PAGE));
   const pagedReportRows = reportRows.slice((reportsPage - 1) * ROWS_PER_PAGE, reportsPage * ROWS_PER_PAGE);
 
-  const recentActivity = useMemo(() => {
-    return allReports.slice(0, 10).map((r) => normalizeReportRow(r, accounts)).filter(Boolean);
-  }, [allReports, accounts]);
+  const missionGroups = useMemo(
+    () => groupReportsByMission(allReports).map(normalizeMissionGroup).filter(Boolean),
+    [allReports]
+  );
+  const recentActivity = useMemo(() => missionGroups.slice(0, 10), [missionGroups]);
 
   const overviewStats = useMemo(() => ({
     totalReports: allReports.length,
@@ -157,12 +203,22 @@ export default function SysManagerDashboardPage({ onLogout }) {
     setAccounts(loadAccounts());
   }
 
+  function refreshAuditLog() {
+    setAuditEntries(loadSysManagerAuditLog());
+  }
+
+  function recordAuditLog(entry) {
+    addSysManagerAuditLog(entry);
+    refreshAuditLog();
+  }
+
   function switchMenu(menuId) {
     setActiveMenu(menuId);
     setSearchQuery("");
     setExpandedAccountId(null);
     setReportsPage(1);
     if (menuId === "reports" || menuId === "overview") setReportsRefreshKey((k) => k + 1);
+    if (menuId === "audit") refreshAuditLog();
   }
 
   function openCreateModal() {
@@ -216,15 +272,56 @@ export default function SysManagerDashboardPage({ onLogout }) {
       setFormError(result.error);
       return;
     }
+    if (modalState.mode === "create") {
+      recordAuditLog({
+        action: "បង្កើតគណនី",
+        target: result.account.username,
+        detail: `${result.account.unitName || "-"} · ${result.account.role}`
+      });
+    } else if (modalState.mode === "reset-password") {
+      recordAuditLog({
+        action: "កំណត់ Password ថ្មី",
+        target: modalState.account.username,
+        detail: modalState.account.unitName || "-"
+      });
+    } else {
+      recordAuditLog({
+        action: "កែប្រែគណនី",
+        target: result.account.username,
+        detail: `${result.account.unitName || "-"} · ${result.account.role}`
+      });
+    }
     refreshAccounts();
     closeModal();
   }
 
   function handleDelete(id) {
+    const account = accounts.find((item) => item.id === id);
     if (!window.confirm("តើអ្នកពិតជាចង់លុបគណនីនេះមែនទេ?")) return;
     deleteAccount(id);
+    if (account) {
+      recordAuditLog({
+        action: "លុបគណនី",
+        target: account.username,
+        detail: `${account.unitName || "-"} · ${account.role}`
+      });
+    }
     refreshAccounts();
     if (expandedAccountId === id) setExpandedAccountId(null);
+  }
+
+  function openDashboardView(dashboardName) {
+    const labels = {
+      user: "User Dashboard",
+      admin: "Admin Dashboard",
+      superadmin: "Superadmin Dashboard"
+    };
+    recordAuditLog({
+      action: "បើក Dashboard",
+      target: labels[dashboardName] || dashboardName,
+      detail: "System Manager"
+    });
+    setViewingDashboard(dashboardName);
   }
 
   function toggleExpanded(id) {
@@ -239,6 +336,8 @@ export default function SysManagerDashboardPage({ onLogout }) {
     ? "ទំព័រដើម"
     : isReportsView
     ? "ទិន្នន័យសំណើ"
+    : isAuditView
+    ? "កំណត់ត្រាសកម្មភាព"
     : accountMenuItems.find((m) => m.id === activeMenu)?.label ?? "";
 
   if (viewingDashboard === "admin") {
@@ -271,8 +370,8 @@ export default function SysManagerDashboardPage({ onLogout }) {
             onError={(e) => { e.currentTarget.src = "/logo.png"; }}
           />
           <div>
-            <div className="sys-manager-brand-title">ប្រព័ន្ធគ្រប់គ្រង</div>
-            <div className="sys-manager-brand-sub">System Manager Dashboard</div>
+            <div className="sys-manager-brand-title">ក្រសួងមហាផ្ទៃ</div>
+            <div className="sys-manager-brand-sub">MINISTRY OF INTERIOR</div>
           </div>
         </div>
         <button className="ghost" type="button" onClick={onLogout}>
@@ -290,6 +389,15 @@ export default function SysManagerDashboardPage({ onLogout }) {
               onClick={() => switchMenu("overview")}
             >
               ទំព័រដើម
+            </button>
+            <button
+              type="button"
+              className={`sys-nav-item${activeMenu === "audit" ? " active" : ""}`}
+              onClick={() => switchMenu("audit")}
+              style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}
+            >
+              <span>កំណត់ត្រាសកម្មភាព</span>
+              <span className="sys-nav-badge">{auditEntries.length}</span>
             </button>
           </nav>
 
@@ -337,21 +445,21 @@ export default function SysManagerDashboardPage({ onLogout }) {
             <button
               type="button"
               className="sys-nav-item"
-              onClick={() => setViewingDashboard("user")}
+              onClick={() => openDashboardView("user")}
             >
               User Dashboard
             </button>
             <button
               type="button"
               className="sys-nav-item"
-              onClick={() => setViewingDashboard("admin")}
+              onClick={() => openDashboardView("admin")}
             >
               Admin Dashboard
             </button>
             <button
               type="button"
               className="sys-nav-item"
-              onClick={() => setViewingDashboard("superadmin")}
+              onClick={() => openDashboardView("superadmin")}
             >
               Superadmin Dashboard
             </button>
@@ -395,29 +503,46 @@ export default function SysManagerDashboardPage({ onLogout }) {
                     <table className="sys-table">
                       <thead>
                         <tr>
-                          <th>អង្គភាព</th>
                           <th>លេខកូដ</th>
                           <th>កម្មវិធី</th>
+                          <th>ទីតាំង</th>
+                          <th>ចំនួនអង្គភាពចូលរួម</th>
                           <th>ពេលវេលា</th>
                           <th>PDF</th>
                         </tr>
                       </thead>
                       <tbody>
                         {recentActivity.map((row) => (
-                          <tr key={row.requestId} className="sys-table-row">
-                            <td>{row.unitName}</td>
-                            <td style={{ whiteSpace: "nowrap", fontSize: 12 }}>{row.requestId}</td>
+                          <tr key={row.key} className="sys-table-row">
+                            <td style={{ whiteSpace: "nowrap", fontSize: 12 }}>{row.reports[0]?.requestId ?? "-"}</td>
                             <td>{row.program}</td>
+                            <td>{row.location}</td>
+                            <td>{row.unitCount}</td>
                             <td style={{ whiteSpace: "nowrap", color: "#9a7840", fontSize: 13 }}>
                               {timeAgo(row.submittedAt)}
                             </td>
-                            <td>
+                            <td style={{ whiteSpace: "nowrap" }}>
                               <button
                                 type="button"
                                 className="ghost sys-action-btn"
-                                onClick={() => setSelectedReport(row.raw)}
+                                onClick={() => {
+                                  setSelectedReport(null);
+                                  setSelectedReports(row.reports);
+                                  setPdfInitialMode("summary");
+                                }}
                               >
-                                មើល
+                                សង្ខេប
+                              </button>
+                              <button
+                                type="button"
+                                className="ghost sys-action-btn"
+                                onClick={() => {
+                                  setSelectedReport(null);
+                                  setSelectedReports(row.reports);
+                                  setPdfInitialMode("full");
+                                }}
+                              >
+                                លម្អិត
                               </button>
                             </td>
                           </tr>
@@ -531,7 +656,10 @@ export default function SysManagerDashboardPage({ onLogout }) {
                           <button
                             type="button"
                             className="ghost sys-action-btn"
-                            onClick={() => setSelectedReport(row.raw)}
+                            onClick={() => {
+                              setSelectedReports(null);
+                              setSelectedReport(row.raw);
+                            }}
                           >
                             មើល PDF
                           </button>
@@ -568,7 +696,47 @@ export default function SysManagerDashboardPage({ onLogout }) {
           )}
 
           {/* ── Accounts view ── */}
-          {!isReportsView && !isOverview && (
+          {isAuditView && (
+            <>
+              <div className="sys-manager-content-header">
+                <h2 className="sys-manager-content-title">{menuTitle}</h2>
+                <span className="sys-result-count">{auditEntries.length} កំណត់ត្រា</span>
+              </div>
+              <div className="sys-table-wrap">
+                <table className="sys-table">
+                  <thead>
+                    <tr>
+                      <th>ពេលវេលា</th>
+                      <th>សកម្មភាព</th>
+                      <th>គោលដៅ</th>
+                      <th>ព័ត៌មានលម្អិត</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {auditEntries.length === 0 ? (
+                      <tr>
+                        <td colSpan="4" className="sys-table-empty">មិនទាន់មានកំណត់ត្រាសកម្មភាពទេ។</td>
+                      </tr>
+                    ) : (
+                      auditEntries.map((entry) => (
+                        <tr key={entry.id} className="sys-table-row">
+                          <td style={{ whiteSpace: "nowrap", color: "#9a7840", fontSize: 13 }}>
+                            {formatDateTime(entry.createdAt)}
+                          </td>
+                          <td>{entry.action}</td>
+                          <td>{entry.target || "-"}</td>
+                          <td>{entry.detail || "-"}</td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          )}
+
+          {/* ── Accounts view ── */}
+          {!isReportsView && !isOverview && !isAuditView && (
             <>
               <div className="sys-manager-content-header">
                 <h2 className="sys-manager-content-title">{menuTitle}</h2>
@@ -681,7 +849,10 @@ export default function SysManagerDashboardPage({ onLogout }) {
                                               <button
                                                 type="button"
                                                 className="ghost sys-action-btn"
-                                                onClick={() => setSelectedReport(report)}
+                                                onClick={() => {
+                                                  setSelectedReports(null);
+                                                  setSelectedReport(report);
+                                                }}
                                               >
                                                 មើល PDF
                                               </button>
@@ -787,7 +958,20 @@ export default function SysManagerDashboardPage({ onLogout }) {
         </div>
       )}
 
-      <PdfTemplate report={selectedReport} onClose={() => setSelectedReport(null)} />
+      <PdfTemplate
+        key={
+          selectedReports?.length
+            ? `${selectedReports[0]?.requestId ?? "group"}-${pdfInitialMode}`
+            : selectedReport?.requestId ?? "single"
+        }
+        report={selectedReport}
+        reports={selectedReports}
+        initialMode={pdfInitialMode}
+        onClose={() => {
+          setSelectedReport(null);
+          setSelectedReports(null);
+        }}
+      />
     </div>
   );
 }

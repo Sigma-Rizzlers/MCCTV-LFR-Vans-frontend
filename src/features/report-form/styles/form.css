@@ -66,14 +66,14 @@
 .meal-panel-header p { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.5; }
 .meal-step-error { margin-top: -4px; }
 .upload-block { margin-top: 12px; }
-.upload-label { margin-bottom: 8px; color: #c98712; font-weight: 700; }
+.upload-label { margin-bottom: 8px; color: #111111; font-weight: 700; }
 .upload-label-dark { color: #3d2402; }
 .upload-area { position: relative; display: flex; align-items: center; justify-content: center; gap: 14px; min-height: 110px; border: 1px solid rgba(92, 53, 6, 0.25); border-radius: 6px; background: #ffffff; color: #5b4a2a; font-weight: 600; cursor: pointer; }
 .upload-area input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
 .upload-icon { width: 64px; height: 64px; border: 2px solid rgba(92, 53, 6, 0.45); border-radius: 50%; display: grid; place-items: center; font-size: 32px; line-height: 1; color: rgba(92, 53, 6, 0.65); }
 .upload-text { font-size: 14px; }
-.upload-file-actions { margin-top: 8px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-.upload-file-actions .status { margin: 0; }
+.upload-file-actions { margin-top: 8px; display: flex; align-items: center; gap: 8px; }
+.upload-filename { padding: 5px 12px; background: rgba(200, 147, 24, 0.08); border: 1px solid rgba(200, 147, 24, 0.28); border-radius: 8px; font-size: 13px; color: #6b4b0c; max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .upload-remove { padding: 6px 12px; border-radius: 8px; font-size: 13px; line-height: 1.2; }
 .member-add { margin-top: 12px; display: inline-flex; align-items: center; gap: 10px; border: 1px solid rgba(92, 53, 6, 0.35); background: #ffffff; color: #6b5a40; border-radius: 6px; padding: 9px 14px; font-weight: 600; cursor: pointer; }
 .member-add::before { content: "+"; width: 22px; height: 22px; border: 2px solid #3d2402; border-radius: 50%; display: inline-grid; place-items: center; font-size: 18px; line-height: 1; color: #3d2402; }

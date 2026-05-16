@@ -116,11 +116,52 @@ function loadDashboardReports() {
   }
 }
 
+function BarChart({ items, labelKey, valueKey, color }) {
+  const max = Math.max(...items.map((d) => d[valueKey]), 1);
+  if (items.length === 0) {
+    return <p style={{ color: "#aaa", fontSize: 13, textAlign: "center", padding: "20px 0" }}>មិនមានទិន្នន័យ</p>;
+  }
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 13 }}>
+      {items.map((item, i) => {
+        const pct = (item[valueKey] / max) * 100;
+        return (
+          <div key={i} style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <div style={{
+              width: 120, fontSize: 12, color: "#555", textAlign: "right", flexShrink: 0,
+              overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", lineHeight: 1.3
+            }} title={item[labelKey]}>
+              {item[labelKey]}
+            </div>
+            <div style={{
+              flex: 1, background: "rgba(200,147,24,0.09)",
+              borderRadius: 6, height: 32, overflow: "hidden"
+            }}>
+              <div style={{
+                width: `${pct}%`, height: "100%",
+                background: color || "#c89318",
+                borderRadius: 6,
+                transition: "width 0.65s cubic-bezier(.4,0,.2,1)",
+                minWidth: item[valueKey] > 0 ? 6 : 0
+              }} />
+            </div>
+            <div style={{ fontSize: 13, fontWeight: 700, color: "#111", minWidth: 32, textAlign: "right" }}>
+              {item[valueKey]}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 export default function SuperAdminDashboardPage({ onBackToMain, onLogout }) {
+  const [activeSection, setActiveSection] = useState("missions");
   const [refreshKey, setRefreshKey] = useState(0);
   const [selectedReports, setSelectedReports] = useState(null);
   const [pdfInitialMode, setPdfInitialMode] = useState("summary");
   const [searchQuery, setSearchQuery] = useState("");
+  const [sortOrder, setSortOrder] = useState("newest");
   const [currentPage, setCurrentPage] = useState(1);
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
@@ -148,24 +189,87 @@ export default function SuperAdminDashboardPage({ onBackToMain, onLogout }) {
     [dateFilteredGroups]
   );
 
-  const filteredGroups = useMemo(() => {
-    const q = searchQuery.toLowerCase();
-    return dateFilteredGroups.filter((g) => {
-      if (q && !(
-        g.program.toLowerCase().includes(q) ||
-        g.location.toLowerCase().includes(q) ||
-        g.reports.some((r) => r.requestId.toLowerCase().includes(q))
-      )) return false;
-      return true;
+  const analytics = useMemo(() => {
+    const now = new Date();
+
+    // Last 6 months — missions and participants per month
+    const monthly = Array.from({ length: 6 }, (_, i) => {
+      const d = new Date(now.getFullYear(), now.getMonth() - (5 - i), 1);
+      const yr = d.getFullYear();
+      const mo = d.getMonth();
+      const label = new Intl.DateTimeFormat("km-KH", { year: "numeric", month: "short" }).format(d);
+      const matching = missionGroups.filter((g) => {
+        const gd = new Date(g.date);
+        return !Number.isNaN(gd.getTime()) && gd.getFullYear() === yr && gd.getMonth() === mo;
+      });
+      return {
+        label,
+        missions: matching.length,
+        participants: matching.reduce((s, g) => s + g.participantCount, 0),
+      };
     });
-  }, [dateFilteredGroups, searchQuery]);
+
+    // Top 6 locations by mission count
+    const locMap = new Map();
+    missionGroups.forEach((g) => {
+      const loc = toText(g.location);
+      if (loc && loc !== fallbackText) locMap.set(loc, (locMap.get(loc) || 0) + 1);
+    });
+    const topLocations = [...locMap.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 6)
+      .map(([loc, count]) => ({ loc, count }));
+
+    // Top 6 units by submission count
+    const unitMap = new Map();
+    dashboardReports.forEach((r) => {
+      const acct = accounts.find((a) => a.username === r.submitterUsername);
+      const label = toText(acct?.unitName) || toText(r.submitterUsername) || "Unknown";
+      unitMap.set(label, (unitMap.get(label) || 0) + 1);
+    });
+    const topUnits = [...unitMap.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 6)
+      .map(([unit, count]) => ({ unit, count }));
+
+    // Total all-time stats (unfiltered)
+    const allTimeMissions = missionGroups.length;
+    const allTimeParticipants = missionGroups.reduce((s, g) => s + g.participantCount, 0);
+    const allTimeLocations = countUniqueLocations(missionGroups);
+    const allTimeUnits = new Set(dashboardReports.map((r) => toText(r.submitterUsername)).filter(Boolean)).size;
+
+    return { monthly, topLocations, topUnits, allTimeMissions, allTimeParticipants, allTimeLocations, allTimeUnits };
+  }, [missionGroups, dashboardReports, accounts]);
+
+  const filteredGroups = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    const filtered = dateFilteredGroups.filter((g) => {
+      if (!q) return true;
+      if (g.program.toLowerCase().includes(q)) return true;
+      if (g.location.toLowerCase().includes(q)) return true;
+      if (g.duration.toLowerCase().includes(q)) return true;
+      return g.reports.some((r) => {
+        if (r.requestId.toLowerCase().includes(q)) return true;
+        const username = toText(r.submitterUsername).toLowerCase();
+        if (username.includes(q)) return true;
+        const account = accounts.find((a) => a.username === r.submitterUsername);
+        if (account && toText(account.unitName).toLowerCase().includes(q)) return true;
+        if (toText(r.formData?.missionTitle).toLowerCase().includes(q)) return true;
+        if (toText(r.formData?.missionPlace).toLowerCase().includes(q)) return true;
+        return false;
+      });
+    });
+    return sortOrder === "oldest"
+      ? [...filtered].sort((a, b) => new Date(a.date) - new Date(b.date))
+      : [...filtered].sort((a, b) => new Date(b.date) - new Date(a.date));
+  }, [dateFilteredGroups, searchQuery, sortOrder, accounts]);
 
   const totalPages = Math.max(1, Math.ceil(filteredGroups.length / ROWS_PER_PAGE));
   const pagedGroups = filteredGroups.slice((currentPage - 1) * ROWS_PER_PAGE, currentPage * ROWS_PER_PAGE);
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchQuery, dateFrom, dateTo]);
+  }, [searchQuery, dateFrom, dateTo, sortOrder]);
 
   useEffect(() => {
     function handleStorageChange(event) {
@@ -226,8 +330,8 @@ export default function SuperAdminDashboardPage({ onBackToMain, onLogout }) {
             onError={(event) => { event.currentTarget.src = "/logo.png"; }}
           />
           <div>
-            <div className="sys-manager-brand-title">ផ្ទាំងគ្រប់គ្រងអ្នកគ្រប់គ្រងជាន់ខ្ពស់</div>
-            <div className="sys-manager-brand-sub">Super Admin Dashboard</div>
+            <div className="sys-manager-brand-title">ក្រសួងមហាផ្ទៃ</div>
+            <div className="sys-manager-brand-sub">MINISTRY OF INTERIOR</div>
           </div>
         </div>
         <div style={{ display: "flex", gap: "10px" }}>
@@ -242,11 +346,25 @@ export default function SuperAdminDashboardPage({ onBackToMain, onLogout }) {
         <aside className="sys-manager-sidebar">
           <div className="sys-sidebar-section-label">ទូទៅ</div>
           <nav className="sys-manager-nav">
-            <button type="button" className="sys-nav-item active">ទិន្នន័យសំណើ</button>
+            <button
+              type="button"
+              className={`sys-nav-item${activeSection === "missions" ? " active" : ""}`}
+              onClick={() => setActiveSection("missions")}
+            >
+              ទិន្នន័យសំណើ
+            </button>
+            <button
+              type="button"
+              className={`sys-nav-item${activeSection === "stats" ? " active" : ""}`}
+              onClick={() => setActiveSection("stats")}
+            >
+              ស្ថិតិ &amp; វិភាគ
+            </button>
           </nav>
         </aside>
 
         <main className="sys-manager-main">
+          {activeSection === "missions" && (<>
           <div className="sys-stat-row" style={{ marginBottom: "24px" }}>
             <div className="sys-stat-card">
               <div className="sys-stat-value">{summaryStats.totalMissions}</div>
@@ -297,6 +415,26 @@ export default function SuperAdminDashboardPage({ onBackToMain, onLogout }) {
               {(dateFrom || dateTo) && (
                 <button className="ghost" type="button" onClick={() => { setDateFrom(""); setDateTo(""); }}>✕ ថ្ងៃ</button>
               )}
+              <select
+                value={sortOrder}
+                onChange={(e) => setSortOrder(e.target.value)}
+                style={{
+                  padding: "8px 12px",
+                  border: "1px solid rgba(199, 145, 44, 0.4)",
+                  borderRadius: 8,
+                  fontSize: 14,
+                  fontFamily: "inherit",
+                  background: "#fff",
+                  color: "#111",
+                  outline: "none",
+                  cursor: "pointer",
+                  minWidth: 140
+                }}
+                title="តម្រៀបតាម"
+              >
+                <option value="newest">ថ្មី → ចាស់</option>
+                <option value="oldest">ចាស់ → ថ្មី</option>
+              </select>
             </div>
           </div>
 
@@ -418,6 +556,102 @@ export default function SuperAdminDashboardPage({ onBackToMain, onLogout }) {
                 </div>
               )}
             </>
+          )}
+          </>)}
+
+          {activeSection === "stats" && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+              <h2 className="sys-manager-content-title" style={{ margin: 0 }}>ស្ថិតិ &amp; វិភាគ</h2>
+
+              {/* All-time overview */}
+              <div className="sys-stat-row">
+                <div className="sys-stat-card">
+                  <div className="sys-stat-value">{analytics.allTimeMissions}</div>
+                  <div className="sys-stat-label">បេសកកម្មសរុប</div>
+                </div>
+                <div className="sys-stat-card">
+                  <div className="sys-stat-value">{analytics.allTimeParticipants}</div>
+                  <div className="sys-stat-label">អ្នកចូលរួមសរុប</div>
+                </div>
+                <div className="sys-stat-card">
+                  <div className="sys-stat-value">{analytics.allTimeLocations}</div>
+                  <div className="sys-stat-label">ទីតាំងសរុប</div>
+                </div>
+                <div className="sys-stat-card">
+                  <div className="sys-stat-value">{analytics.allTimeUnits}</div>
+                  <div className="sys-stat-label">អង្គភាពចូលរួម</div>
+                </div>
+              </div>
+
+              {/* Charts — locked 2-column grid */}
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
+
+                {/* Monthly missions */}
+                <div className="sys-overview-panel">
+                  <div style={{
+                    padding: "14px 20px", borderBottom: "1px solid rgba(199,145,44,0.15)",
+                    background: "linear-gradient(180deg,rgba(248,217,139,0.18),transparent)"
+                  }}>
+                    <h3 style={{ margin: 0, fontFamily: "var(--font-kh-heading)", fontSize: 14, color: "#3d2402" }}>
+                      បេសកកម្មប្រចាំខែ
+                    </h3>
+                    <p style={{ margin: "2px 0 0", fontSize: 12, color: "#9a7840" }}>6 ខែចុងក្រោយ</p>
+                  </div>
+                  <div style={{ padding: "20px 22px" }}>
+                    <BarChart items={analytics.monthly} labelKey="label" valueKey="missions" color="#c89318" />
+                  </div>
+                </div>
+
+                {/* Monthly participants */}
+                <div className="sys-overview-panel">
+                  <div style={{
+                    padding: "14px 20px", borderBottom: "1px solid rgba(199,145,44,0.15)",
+                    background: "linear-gradient(180deg,rgba(248,217,139,0.18),transparent)"
+                  }}>
+                    <h3 style={{ margin: 0, fontFamily: "var(--font-kh-heading)", fontSize: 14, color: "#3d2402" }}>
+                      អ្នកចូលរួមប្រចាំខែ
+                    </h3>
+                    <p style={{ margin: "2px 0 0", fontSize: 12, color: "#9a7840" }}>6 ខែចុងក្រោយ</p>
+                  </div>
+                  <div style={{ padding: "20px 22px" }}>
+                    <BarChart items={analytics.monthly} labelKey="label" valueKey="participants" color="#2d7a4f" />
+                  </div>
+                </div>
+
+                {/* Top locations */}
+                <div className="sys-overview-panel">
+                  <div style={{
+                    padding: "14px 20px", borderBottom: "1px solid rgba(199,145,44,0.15)",
+                    background: "linear-gradient(180deg,rgba(248,217,139,0.18),transparent)"
+                  }}>
+                    <h3 style={{ margin: 0, fontFamily: "var(--font-kh-heading)", fontSize: 14, color: "#3d2402" }}>
+                      ទីតាំងដែលចូលញឹកញាប់
+                    </h3>
+                    <p style={{ margin: "2px 0 0", fontSize: 12, color: "#9a7840" }}>Top 6</p>
+                  </div>
+                  <div style={{ padding: "20px 22px" }}>
+                    <BarChart items={analytics.topLocations} labelKey="loc" valueKey="count" color="#c89318" />
+                  </div>
+                </div>
+
+                {/* Top units */}
+                <div className="sys-overview-panel">
+                  <div style={{
+                    padding: "14px 20px", borderBottom: "1px solid rgba(199,145,44,0.15)",
+                    background: "linear-gradient(180deg,rgba(248,217,139,0.18),transparent)"
+                  }}>
+                    <h3 style={{ margin: 0, fontFamily: "var(--font-kh-heading)", fontSize: 14, color: "#3d2402" }}>
+                      អង្គភាពដែលបំពេញបេសកកម្មច្រើន
+                    </h3>
+                    <p style={{ margin: "2px 0 0", fontSize: 12, color: "#9a7840" }}>Top 6</p>
+                  </div>
+                  <div style={{ padding: "20px 22px" }}>
+                    <BarChart items={analytics.topUnits} labelKey="unit" valueKey="count" color="#7a5820" />
+                  </div>
+                </div>
+
+              </div>
+            </div>
           )}
         </main>
       </div>

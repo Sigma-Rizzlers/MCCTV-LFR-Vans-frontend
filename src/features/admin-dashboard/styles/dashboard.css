@@ -259,6 +259,135 @@
   margin-top: 8px;
 }
 
+.admin-history-header {
+  align-items: flex-start;
+  gap: 18px;
+}
+
+.admin-history-count {
+  display: inline-flex;
+  margin-top: 6px;
+  font-size: 13px;
+  color: #9a7840;
+}
+
+.admin-history-search-wrap {
+  position: relative;
+  width: min(100%, 360px);
+  flex-shrink: 0;
+}
+
+.admin-history-search-icon {
+  position: absolute;
+  left: 13px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #9a7840;
+  font-size: 17px;
+  line-height: 1;
+  pointer-events: none;
+}
+
+.admin-history-search {
+  width: 100%;
+  min-height: 42px;
+  padding: 9px 14px 9px 40px;
+  border: 1px solid rgba(199, 145, 44, 0.38);
+  border-radius: 8px;
+  background: linear-gradient(180deg, #fffdf8 0%, #fff9ec 100%);
+  color: #2f2413;
+  font-family: var(--font-kh-sans);
+  font-size: 14px;
+  line-height: 1.45;
+  outline: none;
+  box-shadow: 0 3px 12px rgba(120, 78, 20, 0.06);
+}
+
+.admin-history-search:focus {
+  border-color: #c78612;
+  box-shadow: 0 0 0 3px rgba(199, 134, 18, 0.14);
+}
+
+.admin-history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.admin-history-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  padding: 13px 16px;
+  border: 1px solid #e6dccb;
+  border-radius: 8px;
+  background: #fafaf8;
+}
+
+.admin-history-card.active {
+  border-color: #9a7840;
+  border-width: 1.5px;
+  background: #fffbeb;
+}
+
+.admin-history-code {
+  flex-shrink: 0;
+  padding: 3px 10px;
+  border-radius: 4px;
+  background: #e6dccb;
+  color: #5b4a2a;
+  font-family: monospace;
+  font-size: 12px;
+  line-height: 1.5;
+  letter-spacing: 0.5px;
+}
+
+.admin-history-card.active .admin-history-code {
+  background: #9a7840;
+  color: #fff;
+}
+
+.admin-history-main {
+  flex: 1;
+  min-width: 220px;
+}
+
+.admin-history-title {
+  color: #3d2402;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.45;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.admin-history-meta,
+.admin-history-detail-row {
+  color: #7a694d;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.admin-history-meta {
+  margin-top: 2px;
+}
+
+.admin-history-detail-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  margin-top: 5px;
+}
+
+.admin-history-active {
+  flex-shrink: 0;
+  color: #2f8d43;
+  font-size: 12px;
+  font-weight: 700;
+}
+
 .admin-hero-stats {
   grid-template-columns: repeat(2, 1fr);
   gap: 20px;
@@ -448,6 +577,14 @@
   .admin-dashboard-page .nav .admin-actions {
     width: auto;
     justify-content: center;
+  }
+
+  .admin-history-header {
+    align-items: stretch;
+  }
+
+  .admin-history-search-wrap {
+    width: 100%;
   }
 
   .admin-dashboard-actions-bar {

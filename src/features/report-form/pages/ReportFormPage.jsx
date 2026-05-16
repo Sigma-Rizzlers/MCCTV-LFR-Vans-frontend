@@ -680,6 +680,7 @@ export default function ReportFormPage({
             />
             <UserProfileSection
               isActive={activeSection === "profile"}
+              savedProfile={savedProfile}
               profileData={profileDraft}
               phoneError={profilePhoneError}
               statusText={profileStatusText}
@@ -720,6 +721,7 @@ export default function ReportFormPage({
         />
         <UserProfileSection
           isActive={activeSection === "profile"}
+          savedProfile={savedProfile}
           profileData={profileDraft}
           phoneError={profilePhoneError}
           statusText={profileStatusText}
