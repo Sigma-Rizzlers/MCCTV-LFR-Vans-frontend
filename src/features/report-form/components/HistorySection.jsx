@@ -190,7 +190,7 @@ export default function HistorySection({
         </div>
 
         {/* ── Right: detail ── */}
-        <div className="detail-card" style={{ overflowY: "auto", maxHeight: "calc(100vh - 260px)" }}>
+        <div className="detail-card">
           {selectedReport ? (
             <>
               <div className="list-header" style={{ marginBottom: 12 }}>
