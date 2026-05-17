@@ -13,12 +13,22 @@ import {
   saveAdminMissionPanel,
   activateMissionPanel,
   deleteMissionFromHistory,
+  syncPanelsFromApi,
 } from "../../../utils/adminMissionPanel";
 import {
   clearAdminMissionFile,
   createAdminMissionFileKey,
   saveAdminMissionFile
 } from "../../../utils/adminMissionFileStore";
+import { DATA_MODE } from "../../../utils/dataMode";
+import {
+  createAdminPanel,
+  updateAdminPanel,
+  deleteAdminPanel,
+  getAdminPanels,
+  uploadAdminFile,
+} from "../../../api/services";
+import OfflineBanner from "../../../components/OfflineBanner";
 
 const initialMissionData = {
   missionTitle: "",
@@ -66,7 +76,10 @@ export default function AdminDashboardPage({ onBackToMain, onLogout }) {
   const [missionHistory, setMissionHistory] = useState(() => loadMissionHistory());
   const [missionStatusText, setMissionStatusText] = useState("");
   const [historySearchText, setHistorySearchText] = useState("");
+  const [remoteIdMap, setRemoteIdMap] = useState({});
+  const [panelSyncError, setPanelSyncError] = useState("");
   const requestPlanFileInputRef = useRef(null);
+  const requestPlanFileRef = useRef(null);
   const normalizedHistorySearch = historySearchText.trim().toLowerCase();
   const filteredMissionHistory = useMemo(
     () => missionHistory.filter((panel) => matchesHistorySearch(panel, normalizedHistorySearch)),
@@ -80,8 +93,40 @@ export default function AdminDashboardPage({ onBackToMain, onLogout }) {
 
   useEffect(() => {
     const storedMissionPanel = loadAdminMissionPanel();
-    if (!storedMissionPanel) return;
-    setMissionData((current) => ({ ...current, ...storedMissionPanel }));
+    if (storedMissionPanel) {
+      setMissionData((current) => ({ ...current, ...storedMissionPanel }));
+    }
+
+    if (DATA_MODE === "local") return;
+
+    getAdminPanels()
+      .then((res) => {
+        const panels = Array.isArray(res.data) ? res.data : (res.data?.results ?? []);
+        if (panels.length === 0) return;
+
+        const newMap = {};
+        panels.forEach((p) => { if (p.missionCode && p.id) newMap[p.missionCode] = p.id; });
+        setRemoteIdMap(newMap);
+
+        syncPanelsFromApi(panels);
+        refreshState();
+
+        const active = panels.find((p) => p.isActive);
+        if (active) {
+          setMissionData((current) => ({
+            ...current,
+            missionTitle: active.missionTitle ?? current.missionTitle,
+            missionPlace: active.missionPlace ?? current.missionPlace,
+            missionTime: active.missionTime ?? current.missionTime,
+            participantCount: active.participantCount != null
+              ? String(active.participantCount)
+              : current.participantCount,
+            missionVia: active.missionVia ?? current.missionVia,
+            requestPlanFileName: active.requestPlanFileName ?? current.requestPlanFileName,
+          }));
+        }
+      })
+      .catch(() => {});
   }, []);
 
   function handleMissionChange(event) {
@@ -93,8 +138,10 @@ export default function AdminDashboardPage({ onBackToMain, onLogout }) {
   async function handleRequestPlanFileChange(file) {
     if (!file) {
       await handleClearRequestPlanFile();
+      requestPlanFileRef.current = null;
       return;
     }
+    requestPlanFileRef.current = file;
     try {
       const savedFile = await saveAdminMissionFile(file, createAdminMissionFileKey());
       setMissionData((current) => ({
@@ -142,6 +189,33 @@ export default function AdminDashboardPage({ onBackToMain, onLogout }) {
     }
     refreshState();
     setMissionStatusText(`បានបង្កើតដោយជោគជ័យ — លេខបេសកកម្ម: ${created.missionCode}`);
+
+    if (DATA_MODE === "local") return;
+
+    const existingRemoteId = remoteIdMap[created.missionCode];
+    const panelPayload = {
+      missionCode: created.missionCode,
+      missionTitle: missionData.missionTitle,
+      missionPlace: missionData.missionPlace,
+      missionTime: missionData.missionTime,
+      participantCount: missionData.participantCount ? Number(missionData.participantCount) : null,
+      missionVia: missionData.missionVia,
+    };
+
+    try {
+      const res = existingRemoteId
+        ? await updateAdminPanel(existingRemoteId, panelPayload)
+        : await createAdminPanel(panelPayload);
+      const remoteId = res.data?.id;
+      if (remoteId) {
+        setRemoteIdMap((prev) => ({ ...prev, [created.missionCode]: remoteId }));
+        if (requestPlanFileRef.current) {
+          uploadAdminFile(remoteId, requestPlanFileRef.current).catch(() => {});
+        }
+      }
+    } catch {
+      setPanelSyncError("ការបញ្ជូនទៅ Server បរាជ័យ — ទិន្នន័យបានរក្សាទុកក្នុងឧបករណ៍");
+    }
   }
 
   async function handleClearMissionPanel() {
@@ -170,6 +244,13 @@ export default function AdminDashboardPage({ onBackToMain, onLogout }) {
     deleteMissionFromHistory(missionCode);
     if (fileKey) {
       try { await clearAdminMissionFile(fileKey); } catch (error) { console.error(error); }
+    }
+    if (DATA_MODE !== "local") {
+      const remoteId = remoteIdMap[missionCode];
+      if (remoteId) {
+        deleteAdminPanel(remoteId).catch(() => {});
+        setRemoteIdMap((prev) => { const next = { ...prev }; delete next[missionCode]; return next; });
+      }
     }
     refreshState();
     setMissionStatusText("");
@@ -223,6 +304,7 @@ export default function AdminDashboardPage({ onBackToMain, onLogout }) {
         </aside>
 
         <main className="sys-manager-main">
+          <OfflineBanner />
 
           {/* ── Page: ព័ត៌មានកម្មវិធី ── */}
           {activePage === "info" && (
@@ -478,6 +560,22 @@ export default function AdminDashboardPage({ onBackToMain, onLogout }) {
 
         </main>
       </div>
+
+      {panelSyncError && (
+        <div role="alert" style={{
+          position: "fixed", bottom: 24, right: 24, zIndex: 200,
+          background: "#fef2f2", border: "1px solid #fca5a5",
+          borderRadius: 8, padding: "12px 16px", color: "#991b1b",
+          fontSize: 13, maxWidth: 320, display: "flex", alignItems: "center", gap: 12
+        }}>
+          <span>⚠ {panelSyncError}</span>
+          <button
+            type="button"
+            style={{ background: "none", border: "none", cursor: "pointer", color: "#991b1b", padding: 0, fontSize: 16 }}
+            onClick={() => setPanelSyncError("")}
+          >✕</button>
+        </div>
+      )}
     </div>
   );
 }

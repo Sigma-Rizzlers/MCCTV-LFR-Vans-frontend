@@ -1,3 +1,6 @@
+import { DATA_MODE } from "./dataMode";
+import { getUserProfile as getApiProfile, saveUserProfile as saveApiProfile } from "../api/services";
+
 const userProfileStorageKey = "mcctv:user-profile";
 
 export const emptyUserProfile = Object.freeze({
@@ -62,4 +65,28 @@ export function saveUserProfile(profile) {
   }
 
   return sanitizedProfile;
+}
+
+export async function syncProfileFromApi() {
+  try {
+    const res = await getApiProfile();
+    const apiProfile = res.data;
+    if (!apiProfile) return null;
+    const sanitized = sanitizeUserProfile(apiProfile);
+    try {
+      window.localStorage.setItem(userProfileStorageKey, JSON.stringify(sanitized));
+    } catch {}
+    return sanitized;
+  } catch {
+    return null;
+  }
+}
+
+export async function pushProfileToApi(sanitizedProfile) {
+  const res = await saveApiProfile(sanitizedProfile);
+  const returned = sanitizeUserProfile(res.data);
+  try {
+    window.localStorage.setItem(userProfileStorageKey, JSON.stringify(returned));
+  } catch {}
+  return returned;
 }

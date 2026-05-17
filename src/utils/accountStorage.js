@@ -1,5 +1,8 @@
+import bcrypt from "bcryptjs";
+
 const accountsKey = "mcctv:accounts";
 const VALID_ROLES = ["user", "admin", "superadmin"];
+const BCRYPT_ROUNDS = 10;
 
 function toText(value) {
   return String(value ?? "").trim();
@@ -50,20 +53,22 @@ function saveAllAccounts(accounts) {
   window.localStorage.setItem(accountsKey, JSON.stringify(accounts));
 }
 
-export function createAccount({ unitName, username, password, role }) {
+export async function createAccount({ unitName, username, password, role }) {
   const accounts = loadAccounts();
   const trimmedUsername = toText(username);
   if (!trimmedUsername) return { error: "Username is required." };
-  if (!toText(password)) return { error: "Password is required." };
+  const trimmedPassword = toText(password);
+  if (!trimmedPassword) return { error: "Password is required." };
   if (!VALID_ROLES.includes(role)) return { error: "Invalid role." };
   if (accounts.some((a) => a.username === trimmedUsername)) {
     return { error: "Username already exists." };
   }
+  const hash = await bcrypt.hash(trimmedPassword, BCRYPT_ROUNDS);
   const account = sanitizeAccount({
     id: createAccountId(),
     unitName: toText(unitName),
     username: trimmedUsername,
-    password: toText(password),
+    password: hash,
     role,
     createdAt: new Date().toISOString()
   });
@@ -72,7 +77,7 @@ export function createAccount({ unitName, username, password, role }) {
   return { account };
 }
 
-export function updateAccount(id, changes) {
+export async function updateAccount(id, changes) {
   const accounts = loadAccounts();
   const index = accounts.findIndex((a) => a.id === id);
   if (index === -1) return { error: "Account not found." };
@@ -81,7 +86,11 @@ export function updateAccount(id, changes) {
   if (accounts.some((a, i) => a.username === trimmedUsername && i !== index)) {
     return { error: "Username already taken." };
   }
-  const updated = sanitizeAccount({ ...accounts[index], ...changes, username: trimmedUsername });
+  const resolvedChanges = { ...changes };
+  if (changes.password && toText(changes.password)) {
+    resolvedChanges.password = await bcrypt.hash(toText(changes.password), BCRYPT_ROUNDS);
+  }
+  const updated = sanitizeAccount({ ...accounts[index], ...resolvedChanges, username: trimmedUsername });
   if (!updated) return { error: "Invalid account data." };
   const next = [...accounts];
   next[index] = updated;
@@ -93,8 +102,11 @@ export function deleteAccount(id) {
   saveAllAccounts(loadAccounts().filter((a) => a.id !== id));
 }
 
-export function findAccount(username, password) {
-  return loadAccounts().find((a) => a.username === username && a.password === password) ?? null;
+export async function findAccount(username, password) {
+  const account = loadAccounts().find((a) => a.username === username);
+  if (!account) return null;
+  const match = await bcrypt.compare(password, account.password);
+  return match ? account : null;
 }
 
 const lastLoginPrefix = "mcctv:last-login:";
@@ -109,7 +121,7 @@ export function getLastLogin(username) {
   return window.localStorage.getItem(`${lastLoginPrefix}${username}`) ?? null;
 }
 
-export function seedDefaultAccounts() {
+export async function seedDefaultAccounts() {
   if (typeof window === "undefined") return;
   const existing = loadAccounts();
   if (existing.length > 0) return;
@@ -121,6 +133,25 @@ export function seedDefaultAccounts() {
   ];
 
   for (const account of defaults) {
-    createAccount(account);
+    await createAccount(account);
   }
+}
+
+export async function migrateAccountPasswords() {
+  if (typeof window === "undefined") return;
+  const accounts = loadAccounts();
+  if (accounts.length === 0) return;
+
+  const needsMigration = accounts.some((a) => !a.password.startsWith("$2"));
+  if (!needsMigration) return;
+
+  const migrated = await Promise.all(
+    accounts.map(async (a) => {
+      if (a.password.startsWith("$2")) return a;
+      const hash = await bcrypt.hash(a.password, BCRYPT_ROUNDS);
+      return { ...a, password: hash };
+    })
+  );
+
+  saveAllAccounts(migrated);
 }

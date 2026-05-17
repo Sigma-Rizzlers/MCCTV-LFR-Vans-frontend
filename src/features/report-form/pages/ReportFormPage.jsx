@@ -7,10 +7,24 @@ import PdfTemplate from "../components/PdfTemplate";
 import UserProfileSection from "../components/UserProfileSection";
 import "../styles/index.css";
 import "../../sys-manager/styles/sysmanager.css";
-import { loadUserProfile, saveUserProfile } from "../../../utils/userProfileStorage";
+import {
+  loadUserProfile,
+  saveUserProfile,
+  syncProfileFromApi,
+  pushProfileToApi,
+} from "../../../utils/userProfileStorage";
 import { loadAdminMissionPanel } from "../../../utils/adminMissionPanel";
 import { saveReportFile } from "../../../utils/reportFileStore";
 import { saveDraft, loadDraft, clearDraft } from "../../../utils/reportDraftStorage";
+import { DATA_MODE } from "../../../utils/dataMode";
+import {
+  createVanRequest,
+  getDraft as getApiDraft,
+  saveDraft as saveApiDraft,
+  uploadReportFile,
+} from "../../../api/services";
+import { useApiOnline } from "../../../context/ApiStatusContext";
+import OfflineBanner from "../../../components/OfflineBanner";
 
 const cambodiaPhoneRegex = /^(?:0\d{8,9}|0\d{2}-\d{3}-\d{3,4})$/;
 const phoneErrorMessage =
@@ -199,6 +213,10 @@ export default function ReportFormPage({
     return loadDraft(getCurrentUsername());
   });
   const [draftSavedAt, setDraftSavedAt] = useState(null);
+  const [syncError, setSyncError] = useState(null);
+
+  const apiOnline = useApiOnline();
+  const submitDisabled = !apiOnline && DATA_MODE === "api";
 
   const currentUsername = useMemo(getCurrentUsername, []);
   const editingReport = useMemo(
@@ -223,9 +241,38 @@ export default function ReportFormPage({
     const timer = setTimeout(() => {
       saveDraft(currentUsername, formData);
       setDraftSavedAt(new Date());
+      if (DATA_MODE !== "local") saveApiDraft(formData).catch(() => {});
     }, 2000);
     return () => clearTimeout(timer);
   }, [formData, authRole, editingReportId, currentUsername]);
+
+  // On mount (api/dual), pull profile from API and refresh local state if newer
+  useEffect(() => {
+    if (authRole !== "user" || DATA_MODE === "local") return;
+    syncProfileFromApi().then((apiProfile) => {
+      if (!apiProfile) return;
+      setSavedProfile(apiProfile);
+      setProfileDraft(createProfileDraft(apiProfile));
+      setFormData((current) => ({ ...current, ...pickProfileFields(apiProfile) }));
+    });
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // On mount, fetch API draft and offer to restore if it's newer than the local one
+  useEffect(() => {
+    if (authRole !== "user" || DATA_MODE === "local") return;
+    getApiDraft()
+      .then((res) => {
+        const apiDraft = res.data;
+        if (!apiDraft?.formData) return;
+        const localDraft = loadDraft(currentUsername);
+        const apiTime = apiDraft.savedAt ? new Date(apiDraft.savedAt).getTime() : 0;
+        const localTime = localDraft?.savedAt ? new Date(localDraft.savedAt).getTime() : 0;
+        if (apiTime > localTime) {
+          setDraftToRestore({ formData: apiDraft.formData, savedAt: apiDraft.savedAt });
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   function handleChange(event) {
     const { name, value } = event.target;
@@ -297,7 +344,7 @@ export default function ReportFormPage({
     setProfileStatusText("");
   }
 
-  function handleProfileSubmit(event) {
+  async function handleProfileSubmit(event) {
     event.preventDefault();
     const nextPhoneError = validatePhone(profileDraft.phone);
     if (nextPhoneError) { setProfilePhoneError(nextPhoneError); return; }
@@ -313,6 +360,17 @@ export default function ReportFormPage({
     setPhoneError("");
     setProfilePhoneError("");
     setProfileStatusText("បានរក្សាទុកព័ត៌មានផ្ទាល់ខ្លួនរួចរាល់");
+
+    if (DATA_MODE !== "local") {
+      try {
+        const apiProfile = await pushProfileToApi(nextSavedProfile);
+        setSavedProfile(apiProfile);
+        setProfileDraft(createProfileDraft(apiProfile));
+        setFormData((current) => ({ ...current, ...pickProfileFields(apiProfile) }));
+      } catch {
+        setProfileStatusText("បានរក្សាទុកក្នុងឧបករណ៍ — ការផ្ញើទៅ Server បរាជ័យ");
+      }
+    }
   }
 
   function handleStartEdit(reportId) {
@@ -345,7 +403,7 @@ export default function ReportFormPage({
     setDraftToRestore(null);
   }
 
-  function handleSubmit(event, payload = {}) {
+  async function handleSubmit(event, payload = {}) {
     event.preventDefault();
 
     const adminPanel = loadAdminMissionPanel();
@@ -434,12 +492,7 @@ export default function ReportFormPage({
 
     if (!nextReport) return;
 
-    const nextHistoryReports = [nextReport, ...historyReports].slice(0, maxHistoryEntries);
-    saveHistoryToStorage(nextHistoryReports);
-    setHistoryReports(nextHistoryReports);
-
-    // Save uploaded files to IndexedDB
-    const newFileEntries = [
+    const fileEntries = [
       ["support", supportFile],
       ["lodging", lodgingImage],
       ["breakfast", breakfastImage],
@@ -447,11 +500,115 @@ export default function ReportFormPage({
       ["dinner", dinnerImage],
       ["implementation", implementationImage]
     ];
-    for (const [fieldName, file] of newFileEntries) {
-      if (file instanceof Blob) {
-        saveReportFile(nextReport.requestId, fieldName, file).catch(console.error);
+
+    function saveFilesLocally(reportId) {
+      for (const [slot, file] of fileEntries) {
+        if (file instanceof Blob) saveReportFile(reportId, slot, file).catch(console.error);
       }
     }
+
+    const slotToField = {
+      support: "supportFileName",
+      lodging: "lodgingImageName",
+      breakfast: "breakfastImageName",
+      lunch: "lunchImageName",
+      dinner: "dinnerImageName",
+      implementation: "implementationImageName",
+    };
+
+    function uploadFilesToApi(remoteId, reportRequestId) {
+      for (const [slot, file] of fileEntries) {
+        if (file instanceof Blob) {
+          uploadReportFile(remoteId, slot, file)
+            .then((res) => {
+              const fieldName = slotToField[slot];
+              setHistoryReports((prev) => {
+                const updated = prev.map((r) =>
+                  r.requestId === reportRequestId ? { ...r, [fieldName]: res.data.fileName } : r
+                );
+                saveHistoryToStorage(updated);
+                return updated;
+              });
+            })
+            .catch(console.error);
+        }
+      }
+    }
+
+    if (DATA_MODE === "local") {
+      const nextHistoryReports = [nextReport, ...historyReports].slice(0, maxHistoryEntries);
+      saveHistoryToStorage(nextHistoryReports);
+      setHistoryReports(nextHistoryReports);
+      saveFilesLocally(nextReport.requestId);
+      clearDraft(currentUsername);
+      setDraftSavedAt(null);
+      setPhoneError("");
+      setStatusText("បានបញ្ជូនសំណើររបស់អ្នកដោយជោគជ័យ");
+      setSuccessInfo({ requestId: nextReport.requestId, report: nextReport, isEdit: false });
+      return;
+    }
+
+    if (DATA_MODE === "api") {
+      try {
+        const res = await createVanRequest(nextReport);
+        const remoteId = res.data.id;
+        const enriched = { ...nextReport, syncStatus: "synced", remoteId };
+        const nextHistoryReports = [enriched, ...historyReports].slice(0, maxHistoryEntries);
+        saveHistoryToStorage(nextHistoryReports);
+        setHistoryReports(nextHistoryReports);
+        saveFilesLocally(nextReport.requestId);
+        uploadFilesToApi(remoteId, nextReport.requestId);
+        clearDraft(currentUsername);
+        setDraftSavedAt(null);
+        setPhoneError("");
+        setStatusText("បានបញ្ជូនសំណើររបស់អ្នកដោយជោគជ័យ");
+        setSuccessInfo({ requestId: nextReport.requestId, report: enriched, isEdit: false });
+      } catch {
+        const failed = { ...nextReport, syncStatus: "failed" };
+        const nextHistoryReports = [failed, ...historyReports].slice(0, maxHistoryEntries);
+        saveHistoryToStorage(nextHistoryReports);
+        setHistoryReports(nextHistoryReports);
+        saveFilesLocally(nextReport.requestId);
+        clearDraft(currentUsername);
+        setDraftSavedAt(null);
+        setPhoneError("");
+        setSuccessInfo({ requestId: nextReport.requestId, report: failed, isEdit: false });
+        setSyncError("ការបញ្ជូនទៅ API បរាជ័យ — សំណើបានរក្សាទុកក្នុងឧបករណ៍");
+      }
+      return;
+    }
+
+    // ── DUAL mode: write locally first, then sync in background ──
+    const nextHistoryReports = [nextReport, ...historyReports].slice(0, maxHistoryEntries);
+    saveHistoryToStorage(nextHistoryReports);
+    setHistoryReports(nextHistoryReports);
+    saveFilesLocally(nextReport.requestId);
+
+    createVanRequest(nextReport)
+      .then((res) => {
+        const remoteId = res.data.id;
+        setHistoryReports((prev) => {
+          const updated = prev.map((r) =>
+            r.requestId === nextReport.requestId
+              ? { ...r, syncStatus: "synced", remoteId }
+              : r
+          );
+          saveHistoryToStorage(updated);
+          return updated;
+        });
+        uploadFilesToApi(remoteId, nextReport.requestId);
+      })
+      .catch(() => {
+        setHistoryReports((prev) => {
+          const updated = prev.map((r) =>
+            r.requestId === nextReport.requestId
+              ? { ...r, syncStatus: "failed" }
+              : r
+          );
+          saveHistoryToStorage(updated);
+          return updated;
+        });
+      });
 
     clearDraft(currentUsername);
     setDraftSavedAt(null);
@@ -517,7 +674,8 @@ export default function ReportFormPage({
     initialVehicles: editingReport?.vehicles ?? null,
     initialEquipmentItems: editingReport?.equipmentItems ?? null,
     editingReportId,
-    onCancelEdit: editingReportId ? handleCancelEdit : null
+    onCancelEdit: editingReportId ? handleCancelEdit : null,
+    submitDisabled,
   };
 
   const sharedOverlays = (
@@ -557,6 +715,24 @@ export default function ReportFormPage({
               </div>
             </div>
           </div>
+        </div>
+      ) : null}
+      {syncError ? (
+        <div
+          role="alert"
+          style={{
+            position: "fixed", bottom: 24, right: 24, zIndex: 200,
+            background: "#fef2f2", border: "1px solid #fca5a5",
+            borderRadius: 8, padding: "12px 16px", color: "#991b1b",
+            fontSize: 14, maxWidth: 320, display: "flex", alignItems: "center", gap: 12
+          }}
+        >
+          <span>⚠ {syncError}</span>
+          <button
+            type="button"
+            style={{ background: "none", border: "none", cursor: "pointer", color: "#991b1b", padding: 0, fontSize: 16 }}
+            onClick={() => setSyncError(null)}
+          >✕</button>
         </div>
       ) : null}
       <PdfTemplate report={submittedReport} onClose={() => setSubmittedReport(null)} />
@@ -624,6 +800,7 @@ export default function ReportFormPage({
           </aside>
 
           <main className="sys-manager-main">
+            <OfflineBanner />
             {/* Draft restore banner */}
             {draftToRestore && activeSection === "request" && !editingReportId && (
               <div style={{

@@ -10,8 +10,9 @@ export default function LoginPage({
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  function handleSubmit(event) {
+  async function handleSubmit(event) {
     event.preventDefault();
     const normalizedUsername = username.trim();
 
@@ -20,17 +21,16 @@ export default function LoginPage({
       return;
     }
 
-    const success = onLogin({
-      username: normalizedUsername,
-      password
-    });
-
-    if (!success) {
-      setError("Invalid credentials.");
-      return;
-    }
-
+    setLoading(true);
     setError("");
+    try {
+      const success = await onLogin({ username: normalizedUsername, password });
+      if (!success) {
+        setError("Invalid credentials.");
+      }
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
@@ -78,7 +78,9 @@ export default function LoginPage({
 
           {error ? <p className="login-error">{error}</p> : null}
 
-          <button type="submit" className="login-submit">Sign In</button>
+          <button type="submit" className="login-submit" disabled={loading}>
+            {loading ? "Signing in…" : "Sign In"}
+          </button>
           {onCancel ? (
             <button type="button" className="login-cancel" onClick={onCancel}>Back</button>
           ) : null}

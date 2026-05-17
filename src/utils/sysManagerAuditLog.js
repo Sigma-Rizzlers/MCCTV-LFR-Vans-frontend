@@ -1,55 +1,72 @@
-const auditLogKey = "mcctv:sysmanager-audit-log";
-const maxAuditEntries = 300;
+import { getAuditLogs, createAuditLog } from "../api/services";
+import { DATA_MODE } from "./dataMode";
 
-function toText(value) {
-  return String(value ?? "").trim();
-}
+const LS_KEY = "mcctv:sys-manager-audit-log";
 
-function createAuditId() {
-  return `AUD-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-}
-
-function sanitizeAuditEntry(entry) {
-  if (!entry || typeof entry !== "object") return null;
-  const id = toText(entry.id);
-  const action = toText(entry.action);
-  const createdAt = toText(entry.createdAt);
-  if (!id || !action || !createdAt) return null;
-
-  return {
-    id,
-    action,
-    target: toText(entry.target),
-    detail: toText(entry.detail),
-    createdAt
-  };
-}
-
-export function loadSysManagerAuditLog() {
-  if (typeof window === "undefined") return [];
-
+function readLocal() {
   try {
-    const raw = window.localStorage.getItem(auditLogKey);
+    const raw = localStorage.getItem(LS_KEY);
     if (!raw) return [];
     const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return [];
-    return parsed.map(sanitizeAuditEntry).filter(Boolean).slice(0, maxAuditEntries);
+    return Array.isArray(parsed) ? parsed : [];
   } catch {
     return [];
   }
 }
 
+function writeLocal(entries) {
+  try {
+    localStorage.setItem(LS_KEY, JSON.stringify(entries));
+  } catch {}
+}
+
+/** Synchronous read from localStorage — use for initial component state. */
+export function readLocalAuditLog() {
+  return readLocal();
+}
+
+/**
+ * In api/dual mode: fetches from API, overwrites localStorage with the
+ * authoritative list, and returns it. Falls back to localStorage on error.
+ * In local mode: reads localStorage only.
+ */
+export async function loadSysManagerAuditLog() {
+  if (DATA_MODE === "local") {
+    return readLocal();
+  }
+  try {
+    const res = await getAuditLogs();
+    const entries = Array.isArray(res.data) ? res.data : [];
+    writeLocal(entries);
+    return entries;
+  } catch {
+    return readLocal();
+  }
+}
+
+/**
+ * Writes an entry to localStorage immediately for an optimistic UI update,
+ * and fires a background POST to the API in api/dual mode.
+ * Returns the updated local array so the caller can set state right away.
+ */
 export function addSysManagerAuditLog(entry) {
-  if (typeof window === "undefined") return null;
-
-  const nextEntry = sanitizeAuditEntry({
-    id: createAuditId(),
+  const newEntry = {
+    ...entry,
+    id: Date.now(),
+    performedBy: sessionStorage.getItem("mcctv:session-username") ?? "",
     createdAt: new Date().toISOString(),
-    ...entry
-  });
-  if (!nextEntry) return null;
+  };
 
-  const nextLog = [nextEntry, ...loadSysManagerAuditLog()].slice(0, maxAuditEntries);
-  window.localStorage.setItem(auditLogKey, JSON.stringify(nextLog));
-  return nextEntry;
+  const updated = [newEntry, ...readLocal()];
+  writeLocal(updated);
+
+  if (DATA_MODE !== "local") {
+    createAuditLog(
+      entry.action ?? "",
+      entry.target ?? "",
+      entry.detail ?? ""
+    ).catch(() => {});
+  }
+
+  return updated;
 }
