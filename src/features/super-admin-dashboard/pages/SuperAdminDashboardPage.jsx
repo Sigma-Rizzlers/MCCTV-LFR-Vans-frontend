@@ -8,6 +8,8 @@ import "../../admin-dashboard/styles/dashboard.css";
 import "../../sys-manager/styles/sysmanager.css";
 import PdfTemplate from "../../report-form/components/PdfTemplate";
 import { loadAccounts } from "../../../utils/accountStorage";
+import requestStore from "../../../store/requestStore";
+import { DATA_MODE } from "../../../utils/dataMode";
 
 const historyStorageKey = "mcctv:mission-request-history";
 const fallbackText = "-";
@@ -169,7 +171,20 @@ export default function SuperAdminDashboardPage({ onBackToMain, onLogout }) {
   const [deleteConfirmGroup, setDeleteConfirmGroup] = useState(null);
   const [pdfMissionGroup, setPdfMissionGroup] = useState(null);
 
-  const dashboardReports = useMemo(() => loadDashboardReports(), [refreshKey]);
+  const [dashboardReports, setDashboardReports] = useState(() =>
+    DATA_MODE === "local" ? loadDashboardReports() : []
+  );
+
+  useEffect(() => {
+    if (DATA_MODE === "local") {
+      setDashboardReports(loadDashboardReports());
+      return;
+    }
+    requestStore.getAll()
+      .then(setDashboardReports)
+      .catch(() => setDashboardReports(loadDashboardReports()));
+  }, [refreshKey]);
+
   const accounts = useMemo(() => loadAccounts(), [refreshKey]);
   const missionGroups = useMemo(
     () => groupReportsByMission(dashboardReports).map(normalizeMissionGroup).filter(Boolean),
@@ -286,21 +301,12 @@ export default function SuperAdminDashboardPage({ onBackToMain, onLogout }) {
     };
   }, []);
 
-  function handleDeleteReports(requestIds) {
-    if (typeof window === "undefined") return;
+  async function handleDeleteReports(requestIds) {
     const idSet = new Set(Array.isArray(requestIds) ? requestIds : [requestIds]);
-    try {
-      const raw = window.localStorage.getItem(historyStorageKey);
-      if (!raw) return;
-      const parsed = JSON.parse(raw);
-      if (!Array.isArray(parsed)) return;
-      window.localStorage.setItem(
-        historyStorageKey,
-        JSON.stringify(parsed.filter((r) => !idSet.has(r?.requestId)))
-      );
-    } catch (error) {
-      console.error(error);
-    }
+    const toDelete = dashboardReports.filter((r) => idSet.has(r.requestId));
+    await Promise.allSettled(
+      toDelete.map((r) => requestStore.remove(r.id ?? r.requestId))
+    );
     setSelectedReports(null);
     setDetailGroup(null);
     setDeleteConfirmGroup(null);

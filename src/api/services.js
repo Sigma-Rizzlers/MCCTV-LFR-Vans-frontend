@@ -173,3 +173,35 @@ export const uploadReportFile = (id, slot, file) => {
     headers: { "Content-Type": "multipart/form-data" },
   });
 };
+
+// ─── Users ────────────────────────────────────────────────────────────────────
+
+export const getUsers = (params = {}) => api.get("/api/v1/users/", { params });
+export const getUser = (id) => api.get(`/api/v1/users/${id}/`);
+export const createUser = (data) => api.post("/api/v1/users/", data);
+export const updateUser = (id, data) => api.patch(`/api/v1/users/${id}/`, data);
+export const deleteUser = (id) => api.delete(`/api/v1/users/${id}/`);
+export const resetPassword = (id, newPassword) =>
+  api.post(`/api/v1/users/${id}/reset-password/`, { newPassword });
+
+// ─── User Profile ─────────────────────────────────────────────────────────────
+
+export const getUserProfile = () => api.get("/api/v1/users/me/profile/");
+export const saveUserProfile = (data) => api.put("/api/v1/users/me/profile/", data);
+
+// ─── Admin Panel ──────────────────────────────────────────────────────────────
+
+export const getAdminPanels = (params = {}) =>
+  api.get("/api/v1/admin-panel/", { params });
+export const getAdminPanel = (id) => api.get(`/api/v1/admin-panel/${id}/`);
+export const createAdminPanel = (data) => api.post("/api/v1/admin-panel/", data);
+export const updateAdminPanel = (id, data) =>
+  api.patch(`/api/v1/admin-panel/${id}/`, data);
+export const deleteAdminPanel = (id) => api.delete(`/api/v1/admin-panel/${id}/`);
+export const uploadAdminFile = (id, file) => {
+  const fd = new FormData();
+  fd.append("file", file);
+  return api.post(`/api/v1/admin-panel/${id}/files/plan/`, fd, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
+};

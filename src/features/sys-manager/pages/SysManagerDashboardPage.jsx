@@ -1,7 +1,16 @@
-import { Fragment, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import { loadAccounts, createAccount, updateAccount, deleteAccount, getLastLogin } from "../../../utils/accountStorage";
 import { loadAdminMissionPanel } from "../../../utils/adminMissionPanel";
 import { addSysManagerAuditLog, loadSysManagerAuditLog } from "../../../utils/sysManagerAuditLog";
+import requestStore from "../../../store/requestStore";
+import { DATA_MODE } from "../../../utils/dataMode";
+import {
+  getUsers,
+  createUser as createUserApi,
+  updateUser as updateUserApi,
+  deleteUser as deleteUserApi,
+  resetPassword as resetPasswordApi,
+} from "../../../api/services";
 import AdminDashboardPage from "../../admin-dashboard/pages/AdminDashboardPage";
 import SuperAdminDashboardPage from "../../super-admin-dashboard/pages/SuperAdminDashboardPage";
 import ReportFormPage from "../../report-form/pages/ReportFormPage";
@@ -128,6 +137,16 @@ const accountMenuItems = [
 
 const emptyForm = { unitName: "", username: "", password: "", role: "user" };
 
+function mapApiUser(user) {
+  return {
+    id: user.id,
+    unitName: user.unitName ?? user.username ?? "",
+    username: user.username ?? "",
+    password: "",
+    role: user.role ?? "user",
+  };
+}
+
 export default function SysManagerDashboardPage({ onLogout }) {
   const [activeMenu, setActiveMenu] = useState("overview");
   const [searchQuery, setSearchQuery] = useState("");
@@ -144,8 +163,28 @@ export default function SysManagerDashboardPage({ onLogout }) {
   const [reportsPage, setReportsPage] = useState(1);
   const [auditEntries, setAuditEntries] = useState(() => loadSysManagerAuditLog());
 
-  const allReports = useMemo(() => loadAllReports(), [reportsRefreshKey]);
+  const [allReports, setAllReports] = useState(() =>
+    DATA_MODE === "local" ? loadAllReports() : []
+  );
   const adminPanel = useMemo(() => loadAdminMissionPanel(), [reportsRefreshKey]);
+
+  useEffect(() => {
+    if (DATA_MODE === "local") {
+      setAllReports(loadAllReports());
+      return;
+    }
+    requestStore.getAll()
+      .then(setAllReports)
+      .catch(() => setAllReports(loadAllReports()));
+  }, [reportsRefreshKey]);
+
+  useEffect(() => {
+    if (DATA_MODE === "local") return;
+    getUsers().then((res) => {
+      const users = Array.isArray(res.data) ? res.data : (res.data?.results ?? []);
+      setAccounts(users.map(mapApiUser));
+    }).catch(() => {});
+  }, []);
 
   const isReportsView = activeMenu === "reports";
   const isOverview = activeMenu === "overview";
@@ -194,13 +233,27 @@ export default function SysManagerDashboardPage({ onLogout }) {
     totalSuperadmins: accounts.filter((a) => a.role === "superadmin").length,
   }), [allReports, accounts]);
 
+  async function refreshAccountsFromApi() {
+    const res = await getUsers();
+    const users = Array.isArray(res.data) ? res.data : (res.data?.results ?? []);
+    setAccounts(users.map(mapApiUser));
+  }
+
   function refreshAll() {
-    setAccounts(loadAccounts());
+    if (DATA_MODE !== "local") {
+      refreshAccountsFromApi().catch(() => {});
+    } else {
+      setAccounts(loadAccounts());
+    }
     setReportsRefreshKey((k) => k + 1);
   }
 
   function refreshAccounts() {
-    setAccounts(loadAccounts());
+    if (DATA_MODE !== "local") {
+      refreshAccountsFromApi().catch(() => {});
+    } else {
+      setAccounts(loadAccounts());
+    }
   }
 
   function refreshAuditLog() {
@@ -255,7 +308,45 @@ export default function SysManagerDashboardPage({ onLogout }) {
     setFormError("");
   }
 
-  function handleModalSave() {
+  async function handleModalSave() {
+    if (DATA_MODE !== "local") {
+      try {
+        let apiAccount;
+        if (modalState.mode === "create") {
+          const res = await createUserApi({
+            unitName: formFields.unitName,
+            username: formFields.username,
+            password: formFields.password,
+            role: formFields.role,
+          });
+          apiAccount = mapApiUser(res.data);
+        } else if (modalState.mode === "reset-password") {
+          if (!formFields.password.trim()) { setFormError("សូមបញ្ចូលពាក្យសម្ងាត់ថ្មី។"); return; }
+          await resetPasswordApi(modalState.account.id, formFields.password);
+          apiAccount = modalState.account;
+        } else {
+          const res = await updateUserApi(modalState.account.id, {
+            unitName: formFields.unitName,
+            username: formFields.username,
+            role: formFields.role,
+          });
+          apiAccount = mapApiUser(res.data);
+        }
+        if (modalState.mode === "create") {
+          recordAuditLog({ action: "បង្កើតគណនី", target: apiAccount.username, detail: `${apiAccount.unitName || "-"} · ${apiAccount.role}` });
+        } else if (modalState.mode === "reset-password") {
+          recordAuditLog({ action: "កំណត់ Password ថ្មី", target: modalState.account.username, detail: modalState.account.unitName || "-" });
+        } else {
+          recordAuditLog({ action: "កែប្រែគណនី", target: apiAccount.username, detail: `${apiAccount.unitName || "-"} · ${apiAccount.role}` });
+        }
+        await refreshAccountsFromApi();
+        closeModal();
+      } catch {
+        setFormError("មានបញ្ហាក្នុងការទំនាក់ទំនង។ សូមសាកល្បងម្ដងទៀត។");
+      }
+      return;
+    }
+
     let result;
     if (modalState.mode === "create") {
       result = createAccount(formFields);
@@ -295,18 +386,27 @@ export default function SysManagerDashboardPage({ onLogout }) {
     closeModal();
   }
 
-  function handleDelete(id) {
+  async function handleDelete(id) {
     const account = accounts.find((item) => item.id === id);
     if (!window.confirm("តើអ្នកពិតជាចង់លុបគណនីនេះមែនទេ?")) return;
-    deleteAccount(id);
-    if (account) {
-      recordAuditLog({
-        action: "លុបគណនី",
-        target: account.username,
-        detail: `${account.unitName || "-"} · ${account.role}`
+
+    if (DATA_MODE !== "local") {
+      try {
+        await deleteUserApi(id);
+      } catch {}
+      if (account) {
+        recordAuditLog({ action: "លុបគណនី", target: account.username, detail: `${account.unitName || "-"} · ${account.role}` });
+      }
+      await refreshAccountsFromApi().catch(() => {
+        setAccounts((prev) => prev.filter((a) => a.id !== id));
       });
+    } else {
+      deleteAccount(id);
+      if (account) {
+        recordAuditLog({ action: "លុបគណនី", target: account.username, detail: `${account.unitName || "-"} · ${account.role}` });
+      }
+      refreshAccounts();
     }
-    refreshAccounts();
     if (expandedAccountId === id) setExpandedAccountId(null);
   }
 

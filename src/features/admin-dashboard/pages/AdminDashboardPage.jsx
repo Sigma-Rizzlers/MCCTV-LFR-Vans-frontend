@@ -19,6 +19,8 @@ import {
   createAdminMissionFileKey,
   saveAdminMissionFile
 } from "../../../utils/adminMissionFileStore";
+import { DATA_MODE } from "../../../utils/dataMode";
+import { createAdminPanel, uploadAdminFile } from "../../../api/services";
 
 const initialMissionData = {
   missionTitle: "",
@@ -66,7 +68,9 @@ export default function AdminDashboardPage({ onBackToMain, onLogout }) {
   const [missionHistory, setMissionHistory] = useState(() => loadMissionHistory());
   const [missionStatusText, setMissionStatusText] = useState("");
   const [historySearchText, setHistorySearchText] = useState("");
+  const [backendPanelId, setBackendPanelId] = useState(null);
   const requestPlanFileInputRef = useRef(null);
+  const requestPlanFileRef = useRef(null);
   const normalizedHistorySearch = historySearchText.trim().toLowerCase();
   const filteredMissionHistory = useMemo(
     () => missionHistory.filter((panel) => matchesHistorySearch(panel, normalizedHistorySearch)),
@@ -93,8 +97,10 @@ export default function AdminDashboardPage({ onBackToMain, onLogout }) {
   async function handleRequestPlanFileChange(file) {
     if (!file) {
       await handleClearRequestPlanFile();
+      requestPlanFileRef.current = null;
       return;
     }
+    requestPlanFileRef.current = file;
     try {
       const savedFile = await saveAdminMissionFile(file, createAdminMissionFileKey());
       setMissionData((current) => ({
@@ -142,6 +148,25 @@ export default function AdminDashboardPage({ onBackToMain, onLogout }) {
     }
     refreshState();
     setMissionStatusText(`បានបង្កើតដោយជោគជ័យ — លេខបេសកកម្ម: ${created.missionCode}`);
+
+    if (DATA_MODE !== "local") {
+      createAdminPanel({
+        missionCode: created.missionCode,
+        missionTitle: missionData.missionTitle,
+        missionPlace: missionData.missionPlace,
+        missionTime: missionData.missionTime,
+        participantCount: missionData.participantCount ? Number(missionData.participantCount) : null,
+        missionVia: missionData.missionVia,
+      }).then(async (res) => {
+        const id = res.data?.id;
+        if (id) {
+          setBackendPanelId(id);
+          if (requestPlanFileRef.current) {
+            uploadAdminFile(id, requestPlanFileRef.current).catch(() => {});
+          }
+        }
+      }).catch(() => {});
+    }
   }
 
   async function handleClearMissionPanel() {
