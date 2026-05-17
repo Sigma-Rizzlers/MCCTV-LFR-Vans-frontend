@@ -4,13 +4,11 @@ import { AdminDashboardPage } from "./features/admin-dashboard";
 import { SuperAdminDashboardPage } from "./features/super-admin-dashboard";
 import { SysManagerDashboardPage } from "./features/sys-manager";
 import { ReportFormPage } from "./features/report-form";
-import { findAccount, seedDefaultAccounts, recordLastLogin } from "./utils/accountStorage";
+import { findAccount, seedDefaultAccounts, migrateAccountPasswords, recordLastLogin } from "./utils/accountStorage";
 import { login as apiLogin, getMe } from "./api/services";
 import { startConnectionMonitor, stopConnectionMonitor } from "./utils/connectionMonitor";
 import { ApiStatusContext } from "./context/ApiStatusContext";
 import { DATA_MODE } from "./utils/dataMode";
-
-seedDefaultAccounts();
 
 const sessionRoleKey = "mcctv:session-role";
 const sessionUsernameKey = "mcctv:session-username";
@@ -98,7 +96,7 @@ export default function App() {
     ) {
       role = roleSysManager;
     } else {
-      const account = findAccount(username, password);
+      const account = await findAccount(username, password);
       if (account) role = account.role;
     }
 
@@ -119,6 +117,11 @@ export default function App() {
   }
 
   useEffect(() => {
+    seedDefaultAccounts();
+    migrateAccountPasswords();
+  }, []);
+
+  useEffect(() => {
     function handleAuthLogout() {
       localStorage.removeItem("authToken");
       window.sessionStorage.removeItem(sessionRoleKey);
@@ -135,11 +138,14 @@ export default function App() {
     if (!validating) return;
     getMe()
       .then((res) => {
-        const { role, username, unitName } = res.data;
+        const { role, username, unitName, lastLoginAt } = res.data;
         const validRole = normalizeRole(role);
         window.sessionStorage.setItem(sessionRoleKey, validRole);
         window.sessionStorage.setItem(sessionUsernameKey, username ?? "");
         window.sessionStorage.setItem(sessionUnitNameKey, unitName ?? "");
+        if (username && lastLoginAt) {
+          localStorage.setItem(`mcctv:last-login:${username}`, lastLoginAt);
+        }
         setAuthRole(validRole);
         setActivePage(pageForRole(validRole));
       })

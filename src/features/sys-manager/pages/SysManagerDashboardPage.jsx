@@ -1,7 +1,7 @@
 import { Fragment, useEffect, useMemo, useState } from "react";
 import { loadAccounts, createAccount, updateAccount, deleteAccount, getLastLogin } from "../../../utils/accountStorage";
 import { loadAdminMissionPanel } from "../../../utils/adminMissionPanel";
-import { addSysManagerAuditLog, loadSysManagerAuditLog } from "../../../utils/sysManagerAuditLog";
+import { addSysManagerAuditLog, loadSysManagerAuditLog, readLocalAuditLog } from "../../../utils/sysManagerAuditLog";
 import requestStore from "../../../store/requestStore";
 import { DATA_MODE } from "../../../utils/dataMode";
 import { getCachedReports, getCacheAge } from "../../../utils/reportCache";
@@ -163,7 +163,7 @@ export default function SysManagerDashboardPage({ onLogout }) {
   const [reportsRefreshKey, setReportsRefreshKey] = useState(0);
   const [viewingDashboard, setViewingDashboard] = useState(null);
   const [reportsPage, setReportsPage] = useState(1);
-  const [auditEntries, setAuditEntries] = useState(() => loadSysManagerAuditLog());
+  const [auditEntries, setAuditEntries] = useState(() => readLocalAuditLog());
 
   const [allReports, setAllReports] = useState(() =>
     DATA_MODE === "local" ? loadAllReports() : getCachedReports()
@@ -196,6 +196,10 @@ export default function SysManagerDashboardPage({ onLogout }) {
       setAccounts(users.map(mapApiUser));
     }).catch(() => {});
   }, []);
+
+  useEffect(() => {
+    refreshAuditLog();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const isReportsView = activeMenu === "reports";
   const isOverview = activeMenu === "overview";
@@ -267,13 +271,12 @@ export default function SysManagerDashboardPage({ onLogout }) {
     }
   }
 
-  function refreshAuditLog() {
-    setAuditEntries(loadSysManagerAuditLog());
+  async function refreshAuditLog() {
+    setAuditEntries(await loadSysManagerAuditLog());
   }
 
   function recordAuditLog(entry) {
-    addSysManagerAuditLog(entry);
-    refreshAuditLog();
+    setAuditEntries(addSysManagerAuditLog(entry));
   }
 
   function switchMenu(menuId) {
@@ -360,15 +363,15 @@ export default function SysManagerDashboardPage({ onLogout }) {
 
     let result;
     if (modalState.mode === "create") {
-      result = createAccount(formFields);
+      result = await createAccount(formFields);
     } else if (modalState.mode === "reset-password") {
       if (!formFields.password.trim()) {
         setFormError("សូមបញ្ចូលពាក្យសម្ងាត់ថ្មី។");
         return;
       }
-      result = updateAccount(modalState.account.id, { password: formFields.password });
+      result = await updateAccount(modalState.account.id, { password: formFields.password });
     } else {
-      result = updateAccount(modalState.account.id, formFields);
+      result = await updateAccount(modalState.account.id, formFields);
     }
     if (result.error) {
       setFormError(result.error);

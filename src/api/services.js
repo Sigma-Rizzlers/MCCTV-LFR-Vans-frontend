@@ -74,7 +74,12 @@ export const getVanRequest = (id) => api.get(`/api/v1/van-requests/${id}/`);
 /** Create a new van request with nested stops and participants. */
 export const createVanRequest = (data) => api.post("/api/v1/van-requests/", data);
 
-/** Update an existing van request (full update). */
+/**
+ * @unused — backend endpoint exists and is ready.
+ * Wire this when the Full report edit mode UI is built.
+ *
+ * Update an existing van request (full update).
+ */
 export const updateVanRequest = (id, data) =>
   api.put(`/api/v1/van-requests/${id}/`, data);
 
@@ -96,29 +101,59 @@ export const approveVanRequest = (id, action, note = "") =>
 
 // ─── Stops ───────────────────────────────────────────────────────────────────
 
-/** List stops for a van request. */
+/**
+ * @unused — backend endpoint exists and is ready.
+ * Wire this when the Route/stops UI on report form is built.
+ *
+ * List stops for a van request.
+ */
 export const listStops = (vanRequestId) =>
   api.get(`/api/v1/van-requests/${vanRequestId}/stops/`);
 
-/** Add a stop to a van request. */
+/**
+ * @unused — backend endpoint exists and is ready.
+ * Wire this when the Route/stops UI on report form is built.
+ *
+ * Add a stop to a van request.
+ */
 export const addStop = (vanRequestId, data) =>
   api.post(`/api/v1/van-requests/${vanRequestId}/stops/`, data);
 
-/** Remove a stop from a van request. */
+/**
+ * @unused — backend endpoint exists and is ready.
+ * Wire this when the Route/stops UI on report form is built.
+ *
+ * Remove a stop from a van request.
+ */
 export const removeStop = (vanRequestId, stopId) =>
   api.delete(`/api/v1/van-requests/${vanRequestId}/stops/${stopId}/`);
 
 // ─── Participants (nested under van request) ─────────────────────────────────
 
-/** List participants on a specific van request. */
+/**
+ * @unused — backend endpoint exists and is ready.
+ * Wire this when the Members section on report form is built.
+ *
+ * List participants on a specific van request.
+ */
 export const listVanRequestParticipants = (vanRequestId) =>
   api.get(`/api/v1/van-requests/${vanRequestId}/participants/`);
 
-/** Add a participant to a van request (by ID or as new). */
+/**
+ * @unused — backend endpoint exists and is ready.
+ * Wire this when the Members section on report form is built.
+ *
+ * Add a participant to a van request (by ID or as new).
+ */
 export const addVanRequestParticipant = (vanRequestId, data) =>
   api.post(`/api/v1/van-requests/${vanRequestId}/participants/`, data);
 
-/** Remove a participant from a van request. */
+/**
+ * @unused — backend endpoint exists and is ready.
+ * Wire this when the Members section on report form is built.
+ *
+ * Remove a participant from a van request.
+ */
 export const removeVanRequestParticipant = (vanRequestId, participantId) =>
   api.delete(
     `/api/v1/van-requests/${vanRequestId}/participants/${participantId}/`
@@ -126,17 +161,37 @@ export const removeVanRequestParticipant = (vanRequestId, participantId) =>
 
 // ─── Participants (standalone) ────────────────────────────────────────────────
 
-/** List all participants. Supports: search, ordering. */
+/**
+ * @unused — backend endpoint exists and is ready.
+ * Wire this when the Participant directory UI is built.
+ *
+ * List all participants. Supports: search, ordering.
+ */
 export const listParticipants = (params = {}) =>
   api.get("/api/v1/participants/", { params });
 
-/** Get a single participant by ID. */
+/**
+ * @unused — backend endpoint exists and is ready.
+ * Wire this when the Participant directory UI is built.
+ *
+ * Get a single participant by ID.
+ */
 export const getParticipant = (id) => api.get(`/api/v1/participants/${id}/`);
 
-/** Create a new participant. */
+/**
+ * @unused — backend endpoint exists and is ready.
+ * Wire this when the Participant directory UI is built.
+ *
+ * Create a new participant.
+ */
 export const createParticipant = (data) => api.post("/api/v1/participants/", data);
 
-/** Update a participant (full update). */
+/**
+ * @unused — backend endpoint exists and is ready.
+ * Wire this when the Participant directory UI is built.
+ *
+ * Update a participant (full update).
+ */
 export const updateParticipant = (id, data) =>
   api.put(`/api/v1/participants/${id}/`, data);
 
@@ -144,7 +199,12 @@ export const updateParticipant = (id, data) =>
 export const patchParticipant = (id, data) =>
   api.patch(`/api/v1/participants/${id}/`, data);
 
-/** Soft-delete a participant. */
+/**
+ * @unused — backend endpoint exists and is ready.
+ * Wire this when the Participant directory UI is built.
+ *
+ * Soft-delete a participant.
+ */
 export const deleteParticipant = (id) => api.delete(`/api/v1/participants/${id}/`);
 
 // ─── Audit Log ────────────────────────────────────────────────────────────────
@@ -178,6 +238,10 @@ export const uploadReportFile = (id, slot, file) => {
 
 export const getMe = () => api.get("/api/v1/users/me/");
 export const getUsers = (params = {}) => api.get("/api/v1/users/", { params });
+/**
+ * @unused — backend endpoint exists and is ready.
+ * Wire this when the User detail view in SysManager is built.
+ */
 export const getUser = (id) => api.get(`/api/v1/users/${id}/`);
 export const createUser = (data) => api.post("/api/v1/users/", data);
 export const updateUser = (id, data) => api.patch(`/api/v1/users/${id}/`, data);
