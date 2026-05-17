@@ -156,3 +156,20 @@ export const getAuditLogs = (params = {}) =>
 /** Create an audit log entry manually. */
 export const createAuditLog = (action, target = "", detail = "") =>
   api.post("/api/v1/audit-log/", { action, target, detail });
+
+// ─── Drafts ───────────────────────────────────────────────────────────────────
+
+export const getDraft = () => api.get("/api/v1/drafts/me/");
+
+export const saveDraft = (formData) =>
+  api.put("/api/v1/drafts/me/", { formData });
+
+// ─── File Attachments ─────────────────────────────────────────────────────────
+
+export const uploadReportFile = (id, slot, file) => {
+  const fd = new FormData();
+  fd.append("file", file);
+  return api.post(`/api/v1/van-requests/${id}/files/${slot}/`, fd, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
+};
