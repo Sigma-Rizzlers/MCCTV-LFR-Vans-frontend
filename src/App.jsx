@@ -1,15 +1,17 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { LoginPage } from "./features/auth";
 import { AdminDashboardPage } from "./features/admin-dashboard";
 import { SuperAdminDashboardPage } from "./features/super-admin-dashboard";
 import { SysManagerDashboardPage } from "./features/sys-manager";
 import { ReportFormPage } from "./features/report-form";
 import { findAccount, seedDefaultAccounts, recordLastLogin } from "./utils/accountStorage";
+import { login as apiLogin } from "./api/services";
 
 seedDefaultAccounts();
 
 const sessionRoleKey = "mcctv:session-role";
 const sessionUsernameKey = "mcctv:session-username";
+const sessionUnitNameKey = "mcctv:session-unitName";
 
 const roleGuest = "guest";
 const roleUser = "user";
@@ -54,7 +56,28 @@ export default function App() {
     return role === roleGuest ? pageLogin : pageForRole(role);
   });
 
-  function handleLogin({ username, password }) {
+  function applySession(role, username, unitName = "") {
+    window.sessionStorage.setItem(sessionRoleKey, role);
+    window.sessionStorage.setItem(sessionUsernameKey, username);
+    window.sessionStorage.setItem(sessionUnitNameKey, unitName);
+    setAuthRole(role);
+    setActivePage(pageForRole(role));
+  }
+
+  async function handleLogin({ username, password }) {
+    // ── 1. Try the FastAPI backend first ─────────────────────────────────────
+    try {
+      const res = await apiLogin(username, password);
+      const { token, role, unitName } = res.data;
+      localStorage.setItem("authToken", token);
+      applySession(normalizeRole(role), username, unitName ?? "");
+      recordLastLogin(username);
+      return true;
+    } catch {
+      // API unreachable, 401, or network error → fall through to local fallback
+    }
+
+    // ── 2. Local fallback (offline / dev / hardcoded sysmanager) ─────────────
     let role = null;
 
     if (
@@ -64,32 +87,37 @@ export default function App() {
       role = roleSysManager;
     } else {
       const account = findAccount(username, password);
-      if (account) {
-        role = account.role;
-      }
+      if (account) role = account.role;
     }
 
     if (!role) return false;
 
-    if (typeof window !== "undefined") {
-      window.sessionStorage.setItem(sessionRoleKey, role);
-      window.sessionStorage.setItem(sessionUsernameKey, username);
-      recordLastLogin(username);
-    }
-
-    setAuthRole(role);
-    setActivePage(pageForRole(role));
+    applySession(role, username, "");
+    recordLastLogin(username);
     return true;
   }
 
   function handleLogout() {
-    if (typeof window !== "undefined") {
-      window.sessionStorage.removeItem(sessionRoleKey);
-      window.sessionStorage.removeItem(sessionUsernameKey);
-    }
+    localStorage.removeItem("authToken");
+    window.sessionStorage.removeItem(sessionRoleKey);
+    window.sessionStorage.removeItem(sessionUsernameKey);
+    window.sessionStorage.removeItem(sessionUnitNameKey);
     setAuthRole(roleGuest);
     setActivePage(pageLogin);
   }
+
+  useEffect(() => {
+    function handleAuthLogout() {
+      localStorage.removeItem("authToken");
+      window.sessionStorage.removeItem(sessionRoleKey);
+      window.sessionStorage.removeItem(sessionUsernameKey);
+      window.sessionStorage.removeItem(sessionUnitNameKey);
+      setAuthRole(roleGuest);
+      setActivePage(pageLogin);
+    }
+    window.addEventListener("auth:logout", handleAuthLogout);
+    return () => window.removeEventListener("auth:logout", handleAuthLogout);
+  }, []);
 
   if (activePage === pageLogin || authRole === roleGuest) {
     return <LoginPage title="Mission Request Login" onLogin={handleLogin} />;
