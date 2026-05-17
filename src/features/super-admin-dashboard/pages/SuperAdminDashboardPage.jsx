@@ -10,6 +10,10 @@ import PdfTemplate from "../../report-form/components/PdfTemplate";
 import { loadAccounts } from "../../../utils/accountStorage";
 import requestStore from "../../../store/requestStore";
 import { DATA_MODE } from "../../../utils/dataMode";
+import { migrateToBackend } from "../../../utils/localMigration";
+import { getCachedReports, getCacheAge, cacheReport } from "../../../utils/reportCache";
+import { approveVanRequest, mapBackendVanRequest } from "../../../api/services";
+import OfflineBanner from "../../../components/OfflineBanner";
 
 const historyStorageKey = "mcctv:mission-request-history";
 const fallbackText = "-";
@@ -157,6 +161,18 @@ function BarChart({ items, labelKey, valueKey, color }) {
   );
 }
 
+const sessionRoleKey = "mcctv:session-role";
+
+function emptyMigrationState() {
+  return {
+    status: "pending",
+    reports: { total: 0, done: 0, synced: 0, failed: 0 },
+    panels: { total: 0, done: 0, synced: 0, failed: 0 },
+    users: { total: 0, done: 0, created: 0, skipped: 0, failed: 0 },
+    log: [],
+  };
+}
+
 export default function SuperAdminDashboardPage({ onBackToMain, onLogout }) {
   const [activeSection, setActiveSection] = useState("missions");
   const [refreshKey, setRefreshKey] = useState(0);
@@ -170,9 +186,20 @@ export default function SuperAdminDashboardPage({ onBackToMain, onLogout }) {
   const [detailGroup, setDetailGroup] = useState(null);
   const [deleteConfirmGroup, setDeleteConfirmGroup] = useState(null);
   const [pdfMissionGroup, setPdfMissionGroup] = useState(null);
+  const [migrationState, setMigrationState] = useState(null);
+  const [approveError, setApproveError] = useState("");
+  const [approveLoading, setApproveLoading] = useState(new Set());
+  const [apiWarning, setApiWarning] = useState(false);
+  const [cacheAge, setCacheAge] = useState(() => getCacheAge());
+
+  const currentRole = typeof window !== "undefined"
+    ? (window.sessionStorage.getItem(sessionRoleKey) ?? "")
+    : "";
+  const showMigration = DATA_MODE !== "local" &&
+    (currentRole === "superadmin" || currentRole === "sysmanager");
 
   const [dashboardReports, setDashboardReports] = useState(() =>
-    DATA_MODE === "local" ? loadDashboardReports() : []
+    DATA_MODE === "local" ? loadDashboardReports() : getCachedReports()
   );
 
   useEffect(() => {
@@ -181,8 +208,15 @@ export default function SuperAdminDashboardPage({ onBackToMain, onLogout }) {
       return;
     }
     requestStore.getAll()
-      .then(setDashboardReports)
-      .catch(() => setDashboardReports(loadDashboardReports()));
+      .then((data) => {
+        setDashboardReports(data);
+        setApiWarning(false);
+        setCacheAge(getCacheAge());
+      })
+      .catch(() => {
+        setDashboardReports(getCachedReports());
+        setApiWarning(true);
+      });
   }, [refreshKey]);
 
   const accounts = useMemo(() => loadAccounts(), [refreshKey]);
@@ -325,6 +359,80 @@ export default function SuperAdminDashboardPage({ onBackToMain, onLogout }) {
     handleDeleteReports(deleteConfirmGroup.reports.map((report) => report.requestId));
   }
 
+  async function handleApprove(report, action) {
+    const remoteId = report.id;
+    if (!remoteId) return;
+    setApproveLoading((prev) => new Set([...prev, report.requestId]));
+    try {
+      const res = await approveVanRequest(remoteId, action);
+      const mapped = mapBackendVanRequest(res.data);
+      cacheReport(mapped);
+      setDashboardReports((prev) =>
+        prev.map((r) => r.requestId === report.requestId ? mapped : r)
+      );
+      setDetailGroup((prev) => {
+        if (!prev) return prev;
+        return { ...prev, reports: prev.reports.map((r) => r.requestId === report.requestId ? mapped : r) };
+      });
+    } catch {
+      setApproveError("ការអនុម័ត/បដិសេធបរាជ័យ — សូមសាកល្បងម្ដងទៀត");
+    } finally {
+      setApproveLoading((prev) => { const next = new Set(prev); next.delete(report.requestId); return next; });
+    }
+  }
+
+  async function startMigration() {
+    setMigrationState((prev) => ({ ...emptyMigrationState(), status: "running", log: prev?.log ?? [] }));
+
+    function onProgress({ type, done, total, status, item }) {
+      setMigrationState((prev) => {
+        if (!prev) return prev;
+        const section = prev[type === "report" ? "reports" : type === "panel" ? "panels" : "users"];
+        const next = { ...prev };
+        if (type === "report") {
+          next.reports = {
+            total,
+            done,
+            synced: done - (prev.reports.failed + (status !== "synced" ? 1 : 0)),
+            failed: status === "failed" ? prev.reports.failed + 1 : prev.reports.failed,
+          };
+          if (status === "synced") next.reports.synced = prev.reports.synced + 1;
+        } else if (type === "panel") {
+          next.panels = {
+            total,
+            done,
+            synced: status === "synced" ? prev.panels.synced + 1 : prev.panels.synced,
+            failed: status === "failed" ? prev.panels.failed + 1 : prev.panels.failed,
+          };
+        } else {
+          next.users = {
+            total,
+            done,
+            created: status === "created" ? prev.users.created + 1 : prev.users.created,
+            skipped: status === "skipped" ? prev.users.skipped + 1 : prev.users.skipped,
+            failed: status === "failed" ? prev.users.failed + 1 : prev.users.failed,
+          };
+        }
+        next.log = [...prev.log, { type, item, status }].slice(-200);
+        return next;
+      });
+    }
+
+    try {
+      const results = await migrateToBackend(onProgress);
+      setMigrationState((prev) => ({
+        ...prev,
+        status: "complete",
+        reports: results.reports,
+        panels: results.panels,
+        users: results.users,
+      }));
+      setRefreshKey((k) => k + 1);
+    } catch {
+      setMigrationState((prev) => prev ? { ...prev, status: "complete" } : prev);
+    }
+  }
+
   return (
     <div className="sys-manager-page notranslate" translate="no" lang="km">
       <header className="sys-manager-topbar">
@@ -367,9 +475,35 @@ export default function SuperAdminDashboardPage({ onBackToMain, onLogout }) {
               ស្ថិតិ &amp; វិភាគ
             </button>
           </nav>
+          {showMigration && (
+            <>
+              <div className="sys-sidebar-section-label" style={{ marginTop: 16 }}>ទិន្នន័យ</div>
+              <nav className="sys-manager-nav">
+                <button
+                  type="button"
+                  className="sys-nav-item"
+                  onClick={() => setMigrationState(emptyMigrationState())}
+                  style={{ color: "#7a5820" }}
+                >
+                  ផ្ទេរទិន្នន័យ Local
+                </button>
+              </nav>
+            </>
+          )}
         </aside>
 
         <main className="sys-manager-main">
+          <OfflineBanner />
+          {apiWarning && DATA_MODE !== "local" && (
+            <div style={{
+              background: "#fff3cd", border: "1px solid #ffc107",
+              borderRadius: 6, padding: "10px 16px", marginBottom: 16,
+              fontSize: 13, color: "#856404", display: "flex", alignItems: "center", gap: 8
+            }}>
+              <span>⚠️</span>
+              <span>កំពុងបង្ហាញទិន្នន័យ Cache — មិនអាចភ្ជាប់ Server</span>
+            </div>
+          )}
           {activeSection === "missions" && (<>
           <div className="sys-stat-row" style={{ marginBottom: "24px" }}>
             <div className="sys-stat-card">
@@ -391,7 +525,14 @@ export default function SuperAdminDashboardPage({ onBackToMain, onLogout }) {
           </div>
 
           <div className="sys-manager-content-header">
-            <h2 className="sys-manager-content-title">ទិន្នន័យសំណើរបេសកកម្ម</h2>
+            <div>
+              <h2 className="sys-manager-content-title">ទិន្នន័យសំណើរបេសកកម្ម</h2>
+              {cacheAge && DATA_MODE !== "local" && (
+                <div style={{ fontSize: 11, color: "#888", marginTop: 2 }}>
+                  បានធ្វើបច្ចុប្បន្នភាព: {new Date(cacheAge).toLocaleString("km-KH")}
+                </div>
+              )}
+            </div>
             <div className="sys-manager-toolbar">
               <input
                 className="sys-search-input sys-search-input--wide"
@@ -699,6 +840,18 @@ export default function SuperAdminDashboardPage({ onBackToMain, onLogout }) {
                   <div>
                     <strong>{getReportUnitName(report, accounts)}</strong>
                     <span>{report.requestId}</span>
+                    {report.approvalStatus && (
+                      <span style={{
+                        marginLeft: 6, fontSize: 11, padding: "1px 6px", borderRadius: 4,
+                        background: report.approvalStatus === "approved" ? "#dcfce7"
+                          : report.approvalStatus === "rejected" ? "#fee2e2" : "#fef9c3",
+                        color: report.approvalStatus === "approved" ? "#166534"
+                          : report.approvalStatus === "rejected" ? "#991b1b" : "#854d0e",
+                      }}>
+                        {report.approvalStatus === "approved" ? "អនុម័ត"
+                          : report.approvalStatus === "rejected" ? "បដិសេធ" : "រង់ចាំ"}
+                      </span>
+                    )}
                   </div>
                   <div>{formatDateTime(report.submittedAt)}</div>
                   <button
@@ -712,6 +865,32 @@ export default function SuperAdminDashboardPage({ onBackToMain, onLogout }) {
                   >
                     មើល PDF
                   </button>
+                  {report.id && DATA_MODE !== "local" && (
+                    <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>
+                      {report.approvalStatus !== "approved" && (
+                        <button
+                          type="button"
+                          className="ghost"
+                          style={{ fontSize: 12, padding: "3px 8px", color: "#16a34a" }}
+                          disabled={approveLoading.has(report.requestId)}
+                          onClick={() => handleApprove(report, "approve")}
+                        >
+                          អនុម័ត
+                        </button>
+                      )}
+                      {report.approvalStatus !== "rejected" && (
+                        <button
+                          type="button"
+                          className="ghost"
+                          style={{ fontSize: 12, padding: "3px 8px", color: "#b3261e" }}
+                          disabled={approveLoading.has(report.requestId)}
+                          onClick={() => handleApprove(report, "reject")}
+                        >
+                          បដិសេធ
+                        </button>
+                      )}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
@@ -757,6 +936,22 @@ export default function SuperAdminDashboardPage({ onBackToMain, onLogout }) {
         </div>
       ) : null}
 
+      {approveError && (
+        <div role="alert" style={{
+          position: "fixed", bottom: 24, right: 24, zIndex: 200,
+          background: "#fef2f2", border: "1px solid #fca5a5",
+          borderRadius: 8, padding: "12px 16px", color: "#991b1b",
+          fontSize: 13, maxWidth: 320, display: "flex", alignItems: "center", gap: 12
+        }}>
+          <span>⚠ {approveError}</span>
+          <button
+            type="button"
+            style={{ background: "none", border: "none", cursor: "pointer", color: "#991b1b", padding: 0, fontSize: 16 }}
+            onClick={() => setApproveError("")}
+          >✕</button>
+        </div>
+      )}
+
       <PdfTemplate
         key={(selectedReports?.[0]?.requestId ?? "none") + "-" + pdfInitialMode}
         reports={selectedReports}
@@ -774,6 +969,128 @@ export default function SuperAdminDashboardPage({ onBackToMain, onLogout }) {
             : undefined
         }
       />
+
+      {migrationState ? (
+        <div className="sys-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="migrationModalTitle">
+          <div className="sys-modal-card" style={{ maxWidth: 540, width: "100%" }}>
+            <div className="sys-modal-header">
+              <h3 id="migrationModalTitle">ផ្ទេរទិន្នន័យ Local → Backend</h3>
+              {migrationState.status !== "running" && (
+                <button type="button" className="ghost" onClick={() => setMigrationState(null)}>បិទ</button>
+              )}
+            </div>
+
+            <div className="sys-modal-body" style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+
+              {migrationState.status === "pending" && (
+                <>
+                  <p style={{ fontSize: 14, color: "#555", lineHeight: 1.6 }}>
+                    ប្រតិបត្តិការនេះនឹងផ្ទេរទិន្នន័យដែលរក្សាទុកនៅ localStorage ទៅកាន់ FastAPI backend។
+                    ការដំណើរការម្ដងទៀតគឺមានសុវត្ថិភាព — សំណើ/ប្លង់ដែលបានបញ្ចូលរួចហើយនឹងត្រូវបានរំលង។
+                  </p>
+                  <ul style={{ fontSize: 13, color: "#555", paddingLeft: 18, lineHeight: 2 }}>
+                    <li>សំណើបេសកកម្ម (localStorage → van-requests)</li>
+                    <li>ប្លង់បេសកកម្ម (localStorage → admin-panel)</li>
+                    <li>គណនីអ្នកប្រើ (localStorage → users, password="reset-required")</li>
+                    <li>ឯកសារ IndexedDB (files → /files/{"{slot}"}/)</li>
+                  </ul>
+                  <p style={{ fontSize: 12, color: "#9a7840", fontStyle: "italic" }}>
+                    ទិន្នន័យ localStorage នឹង​មិន​ត្រូវ​បាន​លុប — វា​នឹង​ត្រូវ​បាន​រក្សា​ទុក​ជា​ cache offline។
+                  </p>
+                </>
+              )}
+
+              {(migrationState.status === "running" || migrationState.status === "complete") && (
+                <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                  {[
+                    { key: "reports", label: "សំណើ", done: migrationState.reports.done, total: migrationState.reports.total, synced: migrationState.reports.synced, failed: migrationState.reports.failed },
+                    { key: "panels", label: "ប្លង់", done: migrationState.panels.done, total: migrationState.panels.total, synced: migrationState.panels.synced, failed: migrationState.panels.failed },
+                    { key: "users", label: "គណនី", done: migrationState.users.done, total: migrationState.users.total, synced: migrationState.users.created + migrationState.users.skipped, failed: migrationState.users.failed },
+                  ].map(({ key, label, done, total, synced, failed }) => (
+                    <div key={key}>
+                      <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, marginBottom: 4 }}>
+                        <span style={{ fontWeight: 600 }}>{label}</span>
+                        <span style={{ color: "#555" }}>
+                          {done}/{total}
+                          {synced > 0 && <span style={{ color: "#2d7a4f", marginLeft: 8 }}>✓ {synced}</span>}
+                          {failed > 0 && <span style={{ color: "#c0392b", marginLeft: 6 }}>✗ {failed}</span>}
+                        </span>
+                      </div>
+                      <div style={{ height: 8, background: "rgba(200,147,24,0.12)", borderRadius: 4, overflow: "hidden" }}>
+                        <div style={{
+                          height: "100%",
+                          width: total > 0 ? `${(done / total) * 100}%` : "0%",
+                          background: failed > 0 ? "#e67e22" : "#2d7a4f",
+                          borderRadius: 4,
+                          transition: "width 0.3s ease",
+                        }} />
+                      </div>
+                    </div>
+                  ))}
+
+                  {migrationState.log.length > 0 && (
+                    <div style={{
+                      maxHeight: 160, overflowY: "auto",
+                      background: "#fafafa", border: "1px solid rgba(199,145,44,0.2)",
+                      borderRadius: 6, padding: "8px 10px",
+                      fontSize: 12, lineHeight: 1.7, fontFamily: "monospace",
+                    }}>
+                      {migrationState.log.slice(-50).map((entry, i) => (
+                        <div key={i} style={{ color: entry.status === "failed" ? "#c0392b" : entry.status === "skipped" ? "#9a7840" : "#2d7a4f" }}>
+                          {entry.status === "synced" || entry.status === "created" ? "✓" : entry.status === "skipped" ? "↷" : "✗"}{" "}
+                          [{entry.type}] {entry.item}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {migrationState.status === "complete" && (
+                <div style={{
+                  background: "rgba(45,122,79,0.08)", border: "1px solid rgba(45,122,79,0.3)",
+                  borderRadius: 6, padding: "12px 14px", fontSize: 13, lineHeight: 1.8,
+                }}>
+                  <strong style={{ display: "block", marginBottom: 4 }}>ការផ្ទេរទិន្នន័យបានបញ្ចប់</strong>
+                  <span>សំណើ: {migrationState.reports.synced} ✓ / {migrationState.reports.failed} ✗</span><br />
+                  <span>ប្លង់: {migrationState.panels.synced} ✓ / {migrationState.panels.failed} ✗</span><br />
+                  <span>គណនី: {migrationState.users.created} បង្កើត / {migrationState.users.skipped} មានស្រាប់ / {migrationState.users.failed} ✗</span>
+                  {migrationState.users.created > 0 && (
+                    <p style={{ marginTop: 8, color: "#9a7840", fontStyle: "italic", fontSize: 12 }}>
+                      គណនីដែលបានផ្ទេរប្រើ password="reset-required" — អ្នកប្រើត្រូវ reset password នៅដំណើរការ login ដំបូង។
+                    </p>
+                  )}
+                  <p style={{ marginTop: 6, color: "#555", fontSize: 12 }}>
+                    ទិន្នន័យ localStorage នៅតែត្រូវបានរក្សា ជា offline cache។
+                    Switch VITE_DATA_MODE="api" ដើម្បីប្រើ Postgres ជា primary source។
+                  </p>
+                </div>
+              )}
+            </div>
+
+            <div className="sys-modal-footer">
+              {migrationState.status === "pending" && (
+                <>
+                  <button type="button" className="ghost" onClick={() => setMigrationState(null)}>
+                    បោះបង់
+                  </button>
+                  <button type="button" className="primary" onClick={startMigration}>
+                    ចាប់ផ្ដើមផ្ទេរ
+                  </button>
+                </>
+              )}
+              {migrationState.status === "running" && (
+                <span style={{ fontSize: 13, color: "#9a7840" }}>កំពុងដំណើរការ...</span>
+              )}
+              {migrationState.status === "complete" && (
+                <button type="button" className="primary" onClick={() => setMigrationState(null)}>
+                  បញ្ចប់
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

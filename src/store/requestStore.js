@@ -7,30 +7,21 @@ import {
   deleteVanRequest,
   mapBackendVanRequest,
 } from "../api/services";
+import {
+  getCachedReports,
+  getCachedReport,
+  cacheReports,
+  cacheReport,
+  removeCachedReport,
+} from "../utils/reportCache";
 
-const LOCAL_KEY = "mcctv:mission-request-history";
-
-function readLocalReports() {
-  try {
-    const raw = window.localStorage.getItem(LOCAL_KEY);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : [];
-  } catch { return []; }
-}
-
-function writeLocalReports(reports) {
-  try { window.localStorage.setItem(LOCAL_KEY, JSON.stringify(reports)); } catch {}
-}
-
-// ─── localAdapter ─────────────────────────────────────────────────────────────
+// ─── Local adapter (cache-backed) ────────────────────────────────────────────
 
 const localAdapter = {
   getAll(filters = {}) {
-    let reports = readLocalReports();
-    if (filters.status) {
+    let reports = getCachedReports();
+    if (filters.status)
       reports = reports.filter((r) => r.approvalStatus === filters.status);
-    }
     if (filters.search) {
       const q = filters.search.toLowerCase();
       reports = reports.filter(
@@ -41,48 +32,38 @@ const localAdapter = {
           r.formData?.missionPlace?.toLowerCase().includes(q)
       );
     }
-    if (filters.submitterUsername) {
+    if (filters.submitterUsername)
       reports = reports.filter((r) => r.submitterUsername === filters.submitterUsername);
-    }
     return Promise.resolve(reports);
   },
+
   getById(id) {
-    const reports = readLocalReports();
-    const found = reports.find(
-      (r) => r.requestId === id || String(r.id) === String(id)
-    );
-    return found
-      ? Promise.resolve(found)
-      : Promise.reject(new Error("Not found"));
+    const reports = getCachedReports();
+    const found = reports.find((r) => r.requestId === id || String(r.id) === String(id));
+    return found ? Promise.resolve(found) : Promise.reject(new Error("Not found"));
   },
+
   save(report) {
-    const reports = readLocalReports();
-    const idx = reports.findIndex((r) => r.requestId === report.requestId);
-    if (idx >= 0) { reports[idx] = report; } else { reports.unshift(report); }
-    writeLocalReports(reports.slice(0, 100));
+    cacheReport(report);
     return Promise.resolve(report);
   },
+
   update(id, patch) {
-    const reports = readLocalReports();
-    const idx = reports.findIndex(
-      (r) => r.requestId === id || String(r.id) === String(id)
-    );
+    const reports = getCachedReports();
+    const idx = reports.findIndex((r) => r.requestId === id || String(r.id) === String(id));
     if (idx < 0) return Promise.reject(new Error("Not found"));
-    reports[idx] = { ...reports[idx], ...patch };
-    writeLocalReports(reports);
-    return Promise.resolve(reports[idx]);
+    const updated = { ...reports[idx], ...patch };
+    cacheReport(updated);
+    return Promise.resolve(updated);
   },
+
   remove(id) {
-    writeLocalReports(
-      readLocalReports().filter(
-        (r) => r.requestId !== id && String(r.id) !== String(id)
-      )
-    );
+    removeCachedReport(id);
     return Promise.resolve();
   },
 };
 
-// ─── apiAdapter ───────────────────────────────────────────────────────────────
+// ─── API adapter (cache-populating) ──────────────────────────────────────────
 
 const apiAdapter = {
   async getAll(filters = {}) {
@@ -91,57 +72,103 @@ const apiAdapter = {
     if (filters.search) params.search = filters.search;
     if (filters.submitterUsername) params.submitter_username = filters.submitterUsername;
     if (filters.ordering) params.ordering = filters.ordering;
-    const res = await listVanRequests(params);
-    const items = Array.isArray(res.data) ? res.data : (res.data?.results ?? []);
-    return items.map(mapBackendVanRequest);
+    try {
+      const res = await listVanRequests(params);
+      const items = Array.isArray(res.data) ? res.data : (res.data?.results ?? []);
+      const mapped = items.map(mapBackendVanRequest);
+      cacheReports(mapped);
+      return mapped;
+    } catch {
+      return getCachedReports();
+    }
   },
+
   async getById(id) {
-    const res = await getVanRequest(id);
-    return mapBackendVanRequest(res.data);
+    try {
+      const res = await getVanRequest(id);
+      const mapped = mapBackendVanRequest(res.data);
+      cacheReport(mapped);
+      return mapped;
+    } catch {
+      const cached = getCachedReport(id);
+      if (cached) return cached;
+      throw new Error("Not found");
+    }
   },
+
   async save(report) {
     const res = await createVanRequest(report);
-    return mapBackendVanRequest(res.data);
+    const mapped = mapBackendVanRequest(res.data);
+    cacheReport(mapped);
+    return mapped;
   },
+
   async update(id, patch) {
     const res = await patchVanRequest(id, patch);
-    return mapBackendVanRequest(res.data);
+    const mapped = mapBackendVanRequest(res.data);
+    cacheReport(mapped);
+    return mapped;
   },
+
   async remove(id) {
+    const cached = getCachedReport(id);
     await deleteVanRequest(id);
+    removeCachedReport(cached?.requestId ?? id);
   },
 };
 
-// ─── dualAdapter ──────────────────────────────────────────────────────────────
+// ─── Dual adapter (optimistic cache + background API) ────────────────────────
 
 const dualAdapter = {
   async getAll(filters = {}) {
-    try { return await apiAdapter.getAll(filters); } catch { return localAdapter.getAll(filters); }
+    return apiAdapter.getAll(filters);
   },
+
   async getById(id) {
-    try { return await apiAdapter.getById(id); } catch { return localAdapter.getById(id); }
+    return apiAdapter.getById(id);
   },
+
   async save(report) {
-    const local = await localAdapter.save(report);
-    apiAdapter.save(report).catch(() => {});
-    return local;
+    cacheReport({ ...report, syncStatus: "pending" });
+    try {
+      const res = await createVanRequest(report);
+      const mapped = mapBackendVanRequest(res.data);
+      cacheReport({ ...mapped, syncStatus: "synced" });
+      return mapped;
+    } catch (err) {
+      cacheReport({ ...report, syncStatus: "failed" });
+      throw err;
+    }
   },
+
   async update(id, patch) {
-    const local = await localAdapter.update(id, patch);
-    apiAdapter.update(id, patch).catch(() => {});
-    return local;
+    const existing = getCachedReport(id) ?? {};
+    cacheReport({ ...existing, ...patch, syncStatus: "pending" });
+    try {
+      const res = await patchVanRequest(id, patch);
+      const mapped = mapBackendVanRequest(res.data);
+      cacheReport({ ...mapped, syncStatus: "synced" });
+      return mapped;
+    } catch (err) {
+      cacheReport({ ...existing, ...patch, syncStatus: "failed" });
+      throw err;
+    }
   },
+
   async remove(id) {
-    await localAdapter.remove(id);
-    apiAdapter.remove(id).catch(() => {});
+    const cached = getCachedReport(id);
+    removeCachedReport(cached?.requestId ?? id);
+    try {
+      await deleteVanRequest(id);
+    } catch {
+      if (cached) cacheReport(cached);
+      throw new Error("Remove failed — restored from cache");
+    }
   },
 };
 
-// ─── active adapter ───────────────────────────────────────────────────────────
-
-const requestStore =
-  DATA_MODE === "api" ? apiAdapter :
-  DATA_MODE === "dual" ? dualAdapter :
-  localAdapter;
-
-export default requestStore;
+export default DATA_MODE === "api"
+  ? apiAdapter
+  : DATA_MODE === "dual"
+  ? dualAdapter
+  : localAdapter;

@@ -148,6 +148,25 @@ export function deleteMissionFromHistory(missionCode) {
   writeHistory(history);
 }
 
+export function syncPanelsFromApi(apiPanels) {
+  if (typeof window === "undefined" || !Array.isArray(apiPanels) || apiPanels.length === 0) return;
+  const mapped = apiPanels.map((p) => ({
+    missionCode: toText(p.missionCode) || toText(String(p.id ?? "")),
+    missionTitle: toText(p.missionTitle),
+    missionPlace: toText(p.missionPlace),
+    missionTime: toText(p.missionTime),
+    participantCount: toText(p.participantCount),
+    missionVia: toText(p.missionVia),
+    requestPlanFileName: toText(p.requestPlanFileName),
+    requestPlanFileDataUrl: "",
+    requestPlanFileKey: "",
+    requestPlanFileType: "",
+    savedAt: toText(p.createdAt || p.savedAt),
+    isActive: Boolean(p.isActive),
+  })).filter((p) => p.missionCode);
+  if (mapped.length > 0) writeHistory(mapped);
+}
+
 export function subscribeAdminMissionPanel(listener) {
   if (typeof window === "undefined") return () => {};
 

@@ -207,7 +207,8 @@ export default function MissionRequestForm({
   initialVehicles = null,
   initialEquipmentItems = null,
   editingReportId = null,
-  onCancelEdit = null
+  onCancelEdit = null,
+  submitDisabled = false,
 }) {
   const [activeStep, setActiveStep] = useState(1);
   const [activeMealSection, setActiveMealSection] = useState("breakfast");
@@ -1531,12 +1532,23 @@ export default function MissionRequestForm({
                 <button className="ghost" type="button" onClick={() => setActiveStep(4)}>
                   ត្រឡប់
                 </button>
-                <button className="primary" type="button" onClick={handleFormSubmit}>
+                <button
+                  className="primary"
+                  type="button"
+                  onClick={handleFormSubmit}
+                  disabled={submitDisabled}
+                  style={submitDisabled ? { opacity: 0.5, cursor: "not-allowed" } : undefined}
+                >
                   {editingReportId ? "រក្សាទុកការកែប្រែ" : "បញ្ជូន និងបង្កើត PDF"}
                 </button>
                 <button className="ghost" type="button" onClick={handleCurrentStepReset}>
                   សម្អាត
                 </button>
+                {submitDisabled && (
+                  <div style={{ fontSize: 12, color: "#856404", marginTop: 4, width: "100%" }}>
+                    ត្រូវការការភ្ជាប់ Internet ដើម្បីបញ្ជូន។ សូម Save Draft ជាមុន។
+                  </div>
+                )}
                 <div className="status" id="statusText">
                   {statusText}
                 </div>

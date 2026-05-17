@@ -64,10 +64,6 @@ export function saveUserProfile(profile) {
     console.error(error);
   }
 
-  if (DATA_MODE !== "local") {
-    saveApiProfile(sanitizedProfile).catch(() => {});
-  }
-
   return sanitizedProfile;
 }
 
@@ -84,4 +80,13 @@ export async function syncProfileFromApi() {
   } catch {
     return null;
   }
+}
+
+export async function pushProfileToApi(sanitizedProfile) {
+  const res = await saveApiProfile(sanitizedProfile);
+  const returned = sanitizeUserProfile(res.data);
+  try {
+    window.localStorage.setItem(userProfileStorageKey, JSON.stringify(returned));
+  } catch {}
+  return returned;
 }

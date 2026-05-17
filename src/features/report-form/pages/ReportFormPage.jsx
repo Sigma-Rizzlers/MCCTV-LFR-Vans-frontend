@@ -7,7 +7,12 @@ import PdfTemplate from "../components/PdfTemplate";
 import UserProfileSection from "../components/UserProfileSection";
 import "../styles/index.css";
 import "../../sys-manager/styles/sysmanager.css";
-import { loadUserProfile, saveUserProfile } from "../../../utils/userProfileStorage";
+import {
+  loadUserProfile,
+  saveUserProfile,
+  syncProfileFromApi,
+  pushProfileToApi,
+} from "../../../utils/userProfileStorage";
 import { loadAdminMissionPanel } from "../../../utils/adminMissionPanel";
 import { saveReportFile } from "../../../utils/reportFileStore";
 import { saveDraft, loadDraft, clearDraft } from "../../../utils/reportDraftStorage";
@@ -18,6 +23,8 @@ import {
   saveDraft as saveApiDraft,
   uploadReportFile,
 } from "../../../api/services";
+import { useApiOnline } from "../../../context/ApiStatusContext";
+import OfflineBanner from "../../../components/OfflineBanner";
 
 const cambodiaPhoneRegex = /^(?:0\d{8,9}|0\d{2}-\d{3}-\d{3,4})$/;
 const phoneErrorMessage =
@@ -208,6 +215,9 @@ export default function ReportFormPage({
   const [draftSavedAt, setDraftSavedAt] = useState(null);
   const [syncError, setSyncError] = useState(null);
 
+  const apiOnline = useApiOnline();
+  const submitDisabled = !apiOnline && DATA_MODE === "api";
+
   const currentUsername = useMemo(getCurrentUsername, []);
   const editingReport = useMemo(
     () => historyReports.find((r) => r.requestId === editingReportId) ?? null,
@@ -235,6 +245,17 @@ export default function ReportFormPage({
     }, 2000);
     return () => clearTimeout(timer);
   }, [formData, authRole, editingReportId, currentUsername]);
+
+  // On mount (api/dual), pull profile from API and refresh local state if newer
+  useEffect(() => {
+    if (authRole !== "user" || DATA_MODE === "local") return;
+    syncProfileFromApi().then((apiProfile) => {
+      if (!apiProfile) return;
+      setSavedProfile(apiProfile);
+      setProfileDraft(createProfileDraft(apiProfile));
+      setFormData((current) => ({ ...current, ...pickProfileFields(apiProfile) }));
+    });
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // On mount, fetch API draft and offer to restore if it's newer than the local one
   useEffect(() => {
@@ -323,7 +344,7 @@ export default function ReportFormPage({
     setProfileStatusText("");
   }
 
-  function handleProfileSubmit(event) {
+  async function handleProfileSubmit(event) {
     event.preventDefault();
     const nextPhoneError = validatePhone(profileDraft.phone);
     if (nextPhoneError) { setProfilePhoneError(nextPhoneError); return; }
@@ -339,6 +360,17 @@ export default function ReportFormPage({
     setPhoneError("");
     setProfilePhoneError("");
     setProfileStatusText("បានរក្សាទុកព័ត៌មានផ្ទាល់ខ្លួនរួចរាល់");
+
+    if (DATA_MODE !== "local") {
+      try {
+        const apiProfile = await pushProfileToApi(nextSavedProfile);
+        setSavedProfile(apiProfile);
+        setProfileDraft(createProfileDraft(apiProfile));
+        setFormData((current) => ({ ...current, ...pickProfileFields(apiProfile) }));
+      } catch {
+        setProfileStatusText("បានរក្សាទុកក្នុងឧបករណ៍ — ការផ្ញើទៅ Server បរាជ័យ");
+      }
+    }
   }
 
   function handleStartEdit(reportId) {
@@ -642,7 +674,8 @@ export default function ReportFormPage({
     initialVehicles: editingReport?.vehicles ?? null,
     initialEquipmentItems: editingReport?.equipmentItems ?? null,
     editingReportId,
-    onCancelEdit: editingReportId ? handleCancelEdit : null
+    onCancelEdit: editingReportId ? handleCancelEdit : null,
+    submitDisabled,
   };
 
   const sharedOverlays = (
@@ -767,6 +800,7 @@ export default function ReportFormPage({
           </aside>
 
           <main className="sys-manager-main">
+            <OfflineBanner />
             {/* Draft restore banner */}
             {draftToRestore && activeSection === "request" && !editingReportId && (
               <div style={{

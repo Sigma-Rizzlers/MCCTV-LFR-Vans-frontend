@@ -176,6 +176,7 @@ export const uploadReportFile = (id, slot, file) => {
 
 // ─── Users ────────────────────────────────────────────────────────────────────
 
+export const getMe = () => api.get("/api/v1/users/me/");
 export const getUsers = (params = {}) => api.get("/api/v1/users/", { params });
 export const getUser = (id) => api.get(`/api/v1/users/${id}/`);
 export const createUser = (data) => api.post("/api/v1/users/", data);

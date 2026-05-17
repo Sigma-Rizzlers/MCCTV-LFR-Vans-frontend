@@ -4,6 +4,8 @@ import { loadAdminMissionPanel } from "../../../utils/adminMissionPanel";
 import { addSysManagerAuditLog, loadSysManagerAuditLog } from "../../../utils/sysManagerAuditLog";
 import requestStore from "../../../store/requestStore";
 import { DATA_MODE } from "../../../utils/dataMode";
+import { getCachedReports, getCacheAge } from "../../../utils/reportCache";
+import OfflineBanner from "../../../components/OfflineBanner";
 import {
   getUsers,
   createUser as createUserApi,
@@ -164,8 +166,10 @@ export default function SysManagerDashboardPage({ onLogout }) {
   const [auditEntries, setAuditEntries] = useState(() => loadSysManagerAuditLog());
 
   const [allReports, setAllReports] = useState(() =>
-    DATA_MODE === "local" ? loadAllReports() : []
+    DATA_MODE === "local" ? loadAllReports() : getCachedReports()
   );
+  const [apiWarning, setApiWarning] = useState(false);
+  const [cacheAge, setCacheAge] = useState(() => getCacheAge());
   const adminPanel = useMemo(() => loadAdminMissionPanel(), [reportsRefreshKey]);
 
   useEffect(() => {
@@ -174,8 +178,15 @@ export default function SysManagerDashboardPage({ onLogout }) {
       return;
     }
     requestStore.getAll()
-      .then(setAllReports)
-      .catch(() => setAllReports(loadAllReports()));
+      .then((data) => {
+        setAllReports(data);
+        setApiWarning(false);
+        setCacheAge(getCacheAge());
+      })
+      .catch(() => {
+        setAllReports(getCachedReports());
+        setApiWarning(true);
+      });
   }, [reportsRefreshKey]);
 
   useEffect(() => {
@@ -567,12 +578,30 @@ export default function SysManagerDashboardPage({ onLogout }) {
         </aside>
 
         <main className="sys-manager-main">
+          <OfflineBanner />
+          {apiWarning && DATA_MODE !== "local" && (
+            <div style={{
+              background: "#fff3cd", border: "1px solid #ffc107",
+              borderRadius: 6, padding: "10px 16px", marginBottom: 16,
+              fontSize: 13, color: "#856404", display: "flex", alignItems: "center", gap: 8
+            }}>
+              <span>⚠️</span>
+              <span>កំពុងបង្ហាញទិន្នន័យ Cache — មិនអាចភ្ជាប់ Server</span>
+            </div>
+          )}
 
           {/* ── Overview ── */}
           {isOverview && (
             <div className="sys-overview">
               <div className="sys-overview-header">
-                <h2 className="sys-manager-content-title">ទំព័រដើម</h2>
+                <div>
+                  <h2 className="sys-manager-content-title">ទំព័រដើម</h2>
+                  {cacheAge && DATA_MODE !== "local" && (
+                    <div style={{ fontSize: 11, color: "#888", marginTop: 2 }}>
+                      បានធ្វើបច្ចុប្បន្នភាព: {new Date(cacheAge).toLocaleString("km-KH")}
+                    </div>
+                  )}
+                </div>
               </div>
 
               <div className="sys-stat-row">
@@ -705,7 +734,14 @@ export default function SysManagerDashboardPage({ onLogout }) {
           {isReportsView && (
             <>
               <div className="sys-manager-content-header">
-                <h2 className="sys-manager-content-title">ស្វែងរក PDF</h2>
+                <div>
+                  <h2 className="sys-manager-content-title">ស្វែងរក PDF</h2>
+                  {cacheAge && DATA_MODE !== "local" && (
+                    <div style={{ fontSize: 11, color: "#888", marginTop: 2 }}>
+                      បានធ្វើបច្ចុប្បន្នភាព: {new Date(cacheAge).toLocaleString("km-KH")}
+                    </div>
+                  )}
+                </div>
                 <div className="sys-manager-toolbar">
                   <input
                     className="sys-search-input sys-search-input--wide"
