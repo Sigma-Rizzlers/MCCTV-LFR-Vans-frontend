@@ -886,8 +886,6 @@ export default function ReportFormPage({
         onAdminLogin={onAdminLogin}
         onAdminLogout={onAdminLogout}
         onOpenAdminDashboard={onOpenAdminDashboard}
-        onOpenProfile={undefined}
-        onOpenMySubmissions={undefined}
       />
 
       <main className="page-main">
