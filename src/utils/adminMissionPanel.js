@@ -167,6 +167,56 @@ export function syncPanelsFromApi(apiPanels) {
   if (mapped.length > 0) writeHistory(mapped);
 }
 
+const reportHistoryKey = "mcctv:mission-request-history";
+
+/**
+ * One-time migration: for any report in localStorage that is missing
+ * adminPanel.missionCode, look up the panel history and fill it in
+ * by matching missionTitle + missionTime.
+ * Returns the number of reports that were updated.
+ */
+export function backfillMissionCodes() {
+  if (typeof window === "undefined") return 0;
+  try {
+    const panels = loadHistoryRaw();
+    if (panels.length === 0) return 0;
+
+    const raw = window.localStorage.getItem(reportHistoryKey);
+    if (!raw) return 0;
+    const reports = JSON.parse(raw);
+    if (!Array.isArray(reports) || reports.length === 0) return 0;
+
+    let patched = 0;
+    const updated = reports.map((report) => {
+      if (!report || typeof report !== "object") return report;
+      if (toText(report.adminPanel?.missionCode)) return report; // already filled
+
+      const missionTitle = toText(report.adminPanel?.missionTitle || report.formData?.missionTitle || "");
+      const missionTime  = toText(report.adminPanel?.missionTime  || "");
+      if (!missionTitle && !missionTime) return report;
+
+      const match = panels.find(
+        (p) => toText(p.missionTitle) === missionTitle && toText(p.missionTime) === missionTime
+      );
+      if (match?.missionCode) {
+        patched += 1;
+        return {
+          ...report,
+          adminPanel: { ...(report.adminPanel || {}), missionCode: match.missionCode },
+        };
+      }
+      return report;
+    });
+
+    if (patched > 0) {
+      window.localStorage.setItem(reportHistoryKey, JSON.stringify(updated));
+    }
+    return patched;
+  } catch {
+    return 0;
+  }
+}
+
 export function subscribeAdminMissionPanel(listener) {
   if (typeof window === "undefined") return () => {};
 

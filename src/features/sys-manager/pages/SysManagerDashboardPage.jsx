@@ -1,6 +1,6 @@
 import { Fragment, useEffect, useMemo, useState } from "react";
 import { loadAccounts, createAccount, updateAccount, deleteAccount, getLastLogin } from "../../../utils/accountStorage";
-import { loadAdminMissionPanel } from "../../../utils/adminMissionPanel";
+import { loadAdminMissionPanel, backfillMissionCodes } from "../../../utils/adminMissionPanel";
 import { addSysManagerAuditLog, loadSysManagerAuditLog, readLocalAuditLog } from "../../../utils/sysManagerAuditLog";
 import requestStore from "../../../store/requestStore";
 import { DATA_MODE } from "../../../utils/dataMode";
@@ -75,6 +75,8 @@ function toText(value) {
 }
 
 function getMissionKey(report) {
+  const missionCode = toText(report.adminPanel?.missionCode || "");
+  if (missionCode) return missionCode;
   const title = toText(report.adminPanel?.missionTitle || report.formData?.missionTitle || "");
   const time = toText(report.adminPanel?.missionTime || "");
   return title || time ? `${title}|${time}` : report.requestId;
@@ -95,6 +97,7 @@ function normalizeMissionGroup(group) {
   const first = group[0];
   const formData = first.formData || {};
   const adminPanel = first.adminPanel || {};
+  const missionCode = toText(adminPanel.missionCode || "");
   const program = toText(adminPanel.missionTitle || formData.missionTitle || formData.mission) || "-";
   const location = toText(adminPanel.missionPlace || formData.missionPlace) || "-";
   const date = toText(formData.departureDate) || toText(first.submittedAt) || "-";
@@ -102,7 +105,8 @@ function normalizeMissionGroup(group) {
   const duration = travelDuration ? `${travelDuration} ម៉ោង` : adminPanel.missionTime ? formatDateTime(adminPanel.missionTime) : "-";
 
   return {
-    key: first.requestId,
+    key: missionCode || first.requestId,
+    missionCode,
     program,
     location,
     unitCount: group.length,
@@ -118,6 +122,7 @@ function normalizeReportRow(report, accounts) {
   if (!requestId) return null;
   const formData = report.formData || {};
   const adminPanel = report.adminPanel || {};
+  const missionCode = toText(adminPanel.missionCode || "");
   const program = toText(adminPanel.missionTitle || formData.missionTitle || formData.mission) || "-";
   const location = toText(adminPanel.missionPlace || formData.missionPlace) || "-";
   const date = toText(formData.departureDate || report.submittedAt) || "-";
@@ -126,7 +131,7 @@ function normalizeReportRow(report, accounts) {
   const submitterUsername = toText(report.submitterUsername);
   const account = accounts.find((a) => a.username === submitterUsername);
   const unitName = account?.unitName || submitterUsername || "-";
-  return { requestId, unitName, program, location, date, duration, submittedAt: report.submittedAt, raw: report };
+  return { requestId, missionCode, unitName, program, location, date, duration, submittedAt: report.submittedAt, raw: report };
 }
 
 const ROWS_PER_PAGE = 10;
@@ -173,6 +178,8 @@ export default function SysManagerDashboardPage({ onLogout }) {
   const adminPanel = useMemo(() => loadAdminMissionPanel(), [reportsRefreshKey]);
 
   useEffect(() => {
+    // Backfill missionCode into old reports that are missing it
+    backfillMissionCodes();
     if (DATA_MODE === "local") {
       setAllReports(loadAllReports());
       return;
@@ -201,6 +208,26 @@ export default function SysManagerDashboardPage({ onLogout }) {
     refreshAuditLog();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  useEffect(() => {
+    function handleHistoryUpdated() {
+      setReportsRefreshKey((k) => k + 1);
+    }
+    function handleStorageChange(event) {
+      if (event.key === "mcctv:mission-request-history") setReportsRefreshKey((k) => k + 1);
+    }
+    function handleVisibilityChange() {
+      if (document.visibilityState === "visible") setReportsRefreshKey((k) => k + 1);
+    }
+    window.addEventListener("mcctv:history-updated", handleHistoryUpdated);
+    window.addEventListener("storage", handleStorageChange);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => {
+      window.removeEventListener("mcctv:history-updated", handleHistoryUpdated);
+      window.removeEventListener("storage", handleStorageChange);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, []);
+
   const isReportsView = activeMenu === "reports";
   const isOverview = activeMenu === "overview";
   const isAuditView = activeMenu === "audit";
@@ -225,6 +252,7 @@ export default function SysManagerDashboardPage({ onLogout }) {
     if (!q) return rows;
     return rows.filter(
       (r) =>
+        (r.missionCode && r.missionCode.toLowerCase().includes(q)) ||
         r.requestId.toLowerCase().includes(q) ||
         r.unitName.toLowerCase().includes(q) ||
         r.program.toLowerCase().includes(q) ||
@@ -646,7 +674,17 @@ export default function SysManagerDashboardPage({ onLogout }) {
                       <tbody>
                         {recentActivity.map((row) => (
                           <tr key={row.key} className="sys-table-row">
-                            <td style={{ whiteSpace: "nowrap", fontSize: 12 }}>{row.reports[0]?.requestId ?? "-"}</td>
+                            <td style={{ fontSize: 12, whiteSpace: "nowrap" }}>
+                              {row.missionCode ? (
+                                <span style={{ fontWeight: 700, color: "#9a6a00", letterSpacing: "0.02em" }}>
+                                  {row.missionCode}
+                                </span>
+                              ) : (
+                                row.reports.map((r) => (
+                                  <div key={r.requestId}>{r.requestId}</div>
+                                ))
+                              )}
+                            </td>
                             <td>{row.program}</td>
                             <td>{row.location}</td>
                             <td>{row.unitCount}</td>
@@ -785,7 +823,15 @@ export default function SysManagerDashboardPage({ onLogout }) {
                     )}
                     {pagedReportRows.map((row) => (
                       <tr key={row.requestId} className="sys-table-row">
-                        <td>{row.requestId}</td>
+                        <td style={{ fontSize: 12, whiteSpace: "nowrap" }}>
+                          {row.missionCode ? (
+                            <span style={{ fontWeight: 700, color: "#9a6a00", letterSpacing: "0.02em" }}>
+                              {row.missionCode}
+                            </span>
+                          ) : (
+                            <span>{row.requestId}</span>
+                          )}
+                        </td>
                         <td>{row.unitName}</td>
                         <td>{row.program}</td>
                         <td>{row.location}</td>

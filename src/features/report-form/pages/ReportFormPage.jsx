@@ -122,6 +122,7 @@ function sanitizeEquipmentItems(items) {
 function sanitizeAdminPanelForReport(rawPanel) {
   if (!rawPanel || typeof rawPanel !== "object") return null;
   return {
+    missionCode: toText(rawPanel.missionCode),
     missionTitle: toText(rawPanel.missionTitle),
     missionPlace: toText(rawPanel.missionPlace),
     missionTime: toText(rawPanel.missionTime),
@@ -173,6 +174,7 @@ function loadHistoryFromStorage() {
 function saveHistoryToStorage(reports) {
   try {
     window.localStorage.setItem(historyStorageKey, JSON.stringify(reports));
+    window.dispatchEvent(new CustomEvent("mcctv:history-updated"));
   } catch (error) {
     console.error(error);
   }

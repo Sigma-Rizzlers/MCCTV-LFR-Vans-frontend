@@ -8,6 +8,7 @@ import "../../admin-dashboard/styles/dashboard.css";
 import "../../sys-manager/styles/sysmanager.css";
 import PdfTemplate from "../../report-form/components/PdfTemplate";
 import { loadAccounts } from "../../../utils/accountStorage";
+import { backfillMissionCodes } from "../../../utils/adminMissionPanel";
 import requestStore from "../../../store/requestStore";
 import { DATA_MODE } from "../../../utils/dataMode";
 import { migrateToBackend } from "../../../utils/localMigration";
@@ -41,6 +42,8 @@ function formatDateTime(value) {
 }
 
 function getMissionKey(report) {
+  const missionCode = toText(report.adminPanel?.missionCode || "");
+  if (missionCode) return missionCode;
   const title = toText(report.adminPanel?.missionTitle || report.formData?.missionTitle || "");
   const time = toText(report.adminPanel?.missionTime || "");
   return (title || time) ? `${title}|${time}` : report.requestId;
@@ -61,13 +64,15 @@ function normalizeMissionGroup(group) {
   const first = group[0];
   const formData = first.formData || {};
   const adminPanel = first.adminPanel || {};
+  const missionCode = toText(adminPanel.missionCode || "");
   const program = toText(adminPanel.missionTitle || formData.missionTitle || formData.mission) || fallbackText;
   const location = toText(adminPanel.missionPlace || formData.missionPlace) || fallbackText;
   const date = toText(formData.departureDate) || toText(first.submittedAt) || fallbackText;
   const missionTime = toText(adminPanel.missionTime);
   const duration = missionTime ? formatDateTime(missionTime) : fallbackText;
   return {
-    key: first.requestId,
+    key: missionCode || first.requestId,
+    missionCode,
     program,
     location,
     unitCount: group.length,
@@ -203,9 +208,15 @@ export default function SuperAdminDashboardPage({ onBackToMain, onLogout }) {
   );
 
   useEffect(() => {
+    // Backfill missionCode into old reports that are missing it
+    const patched = backfillMissionCodes();
     if (DATA_MODE === "local") {
       setDashboardReports(loadDashboardReports());
       return;
+    }
+    // If patched > 0 and using API mode, still show local data with codes filled
+    if (patched > 0) {
+      setDashboardReports(loadDashboardReports());
     }
     requestStore.getAll()
       .then((data) => {
@@ -294,6 +305,7 @@ export default function SuperAdminDashboardPage({ onBackToMain, onLogout }) {
     const q = searchQuery.trim().toLowerCase();
     const filtered = dateFilteredGroups.filter((g) => {
       if (!q) return true;
+      if (g.missionCode && g.missionCode.toLowerCase().includes(q)) return true;
       if (g.program.toLowerCase().includes(q)) return true;
       if (g.location.toLowerCase().includes(q)) return true;
       if (g.duration.toLowerCase().includes(q)) return true;
@@ -327,11 +339,16 @@ export default function SuperAdminDashboardPage({ onBackToMain, onLogout }) {
     function handleVisibilityChange() {
       if (document.visibilityState === "visible") setRefreshKey((k) => k + 1);
     }
+    function handleHistoryUpdated() {
+      setRefreshKey((k) => k + 1);
+    }
     window.addEventListener("storage", handleStorageChange);
     document.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("mcctv:history-updated", handleHistoryUpdated);
     return () => {
       window.removeEventListener("storage", handleStorageChange);
       document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("mcctv:history-updated", handleHistoryUpdated);
     };
   }, []);
 
@@ -463,7 +480,7 @@ export default function SuperAdminDashboardPage({ onBackToMain, onLogout }) {
             <button
               type="button"
               className={`sys-nav-item${activeSection === "missions" ? " active" : ""}`}
-              onClick={() => setActiveSection("missions")}
+              onClick={() => { setActiveSection("missions"); setRefreshKey((k) => k + 1); }}
             >
               ទិន្នន័យសំណើ
             </button>
@@ -525,8 +542,17 @@ export default function SuperAdminDashboardPage({ onBackToMain, onLogout }) {
           </div>
 
           <div className="sys-manager-content-header">
-            <div>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
               <h2 className="sys-manager-content-title">ទិន្នន័យសំណើរបេសកកម្ម</h2>
+              <button
+                type="button"
+                className="ghost"
+                style={{ fontSize: 13, padding: "4px 10px" }}
+                title="ផ្ទុកឡើងវិញ"
+                onClick={() => setRefreshKey((k) => k + 1)}
+              >
+                ↺ Refresh
+              </button>
               {cacheAge && DATA_MODE !== "local" && (
                 <div style={{ fontSize: 11, color: "#888", marginTop: 2 }}>
                   បានធ្វើបច្ចុប្បន្នភាព: {new Date(cacheAge).toLocaleString("km-KH")}
@@ -628,12 +654,28 @@ export default function SuperAdminDashboardPage({ onBackToMain, onLogout }) {
                         }}
                       >
                         <td style={{ fontSize: 12, whiteSpace: "nowrap" }}>
-                          {group.reports[0]?.requestId ?? "-"}
-                          {group.reports.some((r) => r.editHistory?.length > 0) && (
-                            <span style={{
-                              marginLeft: 5, fontSize: 10, background: "#9a7840", color: "#fff",
-                              borderRadius: "3px", padding: "1px 5px", fontWeight: 700, verticalAlign: "middle"
-                            }}>កែ</span>
+                          {group.missionCode ? (
+                            <span style={{ fontWeight: 700, color: "#9a6a00", letterSpacing: "0.02em" }}>
+                              {group.missionCode}
+                              {group.reports.some((r) => r.editHistory?.length > 0) && (
+                                <span style={{
+                                  marginLeft: 5, fontSize: 10, background: "#9a7840", color: "#fff",
+                                  borderRadius: "3px", padding: "1px 4px", fontWeight: 700, verticalAlign: "middle"
+                                }}>កែ</span>
+                              )}
+                            </span>
+                          ) : (
+                            group.reports.map((r) => (
+                              <div key={r.requestId}>
+                                {r.requestId}
+                                {r.editHistory?.length > 0 && (
+                                  <span style={{
+                                    marginLeft: 4, fontSize: 10, background: "#9a7840", color: "#fff",
+                                    borderRadius: "3px", padding: "1px 4px", fontWeight: 700, verticalAlign: "middle"
+                                  }}>កែ</span>
+                                )}
+                              </div>
+                            ))
                           )}
                         </td>
                         <td>{group.program}</td>
@@ -814,7 +856,9 @@ export default function SuperAdminDashboardPage({ onBackToMain, onLogout }) {
           <aside className="superadmin-detail-drawer" onClick={(event) => event.stopPropagation()}>
             <div className="superadmin-detail-header">
               <div>
-                <p className="superadmin-detail-kicker">{detailGroup.reports[0]?.requestId ?? "-"}</p>
+                <p className="superadmin-detail-kicker">
+                  {detailGroup.missionCode || detailGroup.reports[0]?.requestId || "-"}
+                </p>
                 <h3 id="missionDetailTitle">{detailGroup.program}</h3>
                 <p>{[detailGroup.location, formatDate(detailGroup.date), `${detailGroup.unitCount} អង្គភាព`].join(" · ")}</p>
               </div>
@@ -911,8 +955,8 @@ export default function SuperAdminDashboardPage({ onBackToMain, onLogout }) {
               </p>
               <dl className="sys-panel-dl">
                 <div className="sys-panel-dl-row">
-                  <dt>លេខកូដ</dt>
-                  <dd>{deleteConfirmGroup.reports[0]?.requestId ?? "-"}</dd>
+                  <dt>លេខបេសកកម្ម</dt>
+                  <dd>{deleteConfirmGroup.missionCode || deleteConfirmGroup.reports[0]?.requestId || "-"}</dd>
                 </div>
                 <div className="sys-panel-dl-row">
                   <dt>កម្មវិធី</dt>

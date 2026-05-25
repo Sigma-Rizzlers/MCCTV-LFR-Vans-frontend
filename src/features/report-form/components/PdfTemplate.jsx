@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { exportReportToPdfBlob, openPrintFallbackFromElement, saveBlobToFile } from "../utils/pdfExport";
+import { openPrintFallbackFromElement, downloadAsPdf } from "../utils/pdfExport";
 import { loadReportFiles } from "../../../utils/reportFileStore";
 
 function formatDate(value) {
@@ -378,23 +378,25 @@ export default function PdfTemplate({ report, reports: reportsProp, onClose, onD
     ? { ...primary, ...editHistory[Number(viewingVersion)] }
     : primary;
 
-  async function handleSavePdfFile() {
+  async function handleDownload() {
     if (isSavingFile) return;
     setIsSavingFile(true);
     try {
       const suffix = isCombined ? (pdfMode === "summary" ? "-summary" : "-full") : "";
       const fileName = createPdfFileName((requestId ?? "combined") + suffix);
       const pdfElement = document.getElementById("pdfTemplate");
-      const pdfBlob = await exportReportToPdfBlob(primary, { element: pdfElement });
-      await saveBlobToFile(pdfBlob, fileName, null);
-    } catch (error) {
-      console.error(error);
-      const pdfElement = document.getElementById("pdfTemplate");
-      const opened = openPrintFallbackFromElement(pdfElement, createPdfFileName(requestId ?? "combined"));
-      if (!opened) window.alert("Cannot save PDF right now. Please try again.");
+      await downloadAsPdf(pdfElement, fileName);
+    } catch (err) {
+      console.error(err);
+      handlePrint();
     } finally {
       setIsSavingFile(false);
     }
+  }
+
+  function handlePrint() {
+    const pdfElement = document.getElementById("pdfTemplate");
+    openPrintFallbackFromElement(pdfElement, createPdfFileName(requestId ?? "combined"));
   }
 
   const missionHeader = (
@@ -461,8 +463,11 @@ export default function PdfTemplate({ report, reports: reportsProp, onClose, onD
             </div>
           )}
 
-          <button className="primary" type="button" onClick={handleSavePdfFile} disabled={isSavingFile}>
-            {isSavingFile ? "កំពុងរក្សាទុក..." : "រក្សាទុកទៅកុំព្យូទ័រ"}
+          <button className="ghost" type="button" onClick={handlePrint}>
+            Print
+          </button>
+          <button className="primary" type="button" onClick={handleDownload} disabled={isSavingFile}>
+            {isSavingFile ? "កំពុងទាញយក..." : "ទាញយក PDF"}
           </button>
 
           {onDelete ? (

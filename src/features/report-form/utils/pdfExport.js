@@ -265,6 +265,45 @@ export async function saveBlobToFile(blob, fileName, handle) {
   }
 }
 
+const PRINT_CSS = `
+  @page { size: A4; margin: 12mm; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 0; background: #fff;
+    font-family: 'Hanuman', 'Noto Sans Khmer', 'Khmer OS', sans-serif;
+  }
+  .pdf-document {
+    display: block !important; width: auto !important; max-width: none !important;
+    min-height: auto !important; height: auto !important;
+    margin: 0 !important; padding: 0 !important;
+    border: 0 !important; border-radius: 0 !important; box-shadow: none !important;
+    background: #fff !important;
+  }
+  .pdf-grid { display: block !important; }
+  .pdf-panel { margin-bottom: 10px !important; page-break-inside: avoid; break-inside: avoid; }
+  .pdf-panel-full { grid-column: auto !important; }
+  .pdf-member-table { page-break-inside: auto; break-inside: auto; width: 100%; border-collapse: collapse; }
+  .pdf-member-table tr { page-break-inside: avoid; break-inside: avoid; }
+  .pdf-member-table th, .pdf-member-table td { padding: 5px 8px; border: 1px solid #ccc; font-size: 12px; }
+  .pdf-document-footer { page-break-inside: avoid; break-inside: avoid; }
+  .pdf-preview-actions { display: none !important; }
+  img { max-width: 100%; }
+  h3 { font-size: 13px; margin: 8px 0 4px; }
+`;
+
+function collectPageStylesheets() {
+  return Array.from(document.styleSheets)
+    .map((sheet) => {
+      try {
+        return Array.from(sheet.cssRules).map((r) => r.cssText).join("\n");
+      } catch {
+        // cross-origin sheet — link it instead
+        return sheet.href ? `@import url("${sheet.href}");` : "";
+      }
+    })
+    .join("\n");
+}
+
 export function openPrintFallbackFromElement(element, title = "PDF Export") {
   if (!element || typeof document === "undefined" || typeof window === "undefined") {
     return false;
@@ -274,12 +313,8 @@ export function openPrintFallbackFromElement(element, title = "PDF Export") {
   const printStyleId = "pdf-print-style";
   const existingRoot = document.getElementById(printRootId);
   const existingStyle = document.getElementById(printStyleId);
-  if (existingRoot) {
-    existingRoot.remove();
-  }
-  if (existingStyle) {
-    existingStyle.remove();
-  }
+  if (existingRoot) existingRoot.remove();
+  if (existingStyle) existingStyle.remove();
 
   const printRoot = document.createElement("div");
   printRoot.id = printRootId;
@@ -291,60 +326,24 @@ export function openPrintFallbackFromElement(element, title = "PDF Export") {
   printStyle.textContent = `
     @page { size: A4; margin: 12mm; }
     @media print {
-      html, body {
-        margin: 0 !important;
-        padding: 0 !important;
-        background: #ffffff !important;
-      }
+      html, body { margin: 0 !important; padding: 0 !important; background: #fff !important; }
       body > *:not(#${printRootId}):not(#${printStyleId}) { display: none !important; }
       #${printRootId} {
-        display: block !important;
-        position: static;
-        inset: auto;
-        z-index: auto;
-        overflow: visible;
-        background: #ffffff;
-        padding: 0;
-        margin: 0;
-        width: 100% !important;
+        display: block !important; position: static; inset: auto; z-index: auto;
+        overflow: visible; background: #fff; padding: 0; margin: 0; width: 100% !important;
       }
       #${printRootId} .pdf-document {
-        display: block !important;
-        width: auto !important;
-        max-width: none !important;
-        min-height: auto !important;
-        height: auto !important;
-        margin: 0 !important;
-        padding: 0 !important;
-        border: 0 !important;
-        border-radius: 0 !important;
-        box-shadow: none !important;
+        display: block !important; width: auto !important; max-width: none !important;
+        min-height: auto !important; height: auto !important;
+        margin: 0 !important; padding: 0 !important;
+        border: 0 !important; border-radius: 0 !important; box-shadow: none !important;
       }
-      #${printRootId} .pdf-grid {
-        display: block !important;
-        grid-template-columns: 1fr !important;
-        gap: 0 !important;
-      }
-      #${printRootId} .pdf-panel {
-        margin-bottom: 10px !important;
-        page-break-inside: avoid;
-        break-inside: avoid;
-      }
-      #${printRootId} .pdf-panel-full {
-        grid-column: auto !important;
-      }
-      #${printRootId} .pdf-member-table {
-        page-break-inside: auto;
-        break-inside: auto;
-      }
-      #${printRootId} .pdf-member-table tr {
-        page-break-inside: avoid;
-        break-inside: avoid;
-      }
-      #${printRootId} .pdf-document-footer {
-        page-break-inside: avoid;
-        break-inside: avoid;
-      }
+      #${printRootId} .pdf-grid { display: block !important; grid-template-columns: 1fr !important; gap: 0 !important; }
+      #${printRootId} .pdf-panel { margin-bottom: 10px !important; page-break-inside: avoid; break-inside: avoid; }
+      #${printRootId} .pdf-panel-full { grid-column: auto !important; }
+      #${printRootId} .pdf-member-table { page-break-inside: auto; break-inside: auto; }
+      #${printRootId} .pdf-member-table tr { page-break-inside: avoid; break-inside: avoid; }
+      #${printRootId} .pdf-document-footer { page-break-inside: avoid; break-inside: avoid; }
     }
   `;
 
@@ -362,4 +361,71 @@ export function openPrintFallbackFromElement(element, title = "PDF Export") {
   }, 50);
 
   return true;
+}
+
+/**
+ * Captures the element with html2canvas then packages it into a real PDF
+ * file using jsPDF and triggers a browser download — no print dialog.
+ */
+export async function downloadAsPdf(element, fileName = "report.pdf") {
+  if (!element) throw new Error("No element to capture");
+
+  const [{ default: html2canvas }, { default: jsPDF }] = await Promise.all([
+    import("html2canvas"),
+    import("jspdf"),
+  ]);
+
+  if (document.fonts?.ready) await document.fonts.ready;
+
+  const canvas = await html2canvas(element, {
+    scale: 2,
+    useCORS: true,
+    allowTaint: true,
+    backgroundColor: "#ffffff",
+    logging: false,
+  });
+
+  const imgData = canvas.toDataURL("image/jpeg", 0.95);
+  const imgWidth = canvas.width;
+  const imgHeight = canvas.height;
+
+  // A4 in pt: 595.28 x 841.89
+  const pageWidthPt = 595.28;
+  const pageHeightPt = 841.89;
+  const marginPt = 28; // ~10mm
+
+  const usableWidth = pageWidthPt - marginPt * 2;
+  const pxPerPt = imgWidth / usableWidth;
+  const usableHeight = pageHeightPt - marginPt * 2;
+
+  const pdf = new jsPDF({ orientation: "portrait", unit: "pt", format: "a4" });
+
+  let yOffset = 0;
+  let pageNum = 0;
+
+  while (yOffset < imgHeight) {
+    if (pageNum > 0) pdf.addPage();
+
+    const sliceHeightPx = usableHeight * pxPerPt;
+    const remaining = imgHeight - yOffset;
+    const slicePx = Math.min(sliceHeightPx, remaining);
+    const slicePt = slicePx / pxPerPt;
+
+    // crop the slice from the full canvas
+    const slice = document.createElement("canvas");
+    slice.width = imgWidth;
+    slice.height = slicePx;
+    const ctx = slice.getContext("2d");
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, slice.width, slice.height);
+    ctx.drawImage(canvas, 0, yOffset, imgWidth, slicePx, 0, 0, imgWidth, slicePx);
+
+    const sliceData = slice.toDataURL("image/jpeg", 0.95);
+    pdf.addImage(sliceData, "JPEG", marginPt, marginPt, usableWidth, slicePt);
+
+    yOffset += slicePx;
+    pageNum += 1;
+  }
+
+  pdf.save(fileName);
 }
