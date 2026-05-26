@@ -143,6 +143,24 @@ export function activateMissionPanel(missionCode) {
   return history.find((p) => p.isActive) ?? null;
 }
 
+export function updateAdminMissionPanel(missionCode, rawPanel) {
+  if (typeof window === "undefined" || !missionCode) return null;
+  const sanitized = sanitizeAdminMissionPanel(rawPanel);
+  if (!sanitized) return null;
+  const history = loadHistoryRaw();
+  const index = history.findIndex((p) => p.missionCode === missionCode);
+  if (index === -1) return null;
+  const updated = {
+    ...history[index],
+    ...sanitized,
+    missionCode,
+    savedAt: new Date().toISOString(),
+  };
+  history[index] = updated;
+  writeHistory(history);
+  return updated;
+}
+
 export function deleteMissionFromHistory(missionCode) {
   const history = loadHistoryRaw().filter((p) => p.missionCode !== missionCode);
   writeHistory(history);
