@@ -437,7 +437,7 @@ export default function AdminDashboardPage({ onBackToMain, onLogout }) {
                 onClick={() => { setActivePage("history"); setHistorySubPage("archived"); }}
               >
                 <span className="admin-subnav-icon">🗂</span>
-                ប័ណ្ណស័រ
+                បណ្ណសារ
                 {archivedHistory.length > 0 && (
                   <span className="sys-nav-badge">{archivedHistory.length}</span>
                 )}
@@ -743,7 +743,7 @@ export default function AdminDashboardPage({ onBackToMain, onLogout }) {
                           style={{ fontSize: 13, padding: "5px 12px", color: "#92650a", flexShrink: 0 }}
                           onClick={() => handleArchiveMission(panel.missionCode)}
                         >
-                          ប័ណ្ណស័រ
+                          បណ្ណសារ
                         </button>
                       </div>
                     );
@@ -753,12 +753,12 @@ export default function AdminDashboardPage({ onBackToMain, onLogout }) {
             </>
           )}
 
-          {/* ── Sub-page: ប័ណ្ណស័រ ── */}
+          {/* ── Sub-page: បណ្ណសារ ── */}
           {activePage === "history" && historySubPage === "archived" && (
             <>
               <div className="sys-manager-content-header admin-history-header">
                 <div>
-                  <h2 className="sys-manager-content-title">ប័ណ្ណស័រ</h2>
+                  <h2 className="sys-manager-content-title">បណ្ណសារ</h2>
                   <span className="admin-history-count">{archivedHistory.length} កំណត់ត្រា</span>
                 </div>
                 {archivedHistory.length > 0 && (
@@ -770,14 +770,14 @@ export default function AdminDashboardPage({ onBackToMain, onLogout }) {
                       value={historySearchText}
                       onChange={(event) => setHistorySearchText(event.target.value)}
                       placeholder="ស្វែងរកលេខកូដ កម្មវិធី ទីតាំង..."
-                      aria-label="ស្វែងរកប័ណ្ណស័រ"
+                      aria-label="ស្វែងរកបណ្ណសារ"
                     />
                   </div>
                 )}
               </div>
 
               {archivedHistory.length === 0 ? (
-                <p className="sys-table-empty">ប័ណ្ណស័រទទេ — បេសកកម្មដែលបានដាក់ប័ណ្ណស័រនឹងបង្ហាញនៅទីនេះ។</p>
+                <p className="sys-table-empty">បណ្ណសារទទេ — បេសកកម្មដែលបានដាក់បណ្ណសារនឹងបង្ហាញនៅទីនេះ។</p>
               ) : filteredArchivedHistory.length === 0 ? (
                 <p className="sys-table-empty">មិនមានលទ្ធផលស្វែងរកសម្រាប់ "{historySearchText.trim()}" ទេ។</p>
               ) : (
