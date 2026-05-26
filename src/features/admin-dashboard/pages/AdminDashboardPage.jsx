@@ -633,38 +633,38 @@ export default function AdminDashboardPage({ onBackToMain, onLogout }) {
           )}
 
           {/* ── Page: ប្រវត្តិបេសកកម្ម ── */}
-          {activePage === “history” && historySubPage === “active” && (
+          {activePage === "history" && historySubPage === "active" && (
             <>
-              <div className=”sys-manager-content-header admin-history-header”>
+              <div className="sys-manager-content-header admin-history-header">
                 <div>
-                  <h2 className=”sys-manager-content-title”>ប្រវត្តិបេសកកម្ម</h2>
-                  <span className=”admin-history-count”>
+                  <h2 className="sys-manager-content-title">ប្រវត្តិបេសកកម្ម</h2>
+                  <span className="admin-history-count">
                     {normalizedHistorySearch
                       ? `${filteredMissionHistory.length} / ${missionHistory.length} កំណត់ត្រា`
                       : `${missionHistory.length} កំណត់ត្រា`}
                   </span>
                 </div>
-                <div style={{ display: “flex”, gap: 8, alignItems: “center”, flexWrap: “wrap” }}>
+                <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
                   <select
-                    className=”admin-history-sort”
+                    className="admin-history-sort"
                     value={historySortOrder}
                     onChange={(e) => setHistorySortOrder(e.target.value)}
-                    aria-label=”តម្រៀបប្រវត្តិ”
+                    aria-label="តម្រៀបប្រវត្តិ"
                   >
-                    <option value=”newest”>ថ្មីជាងគេ</option>
-                    <option value=”oldest”>ចាស់ជាងគេ</option>
-                    <option value=”active”>កំពុងប្រើដំបូង</option>
+                    <option value="newest">ថ្មីជាងគេ</option>
+                    <option value="oldest">ចាស់ជាងគេ</option>
+                    <option value="active">កំពុងប្រើដំបូង</option>
                   </select>
                   {missionHistory.length > 0 && (
-                    <div className=”admin-history-search-wrap”>
-                      <span className=”admin-history-search-icon” aria-hidden=”true”>⌕</span>
+                    <div className="admin-history-search-wrap">
+                      <span className="admin-history-search-icon" aria-hidden="true">⌕</span>
                       <input
-                        className=”admin-history-search”
-                        type=”search”
+                        className="admin-history-search"
+                        type="search"
                         value={historySearchText}
                         onChange={(event) => setHistorySearchText(event.target.value)}
-                        placeholder=”ស្វែងរកលេខកូដ កម្មវិធី ទីតាំង...”
-                        aria-label=”ស្វែងរកប្រវត្តិបេសកកម្ម”
+                        placeholder="ស្វែងរកលេខកូដ កម្មវិធី ទីតាំង..."
+                        aria-label="ស្វែងរកប្រវត្តិបេសកកម្ម"
                       />
                     </div>
                   )}
@@ -672,34 +672,34 @@ export default function AdminDashboardPage({ onBackToMain, onLogout }) {
               </div>
 
               {missionHistory.length === 0 ? (
-                <p className=”sys-table-empty”>មិនទាន់មានប្រវត្តិបេសកកម្មទេ។</p>
+                <p className="sys-table-empty">មិនទាន់មានប្រវត្តិបេសកកម្មទេ។</p>
               ) : filteredMissionHistory.length === 0 ? (
-                <p className=”sys-table-empty”>មិនមានលទ្ធផលស្វែងរកសម្រាប់ “{historySearchText.trim()}” ទេ។</p>
+                <p className="sys-table-empty">មិនមានលទ្ធផលស្វែងរកសម្រាប់ "{historySearchText.trim()}" ទេ។</p>
               ) : (
-                <div className=”admin-history-list”>
+                <div className="admin-history-list">
                   {filteredMissionHistory.map((panel) => {
                     const subCount = submissionCounts[panel.missionCode] ?? 0;
                     return (
                       <div
                         key={panel.missionCode}
-                        className={`admin-history-card${panel.isActive ? “ active” : “”}`}
+                        className={`admin-history-card${panel.isActive ? " active" : ""}`}
                       >
-                        <span className=”admin-history-code”>
+                        <span className="admin-history-code">
                           {panel.missionCode}
                         </span>
-                        <div className=”admin-history-main”>
-                          <div className=”admin-history-title”>
-                            {panel.missionTitle || “—“}
+                        <div className="admin-history-main">
+                          <div className="admin-history-title">
+                            {panel.missionTitle || "—"}
                             {subCount > 0 && (
-                              <span className=”admin-submission-badge”>{subCount} សំណើ</span>
+                              <span className="admin-submission-badge">{subCount} សំណើ</span>
                             )}
                           </div>
-                          <div className=”admin-history-meta”>
+                          <div className="admin-history-meta">
                             {[panel.missionPlace, formatDateTime(panel.missionTime), formatDateTime(panel.savedAt)]
                               .filter(Boolean)
-                              .join(“ · “)}
+                              .join(" · ")}
                           </div>
-                          <div className=”admin-history-detail-row”>
+                          <div className="admin-history-detail-row">
                             {panel.participantCount ? <span>{panel.participantCount} នាក់</span> : null}
                             {panel.missionVia ? <span>តាមរយៈ: {panel.missionVia}</span> : null}
                             {panel.requestPlanFileName ? <span>{panel.requestPlanFileName}</span> : null}
@@ -707,40 +707,40 @@ export default function AdminDashboardPage({ onBackToMain, onLogout }) {
                         </div>
                         {panel.requestPlanFileKey ? (
                           <button
-                            type=”button”
-                            className=”ghost”
-                            style={{ fontSize: 13, padding: “5px 12px”, flexShrink: 0 }}
+                            type="button"
+                            className="ghost"
+                            style={{ fontSize: 13, padding: "5px 12px", flexShrink: 0 }}
                             onClick={() => openFileView(panel)}
                           >
                             មើលឯកសារ
                           </button>
                         ) : null}
                         <button
-                          type=”button”
-                          className=”ghost”
-                          style={{ fontSize: 13, padding: “5px 12px”, flexShrink: 0 }}
+                          type="button"
+                          className="ghost"
+                          style={{ fontSize: 13, padding: "5px 12px", flexShrink: 0 }}
                           onClick={() => handleEditMission(panel)}
                         >
                           កែប្រែ
                         </button>
                         {panel.isActive ? (
-                          <span className=”admin-history-active”>
+                          <span className="admin-history-active">
                             ● កំពុងប្រើ
                           </span>
                         ) : (
                           <button
-                            type=”button”
-                            className=”ghost”
-                            style={{ fontSize: 13, padding: “5px 12px”, flexShrink: 0 }}
+                            type="button"
+                            className="ghost"
+                            style={{ fontSize: 13, padding: "5px 12px", flexShrink: 0 }}
                             onClick={() => handleActivateMission(panel.missionCode)}
                           >
                             ដំណើរការ
                           </button>
                         )}
                         <button
-                          type=”button”
-                          className=”ghost”
-                          style={{ fontSize: 13, padding: “5px 12px”, color: “#92650a”, flexShrink: 0 }}
+                          type="button"
+                          className="ghost"
+                          style={{ fontSize: 13, padding: "5px 12px", color: "#92650a", flexShrink: 0 }}
                           onClick={() => handleArchiveMission(panel.missionCode)}
                         >
                           ប័ណ្ណស័រ
@@ -754,71 +754,71 @@ export default function AdminDashboardPage({ onBackToMain, onLogout }) {
           )}
 
           {/* ── Sub-page: ប័ណ្ណស័រ ── */}
-          {activePage === “history” && historySubPage === “archived” && (
+          {activePage === "history" && historySubPage === "archived" && (
             <>
-              <div className=”sys-manager-content-header admin-history-header”>
+              <div className="sys-manager-content-header admin-history-header">
                 <div>
-                  <h2 className=”sys-manager-content-title”>ប័ណ្ណស័រ</h2>
-                  <span className=”admin-history-count”>{archivedHistory.length} កំណត់ត្រា</span>
+                  <h2 className="sys-manager-content-title">ប័ណ្ណស័រ</h2>
+                  <span className="admin-history-count">{archivedHistory.length} កំណត់ត្រា</span>
                 </div>
                 {archivedHistory.length > 0 && (
-                  <div className=”admin-history-search-wrap”>
-                    <span className=”admin-history-search-icon” aria-hidden=”true”>⌕</span>
+                  <div className="admin-history-search-wrap">
+                    <span className="admin-history-search-icon" aria-hidden="true">⌕</span>
                     <input
-                      className=”admin-history-search”
-                      type=”search”
+                      className="admin-history-search"
+                      type="search"
                       value={historySearchText}
                       onChange={(event) => setHistorySearchText(event.target.value)}
-                      placeholder=”ស្វែងរកលេខកូដ កម្មវិធី ទីតាំង...”
-                      aria-label=”ស្វែងរកប័ណ្ណស័រ”
+                      placeholder="ស្វែងរកលេខកូដ កម្មវិធី ទីតាំង..."
+                      aria-label="ស្វែងរកប័ណ្ណស័រ"
                     />
                   </div>
                 )}
               </div>
 
               {archivedHistory.length === 0 ? (
-                <p className=”sys-table-empty”>ប័ណ្ណស័រទទេ — បេសកកម្មដែលបានដាក់ប័ណ្ណស័រនឹងបង្ហាញនៅទីនេះ។</p>
+                <p className="sys-table-empty">ប័ណ្ណស័រទទេ — បេសកកម្មដែលបានដាក់ប័ណ្ណស័រនឹងបង្ហាញនៅទីនេះ។</p>
               ) : filteredArchivedHistory.length === 0 ? (
-                <p className=”sys-table-empty”>មិនមានលទ្ធផលស្វែងរកសម្រាប់ “{historySearchText.trim()}” ទេ។</p>
+                <p className="sys-table-empty">មិនមានលទ្ធផលស្វែងរកសម្រាប់ "{historySearchText.trim()}" ទេ។</p>
               ) : (
-                <div className=”admin-history-list”>
+                <div className="admin-history-list">
                   {filteredArchivedHistory.map((panel) => (
-                    <div key={panel.missionCode} className=”admin-history-card admin-history-card--archived”>
-                      <span className=”admin-history-code”>{panel.missionCode}</span>
-                      <div className=”admin-history-main”>
-                        <div className=”admin-history-title”>{panel.missionTitle || “—“}</div>
-                        <div className=”admin-history-meta”>
+                    <div key={panel.missionCode} className="admin-history-card admin-history-card--archived">
+                      <span className="admin-history-code">{panel.missionCode}</span>
+                      <div className="admin-history-main">
+                        <div className="admin-history-title">{panel.missionTitle || "—"}</div>
+                        <div className="admin-history-meta">
                           {[panel.missionPlace, formatDateTime(panel.missionTime), formatDateTime(panel.savedAt)]
                             .filter(Boolean)
-                            .join(“ · “)}
+                            .join(" · ")}
                         </div>
-                        <div className=”admin-history-detail-row”>
+                        <div className="admin-history-detail-row">
                           {panel.participantCount ? <span>{panel.participantCount} នាក់</span> : null}
                           {panel.missionVia ? <span>តាមរយៈ: {panel.missionVia}</span> : null}
                         </div>
                       </div>
                       {panel.requestPlanFileKey ? (
                         <button
-                          type=”button”
-                          className=”ghost”
-                          style={{ fontSize: 13, padding: “5px 12px”, flexShrink: 0 }}
+                          type="button"
+                          className="ghost"
+                          style={{ fontSize: 13, padding: "5px 12px", flexShrink: 0 }}
                           onClick={() => openFileView(panel)}
                         >
                           មើលឯកសារ
                         </button>
                       ) : null}
                       <button
-                        type=”button”
-                        className=”ghost”
-                        style={{ fontSize: 13, padding: “5px 12px”, flexShrink: 0 }}
+                        type="button"
+                        className="ghost"
+                        style={{ fontSize: 13, padding: "5px 12px", flexShrink: 0 }}
                         onClick={() => handleRestoreMission(panel.missionCode)}
                       >
                         ស្ដារ
                       </button>
                       <button
-                        type=”button”
-                        className=”ghost”
-                        style={{ fontSize: 13, padding: “5px 12px”, color: “#b3261e”, flexShrink: 0 }}
+                        type="button"
+                        className="ghost"
+                        style={{ fontSize: 13, padding: "5px 12px", color: "#b3261e", flexShrink: 0 }}
                         onClick={() => handleDeleteHistoryMission(panel.missionCode, panel.requestPlanFileKey)}
                       >
                         លុបថេរ
