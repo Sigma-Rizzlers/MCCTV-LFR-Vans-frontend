@@ -89,7 +89,25 @@ function writeHistory(history) {
 }
 
 export function loadMissionHistory() {
-  return loadHistoryRaw();
+  return loadHistoryRaw().filter((p) => !p.isArchived);
+}
+
+export function loadArchivedHistory() {
+  return loadHistoryRaw().filter((p) => p.isArchived);
+}
+
+export function archiveMissionPanel(missionCode) {
+  const history = loadHistoryRaw().map((p) =>
+    p.missionCode === missionCode ? { ...p, isArchived: true, isActive: false } : p
+  );
+  writeHistory(history);
+}
+
+export function restoreMissionPanel(missionCode) {
+  const history = loadHistoryRaw().map((p) =>
+    p.missionCode === missionCode ? { ...p, isArchived: false } : p
+  );
+  writeHistory(history);
 }
 
 export function loadAdminMissionPanel() {

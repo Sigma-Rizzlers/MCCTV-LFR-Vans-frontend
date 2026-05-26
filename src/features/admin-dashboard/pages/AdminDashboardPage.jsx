@@ -9,10 +9,13 @@ import "../../sys-manager/styles/sysmanager.css";
 import {
   loadAdminMissionPanel,
   loadMissionHistory,
+  loadArchivedHistory,
   sanitizeAdminMissionPanel,
   saveAdminMissionPanel,
   updateAdminMissionPanel,
   activateMissionPanel,
+  archiveMissionPanel,
+  restoreMissionPanel,
   deleteMissionFromHistory,
   syncPanelsFromApi,
 } from "../../../utils/adminMissionPanel";
@@ -54,6 +57,23 @@ function formatDateTime(value) {
   }).format(date);
 }
 
+const reportHistoryKey = "mcctv:mission-request-history";
+
+function loadSubmissionCounts() {
+  try {
+    const raw = typeof window !== "undefined" && window.localStorage.getItem(reportHistoryKey);
+    if (!raw) return {};
+    const reports = JSON.parse(raw);
+    if (!Array.isArray(reports)) return {};
+    const counts = {};
+    reports.forEach((r) => {
+      const code = String(r?.adminPanel?.missionCode ?? "").trim();
+      if (code) counts[code] = (counts[code] ?? 0) + 1;
+    });
+    return counts;
+  } catch { return {}; }
+}
+
 function matchesHistorySearch(panel, query) {
   if (!query) return true;
 
@@ -84,17 +104,35 @@ export default function AdminDashboardPage({ onBackToMain, onLogout }) {
   const [fileViewUrl, setFileViewUrl] = useState(null);
   const [fileViewLoading, setFileViewLoading] = useState(false);
   const [editingMissionCode, setEditingMissionCode] = useState(null);
+  const [archivedHistory, setArchivedHistory] = useState(() => loadArchivedHistory());
+  const [historySubPage, setHistorySubPage] = useState("active");
+  const [historySortOrder, setHistorySortOrder] = useState("newest");
+  const [submissionCounts, setSubmissionCounts] = useState(() => loadSubmissionCounts());
   const requestPlanFileInputRef = useRef(null);
   const requestPlanFileRef = useRef(null);
   const normalizedHistorySearch = historySearchText.trim().toLowerCase();
-  const filteredMissionHistory = useMemo(
-    () => missionHistory.filter((panel) => matchesHistorySearch(panel, normalizedHistorySearch)),
-    [missionHistory, normalizedHistorySearch]
+  const filteredMissionHistory = useMemo(() => {
+    const filtered = missionHistory.filter((panel) => matchesHistorySearch(panel, normalizedHistorySearch));
+    return [...filtered].sort((a, b) => {
+      if (historySortOrder === "active") {
+        if (a.isActive !== b.isActive) return a.isActive ? -1 : 1;
+      }
+      const tA = new Date(a.savedAt).getTime() || 0;
+      const tB = new Date(b.savedAt).getTime() || 0;
+      return historySortOrder === "oldest" ? tA - tB : tB - tA;
+    });
+  }, [missionHistory, normalizedHistorySearch, historySortOrder]);
+
+  const filteredArchivedHistory = useMemo(
+    () => archivedHistory.filter((panel) => matchesHistorySearch(panel, normalizedHistorySearch)),
+    [archivedHistory, normalizedHistorySearch]
   );
 
   function refreshState() {
     setSavedPanel(loadAdminMissionPanel());
     setMissionHistory(loadMissionHistory());
+    setArchivedHistory(loadArchivedHistory());
+    setSubmissionCounts(loadSubmissionCounts());
   }
 
   useEffect(() => {
@@ -292,6 +330,17 @@ export default function AdminDashboardPage({ onBackToMain, onLogout }) {
     if (requestPlanFileInputRef.current) requestPlanFileInputRef.current.value = "";
   }
 
+  function handleArchiveMission(missionCode) {
+    archiveMissionPanel(missionCode);
+    refreshState();
+    setMissionStatusText("");
+  }
+
+  function handleRestoreMission(missionCode) {
+    restoreMissionPanel(missionCode);
+    refreshState();
+  }
+
   function handleActivateMission(missionCode) {
     activateMissionPanel(missionCode);
     refreshState();
@@ -373,12 +422,22 @@ export default function AdminDashboardPage({ onBackToMain, onLogout }) {
             </button>
             <button
               type="button"
-              className={`sys-nav-item${activePage === "history" ? " active" : ""}`}
-              onClick={() => setActivePage("history")}
+              className={`sys-nav-item${activePage === "history" && historySubPage === "active" ? " active" : ""}`}
+              onClick={() => { setActivePage("history"); setHistorySubPage("active"); }}
             >
               ប្រវត្តិបេសកកម្ម
               {missionHistory.length > 0 && (
                 <span className="sys-nav-badge">{missionHistory.length}</span>
+              )}
+            </button>
+            <button
+              type="button"
+              className={`sys-nav-item sys-nav-item--sub${activePage === "history" && historySubPage === "archived" ? " active" : ""}`}
+              onClick={() => { setActivePage("history"); setHistorySubPage("archived"); }}
+            >
+              ប័ណ្ណស័រ
+              {archivedHistory.length > 0 && (
+                <span className="sys-nav-badge">{archivedHistory.length}</span>
               )}
             </button>
           </nav>
@@ -571,100 +630,195 @@ export default function AdminDashboardPage({ onBackToMain, onLogout }) {
           )}
 
           {/* ── Page: ប្រវត្តិបេសកកម្ម ── */}
-          {activePage === "history" && (
+          {activePage === “history” && historySubPage === “active” && (
             <>
-              <div className="sys-manager-content-header admin-history-header">
+              <div className=”sys-manager-content-header admin-history-header”>
                 <div>
-                  <h2 className="sys-manager-content-title">ប្រវត្តិបេសកកម្ម</h2>
-                  <span className="admin-history-count">
+                  <h2 className=”sys-manager-content-title”>ប្រវត្តិបេសកកម្ម</h2>
+                  <span className=”admin-history-count”>
                     {normalizedHistorySearch
                       ? `${filteredMissionHistory.length} / ${missionHistory.length} កំណត់ត្រា`
                       : `${missionHistory.length} កំណត់ត្រា`}
                   </span>
                 </div>
-                {missionHistory.length > 0 ? (
-                  <div className="admin-history-search-wrap">
-                    <span className="admin-history-search-icon" aria-hidden="true">⌕</span>
-                    <input
-                      className="admin-history-search"
-                      type="search"
-                      value={historySearchText}
-                      onChange={(event) => setHistorySearchText(event.target.value)}
-                      placeholder="ស្វែងរកលេខកូដ កម្មវិធី ទីតាំង..."
-                      aria-label="ស្វែងរកប្រវត្តិបេសកកម្ម"
-                    />
-                  </div>
-                ) : null}
+                <div style={{ display: “flex”, gap: 8, alignItems: “center”, flexWrap: “wrap” }}>
+                  <select
+                    className=”admin-history-sort”
+                    value={historySortOrder}
+                    onChange={(e) => setHistorySortOrder(e.target.value)}
+                    aria-label=”តម្រៀបប្រវត្តិ”
+                  >
+                    <option value=”newest”>ថ្មីជាងគេ</option>
+                    <option value=”oldest”>ចាស់ជាងគេ</option>
+                    <option value=”active”>កំពុងប្រើដំបូង</option>
+                  </select>
+                  {missionHistory.length > 0 && (
+                    <div className=”admin-history-search-wrap”>
+                      <span className=”admin-history-search-icon” aria-hidden=”true”>⌕</span>
+                      <input
+                        className=”admin-history-search”
+                        type=”search”
+                        value={historySearchText}
+                        onChange={(event) => setHistorySearchText(event.target.value)}
+                        placeholder=”ស្វែងរកលេខកូដ កម្មវិធី ទីតាំង...”
+                        aria-label=”ស្វែងរកប្រវត្តិបេសកកម្ម”
+                      />
+                    </div>
+                  )}
+                </div>
               </div>
 
               {missionHistory.length === 0 ? (
-                <p className="sys-table-empty">មិនទាន់មានប្រវត្តិបេសកកម្មទេ។</p>
+                <p className=”sys-table-empty”>មិនទាន់មានប្រវត្តិបេសកកម្មទេ។</p>
               ) : filteredMissionHistory.length === 0 ? (
-                <p className="sys-table-empty">មិនមានលទ្ធផលស្វែងរកសម្រាប់ “{historySearchText.trim()}” ទេ។</p>
+                <p className=”sys-table-empty”>មិនមានលទ្ធផលស្វែងរកសម្រាប់ “{historySearchText.trim()}” ទេ។</p>
               ) : (
-                <div className="admin-history-list">
-                  {filteredMissionHistory.map((panel) => (
-                    <div
-                      key={panel.missionCode}
-                      className={`admin-history-card${panel.isActive ? " active" : ""}`}
-                    >
-                      <span className="admin-history-code">
-                        {panel.missionCode}
-                      </span>
-                      <div className="admin-history-main">
-                        <div className="admin-history-title">
-                          {panel.missionTitle || "—"}
+                <div className=”admin-history-list”>
+                  {filteredMissionHistory.map((panel) => {
+                    const subCount = submissionCounts[panel.missionCode] ?? 0;
+                    return (
+                      <div
+                        key={panel.missionCode}
+                        className={`admin-history-card${panel.isActive ? “ active” : “”}`}
+                      >
+                        <span className=”admin-history-code”>
+                          {panel.missionCode}
+                        </span>
+                        <div className=”admin-history-main”>
+                          <div className=”admin-history-title”>
+                            {panel.missionTitle || “—“}
+                            {subCount > 0 && (
+                              <span className=”admin-submission-badge”>{subCount} សំណើ</span>
+                            )}
+                          </div>
+                          <div className=”admin-history-meta”>
+                            {[panel.missionPlace, formatDateTime(panel.missionTime), formatDateTime(panel.savedAt)]
+                              .filter(Boolean)
+                              .join(“ · “)}
+                          </div>
+                          <div className=”admin-history-detail-row”>
+                            {panel.participantCount ? <span>{panel.participantCount} នាក់</span> : null}
+                            {panel.missionVia ? <span>តាមរយៈ: {panel.missionVia}</span> : null}
+                            {panel.requestPlanFileName ? <span>{panel.requestPlanFileName}</span> : null}
+                          </div>
                         </div>
-                        <div className="admin-history-meta">
+                        {panel.requestPlanFileKey ? (
+                          <button
+                            type=”button”
+                            className=”ghost”
+                            style={{ fontSize: 13, padding: “5px 12px”, flexShrink: 0 }}
+                            onClick={() => openFileView(panel)}
+                          >
+                            មើលឯកសារ
+                          </button>
+                        ) : null}
+                        <button
+                          type=”button”
+                          className=”ghost”
+                          style={{ fontSize: 13, padding: “5px 12px”, flexShrink: 0 }}
+                          onClick={() => handleEditMission(panel)}
+                        >
+                          កែប្រែ
+                        </button>
+                        {panel.isActive ? (
+                          <span className=”admin-history-active”>
+                            ● កំពុងប្រើ
+                          </span>
+                        ) : (
+                          <button
+                            type=”button”
+                            className=”ghost”
+                            style={{ fontSize: 13, padding: “5px 12px”, flexShrink: 0 }}
+                            onClick={() => handleActivateMission(panel.missionCode)}
+                          >
+                            ដំណើរការ
+                          </button>
+                        )}
+                        <button
+                          type=”button”
+                          className=”ghost”
+                          style={{ fontSize: 13, padding: “5px 12px”, color: “#92650a”, flexShrink: 0 }}
+                          onClick={() => handleArchiveMission(panel.missionCode)}
+                        >
+                          ប័ណ្ណស័រ
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </>
+          )}
+
+          {/* ── Sub-page: ប័ណ្ណស័រ ── */}
+          {activePage === “history” && historySubPage === “archived” && (
+            <>
+              <div className=”sys-manager-content-header admin-history-header”>
+                <div>
+                  <h2 className=”sys-manager-content-title”>ប័ណ្ណស័រ</h2>
+                  <span className=”admin-history-count”>{archivedHistory.length} កំណត់ត្រា</span>
+                </div>
+                {archivedHistory.length > 0 && (
+                  <div className=”admin-history-search-wrap”>
+                    <span className=”admin-history-search-icon” aria-hidden=”true”>⌕</span>
+                    <input
+                      className=”admin-history-search”
+                      type=”search”
+                      value={historySearchText}
+                      onChange={(event) => setHistorySearchText(event.target.value)}
+                      placeholder=”ស្វែងរកលេខកូដ កម្មវិធី ទីតាំង...”
+                      aria-label=”ស្វែងរកប័ណ្ណស័រ”
+                    />
+                  </div>
+                )}
+              </div>
+
+              {archivedHistory.length === 0 ? (
+                <p className=”sys-table-empty”>ប័ណ្ណស័រទទេ — បេសកកម្មដែលបានដាក់ប័ណ្ណស័រនឹងបង្ហាញនៅទីនេះ។</p>
+              ) : filteredArchivedHistory.length === 0 ? (
+                <p className=”sys-table-empty”>មិនមានលទ្ធផលស្វែងរកសម្រាប់ “{historySearchText.trim()}” ទេ។</p>
+              ) : (
+                <div className=”admin-history-list”>
+                  {filteredArchivedHistory.map((panel) => (
+                    <div key={panel.missionCode} className=”admin-history-card admin-history-card--archived”>
+                      <span className=”admin-history-code”>{panel.missionCode}</span>
+                      <div className=”admin-history-main”>
+                        <div className=”admin-history-title”>{panel.missionTitle || “—“}</div>
+                        <div className=”admin-history-meta”>
                           {[panel.missionPlace, formatDateTime(panel.missionTime), formatDateTime(panel.savedAt)]
                             .filter(Boolean)
-                            .join(" · ")}
+                            .join(“ · “)}
                         </div>
-                        <div className="admin-history-detail-row">
+                        <div className=”admin-history-detail-row”>
                           {panel.participantCount ? <span>{panel.participantCount} នាក់</span> : null}
                           {panel.missionVia ? <span>តាមរយៈ: {panel.missionVia}</span> : null}
-                          {panel.requestPlanFileName ? <span>{panel.requestPlanFileName}</span> : null}
                         </div>
                       </div>
                       {panel.requestPlanFileKey ? (
                         <button
-                          type="button"
-                          className="ghost"
-                          style={{ fontSize: 13, padding: "5px 12px", flexShrink: 0 }}
+                          type=”button”
+                          className=”ghost”
+                          style={{ fontSize: 13, padding: “5px 12px”, flexShrink: 0 }}
                           onClick={() => openFileView(panel)}
                         >
                           មើលឯកសារ
                         </button>
                       ) : null}
                       <button
-                        type="button"
-                        className="ghost"
-                        style={{ fontSize: 13, padding: "5px 12px", flexShrink: 0 }}
-                        onClick={() => handleEditMission(panel)}
+                        type=”button”
+                        className=”ghost”
+                        style={{ fontSize: 13, padding: “5px 12px”, flexShrink: 0 }}
+                        onClick={() => handleRestoreMission(panel.missionCode)}
                       >
-                        កែប្រែ
+                        ស្ដារ
                       </button>
-                      {panel.isActive ? (
-                        <span className="admin-history-active">
-                          ● កំពុងប្រើ
-                        </span>
-                      ) : (
-                        <button
-                          type="button"
-                          className="ghost"
-                          style={{ fontSize: 13, padding: "5px 12px", flexShrink: 0 }}
-                          onClick={() => handleActivateMission(panel.missionCode)}
-                        >
-                          ដំណើរការ
-                        </button>
-                      )}
                       <button
-                        type="button"
-                        className="ghost"
-                        style={{ fontSize: 13, padding: "5px 12px", color: "#b3261e", flexShrink: 0 }}
+                        type=”button”
+                        className=”ghost”
+                        style={{ fontSize: 13, padding: “5px 12px”, color: “#b3261e”, flexShrink: 0 }}
                         onClick={() => handleDeleteHistoryMission(panel.missionCode, panel.requestPlanFileKey)}
                       >
-                        លុប
+                        លុបថេរ
                       </button>
                     </div>
                   ))}

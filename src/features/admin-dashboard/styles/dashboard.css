@@ -354,13 +354,14 @@
 }
 
 .admin-history-title {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
   color: #3d2402;
   font-size: 14px;
   font-weight: 700;
   line-height: 1.45;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .admin-history-meta,
@@ -386,6 +387,50 @@
   color: #2f8d43;
   font-size: 12px;
   font-weight: 700;
+}
+
+/* Submission count badge */
+.admin-submission-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(199, 134, 18, 0.15);
+  border: 1px solid rgba(199, 134, 18, 0.4);
+  color: #7a5010;
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+/* Sort select */
+.admin-history-sort {
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(92, 53, 6, 0.2);
+  background: #fff;
+  font-family: var(--font-kh-sans);
+  font-size: 13px;
+  color: #5c3506;
+  cursor: pointer;
+}
+
+/* Archive subnav */
+.sys-nav-item--sub {
+  padding-left: 28px;
+  font-size: 13px;
+  opacity: 0.85;
+}
+
+.sys-nav-item--sub.active {
+  opacity: 1;
+}
+
+/* Archived card style */
+.admin-history-card--archived {
+  opacity: 0.72;
+  background: #f5f3ef;
+  border-style: dashed;
 }
 
 .admin-hero-stats {
