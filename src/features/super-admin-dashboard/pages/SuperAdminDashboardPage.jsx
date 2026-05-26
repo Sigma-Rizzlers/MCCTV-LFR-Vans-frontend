@@ -8,6 +8,7 @@ import "../../admin-dashboard/styles/dashboard.css";
 import "../../sys-manager/styles/sysmanager.css";
 import PdfTemplate from "../../report-form/components/PdfTemplate";
 import { loadAccounts } from "../../../utils/accountStorage";
+import { loadReportFiles, REPORT_FILE_FIELDS } from "../../../utils/reportFileStore";
 import { backfillMissionCodes } from "../../../utils/adminMissionPanel";
 import requestStore from "../../../store/requestStore";
 import { DATA_MODE } from "../../../utils/dataMode";
@@ -196,6 +197,10 @@ export default function SuperAdminDashboardPage({ onBackToMain, onLogout }) {
   const [approveLoading, setApproveLoading] = useState(new Set());
   const [apiWarning, setApiWarning] = useState(false);
   const [cacheAge, setCacheAge] = useState(() => getCacheAge());
+  const [imageViewReport, setImageViewReport] = useState(null);
+  const [imageViewFiles, setImageViewFiles] = useState({});
+  const [imageViewLoading, setImageViewLoading] = useState(false);
+  const [imageViewUrls, setImageViewUrls] = useState({});
 
   const currentRole = typeof window !== "undefined"
     ? (window.sessionStorage.getItem(sessionRoleKey) ?? "")
@@ -372,6 +377,33 @@ export default function SuperAdminDashboardPage({ onBackToMain, onLogout }) {
     setSelectedReports(group.reports);
     setPdfMissionGroup(group);
     setPdfInitialMode(mode);
+  }
+
+  async function openImageView(report) {
+    setImageViewReport(report);
+    setImageViewFiles({});
+    setImageViewUrls({});
+    setImageViewLoading(true);
+    try {
+      const files = await loadReportFiles(report.requestId, REPORT_FILE_FIELDS);
+      const urls = {};
+      for (const [slot, blob] of Object.entries(files)) {
+        if (blob) urls[slot] = URL.createObjectURL(blob);
+      }
+      setImageViewFiles(files);
+      setImageViewUrls(urls);
+    } catch {
+      // show empty state
+    } finally {
+      setImageViewLoading(false);
+    }
+  }
+
+  function closeImageView() {
+    Object.values(imageViewUrls).forEach((url) => URL.revokeObjectURL(url));
+    setImageViewReport(null);
+    setImageViewFiles({});
+    setImageViewUrls({});
   }
 
   function confirmDeleteMission() {
@@ -912,6 +944,13 @@ export default function SuperAdminDashboardPage({ onBackToMain, onLogout }) {
                   >
                     មើល PDF
                   </button>
+                  <button
+                    type="button"
+                    className="ghost sys-action-btn"
+                    onClick={() => openImageView(report)}
+                  >
+                    រូបភាព
+                  </button>
                   {report.id && DATA_MODE !== "local" && (
                     <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>
                       {report.approvalStatus !== "approved" && (
@@ -942,6 +981,74 @@ export default function SuperAdminDashboardPage({ onBackToMain, onLogout }) {
               ))}
             </div>
           </aside>
+        </div>
+      ) : null}
+
+      {imageViewReport ? (
+        <div
+          className="sys-modal-overlay"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="imageViewTitle"
+          onClick={closeImageView}
+        >
+          <div className="sys-modal-card superadmin-image-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="sys-modal-header">
+              <div>
+                <h3 id="imageViewTitle">រូបភាព / ឯកសារ</h3>
+                <p style={{ margin: "2px 0 0", fontSize: 13, color: "#7a6846" }}>
+                  {getReportUnitName(imageViewReport, accounts)} · {imageViewReport.requestId}
+                </p>
+              </div>
+              <button type="button" className="ghost" onClick={closeImageView}>បិទ</button>
+            </div>
+            <div className="sys-modal-body">
+              {imageViewLoading ? (
+                <p style={{ textAlign: "center", color: "#7a6846", padding: "32px 0" }}>កំពុងផ្ទុក...</p>
+              ) : Object.values(imageViewUrls).every((u) => !u) ? (
+                <p style={{ textAlign: "center", color: "#7a6846", padding: "32px 0" }}>មិនមានរូបភាព ឬ ឯកសារទេ</p>
+              ) : (
+                <div className="superadmin-image-grid">
+                  {[
+                    { slot: "support",        label: "ឯកសារគាំទ្រ" },
+                    { slot: "lodging",        label: "ទីកន្លែងស្នាក់នៅ" },
+                    { slot: "breakfast",      label: "អាហារព្រឹក" },
+                    { slot: "lunch",          label: "អាហារថ្ងៃ" },
+                    { slot: "dinner",         label: "អាហារល្ងាច" },
+                    { slot: "implementation", label: "ការអនុវត្តន៍" },
+                  ].map(({ slot, label }) => {
+                    const url = imageViewUrls[slot];
+                    const blob = imageViewFiles[slot];
+                    if (!url) return null;
+                    const isPdf = blob?.type === "application/pdf";
+                    return (
+                      <div key={slot} className="superadmin-image-item">
+                        <p className="superadmin-image-label">{label}</p>
+                        {isPdf ? (
+                          <a
+                            href={url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="superadmin-image-pdf-link"
+                          >
+                            📄 {blob.name || "មើលឯកសារ PDF"}
+                          </a>
+                        ) : (
+                          <a href={url} target="_blank" rel="noopener noreferrer">
+                            <img
+                              src={url}
+                              alt={label}
+                              className="superadmin-image-thumb"
+                            />
+                          </a>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       ) : null}
 
