@@ -18,6 +18,7 @@ import {
 import {
   clearAdminMissionFile,
   createAdminMissionFileKey,
+  loadAdminMissionFile,
   saveAdminMissionFile
 } from "../../../utils/adminMissionFileStore";
 import { DATA_MODE } from "../../../utils/dataMode";
@@ -78,6 +79,9 @@ export default function AdminDashboardPage({ onBackToMain, onLogout }) {
   const [historySearchText, setHistorySearchText] = useState("");
   const [remoteIdMap, setRemoteIdMap] = useState({});
   const [panelSyncError, setPanelSyncError] = useState("");
+  const [fileViewPanel, setFileViewPanel] = useState(null);
+  const [fileViewUrl, setFileViewUrl] = useState(null);
+  const [fileViewLoading, setFileViewLoading] = useState(false);
   const requestPlanFileInputRef = useRef(null);
   const requestPlanFileRef = useRef(null);
   const normalizedHistorySearch = historySearchText.trim().toLowerCase();
@@ -238,6 +242,27 @@ export default function AdminDashboardPage({ onBackToMain, onLogout }) {
     const activated = loadAdminMissionPanel();
     if (activated) setMissionData((current) => ({ ...current, ...activated }));
     setMissionStatusText(`បានដំណើរការ — ${missionCode}`);
+  }
+
+  async function openFileView(panel) {
+    if (!panel.requestPlanFileKey) return;
+    setFileViewPanel(panel);
+    setFileViewUrl(null);
+    setFileViewLoading(true);
+    try {
+      const blob = await loadAdminMissionFile(panel.requestPlanFileKey);
+      if (blob) setFileViewUrl(URL.createObjectURL(blob));
+    } catch {
+      // show empty state
+    } finally {
+      setFileViewLoading(false);
+    }
+  }
+
+  function closeFileView() {
+    if (fileViewUrl) URL.revokeObjectURL(fileViewUrl);
+    setFileViewPanel(null);
+    setFileViewUrl(null);
   }
 
   async function handleDeleteHistoryMission(missionCode, fileKey) {
@@ -529,6 +554,16 @@ export default function AdminDashboardPage({ onBackToMain, onLogout }) {
                           {panel.requestPlanFileName ? <span>{panel.requestPlanFileName}</span> : null}
                         </div>
                       </div>
+                      {panel.requestPlanFileKey ? (
+                        <button
+                          type="button"
+                          className="ghost"
+                          style={{ fontSize: 13, padding: "5px 12px", flexShrink: 0 }}
+                          onClick={() => openFileView(panel)}
+                        >
+                          មើលឯកសារ
+                        </button>
+                      ) : null}
                       {panel.isActive ? (
                         <span className="admin-history-active">
                           ● កំពុងប្រើ
@@ -560,6 +595,63 @@ export default function AdminDashboardPage({ onBackToMain, onLogout }) {
 
         </main>
       </div>
+
+      {fileViewPanel ? (
+        <div
+          className="sys-modal-overlay"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="adminFileViewTitle"
+          onClick={closeFileView}
+        >
+          <div className="sys-modal-card superadmin-image-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="sys-modal-header">
+              <div>
+                <h3 id="adminFileViewTitle">ឯកសារបេសកកម្ម</h3>
+                <p style={{ margin: "2px 0 0", fontSize: 13, color: "#7a6846" }}>
+                  {fileViewPanel.missionCode} · {fileViewPanel.missionTitle || "—"}
+                </p>
+              </div>
+              <button type="button" className="ghost" onClick={closeFileView}>បិទ</button>
+            </div>
+            <div className="sys-modal-body">
+              {fileViewLoading ? (
+                <p style={{ textAlign: "center", color: "#7a6846", padding: "32px 0" }}>កំពុងផ្ទុក...</p>
+              ) : !fileViewUrl ? (
+                <p style={{ textAlign: "center", color: "#7a6846", padding: "32px 0" }}>មិនអាចផ្ទុកឯកសារបានទេ</p>
+              ) : fileViewPanel.requestPlanFileType === "application/pdf" || fileViewPanel.requestPlanFileName?.toLowerCase().endsWith(".pdf") ? (
+                <div style={{ textAlign: "center", padding: "16px 0" }}>
+                  <p style={{ marginBottom: 12, color: "#5c3506", fontWeight: 600 }}>
+                    📄 {fileViewPanel.requestPlanFileName}
+                  </p>
+                  <a
+                    href={fileViewUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="primary"
+                    style={{ display: "inline-block", padding: "10px 24px", borderRadius: 10, textDecoration: "none" }}
+                  >
+                    បើក PDF
+                  </a>
+                </div>
+              ) : (
+                <div style={{ textAlign: "center" }}>
+                  <p style={{ marginBottom: 12, color: "#5c3506", fontWeight: 600 }}>
+                    {fileViewPanel.requestPlanFileName}
+                  </p>
+                  <a href={fileViewUrl} target="_blank" rel="noopener noreferrer">
+                    <img
+                      src={fileViewUrl}
+                      alt={fileViewPanel.requestPlanFileName}
+                      style={{ maxWidth: "100%", maxHeight: "60vh", borderRadius: 10, border: "1px solid rgba(92,53,6,0.18)" }}
+                    />
+                  </a>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       {panelSyncError && (
         <div role="alert" style={{
