@@ -415,15 +415,47 @@
   cursor: pointer;
 }
 
-/* Archive subnav */
-.sys-nav-item--sub {
-  padding-left: 28px;
-  font-size: 13px;
-  opacity: 0.85;
+/* Archive subnav group */
+.admin-subnav-group {
+  margin-top: 2px;
+  padding-left: 14px;
+  border-left: 2px solid rgba(154, 120, 64, 0.28);
+  margin-left: 16px;
 }
 
-.sys-nav-item--sub.active {
-  opacity: 1;
+.admin-subnav-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  text-align: left;
+  padding: 7px 12px;
+  border-radius: 6px;
+  font-family: var(--font-kh-sans);
+  font-size: 13px;
+  font-weight: 600;
+  color: #8a6a38;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.admin-subnav-item:hover {
+  background: rgba(199, 145, 44, 0.1);
+  color: #4a2e08;
+}
+
+.admin-subnav-item.active {
+  background: rgba(199, 145, 44, 0.18);
+  color: #4a2e08;
+  font-weight: 700;
+}
+
+.admin-subnav-icon {
+  font-size: 14px;
+  line-height: 1;
+  flex-shrink: 0;
 }
 
 /* Archived card style */

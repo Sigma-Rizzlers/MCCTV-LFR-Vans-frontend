@@ -430,16 +430,19 @@ export default function AdminDashboardPage({ onBackToMain, onLogout }) {
                 <span className="sys-nav-badge">{missionHistory.length}</span>
               )}
             </button>
-            <button
-              type="button"
-              className={`sys-nav-item sys-nav-item--sub${activePage === "history" && historySubPage === "archived" ? " active" : ""}`}
-              onClick={() => { setActivePage("history"); setHistorySubPage("archived"); }}
-            >
-              ប័ណ្ណស័រ
-              {archivedHistory.length > 0 && (
-                <span className="sys-nav-badge">{archivedHistory.length}</span>
-              )}
-            </button>
+            <div className="admin-subnav-group">
+              <button
+                type="button"
+                className={`admin-subnav-item${activePage === "history" && historySubPage === "archived" ? " active" : ""}`}
+                onClick={() => { setActivePage("history"); setHistorySubPage("archived"); }}
+              >
+                <span className="admin-subnav-icon">🗂</span>
+                ប័ណ្ណស័រ
+                {archivedHistory.length > 0 && (
+                  <span className="sys-nav-badge">{archivedHistory.length}</span>
+                )}
+              </button>
+            </div>
           </nav>
         </aside>
 
