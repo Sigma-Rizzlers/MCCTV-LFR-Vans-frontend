@@ -40,14 +40,18 @@ const stepTwoFieldNames = [
   "equipmentPlanCount",
   "equipmentActualCount",
   "departDate",
+  "departTime",
   "arriveDate",
+  "arriveTime",
   "routeDistance",
   "travelDuration"
 ];
 const stepFourFieldNames = [
   "meetingParticipantsCount",
   "meetingParticipantsFemale",
+  "meetingStartDate",
   "meetingStartTime",
+  "meetingEndDate",
   "meetingEndTime",
   "lodgingPlace",
   "lodgingCount",
@@ -63,9 +67,13 @@ const stepSixFieldNames = [
   "implementationPlanFemale",
   "implementationActualTotal",
   "implementationActualFemale",
+  "implementationDurationCheckDate",
   "implementationDurationCheck",
+  "implementationDurationManageDate",
   "implementationDurationManage",
+  "returnDepartDate",
   "returnDepartTime",
+  "returnArriveDate",
   "returnArriveTime",
   "returnSafetyStatus",
   "returnIssue"
@@ -1039,24 +1047,40 @@ export default function MissionRequestForm({
               </div>
 	              <div className="field-grid">
 	                <label className="field">
-	                  <span>ចេញដំណើរ</span>
-	                  <input
-	                    type="date"
-	                    name="departDate"
-                    value={formData.departDate}
-                    onChange={onChange}
-                    required
-	                  />
+	                  <span>ពេលវេលាចេញដំណើរ</span>
+	                  <div className="date-time-wrap">
+	                    <input
+	                      type="date"
+	                      name="departDate"
+	                      value={formData.departDate}
+	                      onChange={onChange}
+	                      required
+	                    />
+	                    <input
+	                      type="time"
+	                      name="departTime"
+	                      value={formData.departTime}
+	                      onChange={onChange}
+	                    />
+	                  </div>
 	                </label>
 	                <label className="field">
-	                  <span>ទៅដល់</span>
-	                  <input
-	                    type="date"
-	                    name="arriveDate"
-                    value={formData.arriveDate}
-                    onChange={onChange}
-                    required
-	                  />
+	                  <span>ពេលវេលាទៅដល់</span>
+	                  <div className="date-time-wrap">
+	                    <input
+	                      type="date"
+	                      name="arriveDate"
+	                      value={formData.arriveDate}
+	                      onChange={onChange}
+	                      required
+	                    />
+	                    <input
+	                      type="time"
+	                      name="arriveTime"
+	                      value={formData.arriveTime}
+	                      onChange={onChange}
+	                    />
+	                  </div>
 	                </label>
 	                <label className="field">
 	                  <span>ចំងាយផ្លូវ</span>
@@ -1121,23 +1145,39 @@ export default function MissionRequestForm({
                 </label>
                 <label className="field">
                   <span>រយៈពេល (ចាប់ផ្តើម)</span>
-                  <input
-                    type="time"
-                    name="meetingStartTime"
-                    value={formData.meetingStartTime}
-                    onChange={onChange}
-                    required
-                  />
+                  <div className="date-time-wrap">
+                    <input
+                      type="date"
+                      name="meetingStartDate"
+                      value={formData.meetingStartDate}
+                      onChange={onChange}
+                    />
+                    <input
+                      type="time"
+                      name="meetingStartTime"
+                      value={formData.meetingStartTime}
+                      onChange={onChange}
+                      required
+                    />
+                  </div>
                 </label>
                 <label className="field">
                   <span>រយៈពេល (បញ្ចប់)</span>
-                  <input
-                    type="time"
-                    name="meetingEndTime"
-                    value={formData.meetingEndTime}
-                    onChange={onChange}
-                    required
-                  />
+                  <div className="date-time-wrap">
+                    <input
+                      type="date"
+                      name="meetingEndDate"
+                      value={formData.meetingEndDate}
+                      onChange={onChange}
+                    />
+                    <input
+                      type="time"
+                      name="meetingEndTime"
+                      value={formData.meetingEndTime}
+                      onChange={onChange}
+                      required
+                    />
+                  </div>
                 </label>
               </div>
             </section>
@@ -1380,23 +1420,39 @@ export default function MissionRequestForm({
                 </label>
                 <label className="field">
                   <span>រយៈពេលនៃការអនុវត្តន៍ (ត្រួតពិនិត្យ)</span>
-                  <input
-                    type="time"
-                    name="implementationDurationCheck"
-                    value={formData.implementationDurationCheck}
-                    onChange={onChange}
-                    required
-                  />
+                  <div className="date-time-wrap">
+                    <input
+                      type="date"
+                      name="implementationDurationCheckDate"
+                      value={formData.implementationDurationCheckDate}
+                      onChange={onChange}
+                    />
+                    <input
+                      type="time"
+                      name="implementationDurationCheck"
+                      value={formData.implementationDurationCheck}
+                      onChange={onChange}
+                      required
+                    />
+                  </div>
                 </label>
                 <label className="field">
                   <span>រយៈពេលនៃការអនុវត្តន៍ (គ្រប់គ្រង)</span>
-                  <input
-                    type="time"
-                    name="implementationDurationManage"
-                    value={formData.implementationDurationManage}
-                    onChange={onChange}
-                    required
-                  />
+                  <div className="date-time-wrap">
+                    <input
+                      type="date"
+                      name="implementationDurationManageDate"
+                      value={formData.implementationDurationManageDate}
+                      onChange={onChange}
+                    />
+                    <input
+                      type="time"
+                      name="implementationDurationManage"
+                      value={formData.implementationDurationManage}
+                      onChange={onChange}
+                      required
+                    />
+                  </div>
                 </label>
               </div>
               <div className="upload-block">
@@ -1432,23 +1488,39 @@ export default function MissionRequestForm({
               <div className="field-grid">
                 <label className="field">
                   <span>ពេលវេលា (ចេញដំណើរ)</span>
-                  <input
-                    type="time"
-                    name="returnDepartTime"
-                    value={formData.returnDepartTime}
-                    onChange={onChange}
-                    required
-                  />
+                  <div className="date-time-wrap">
+                    <input
+                      type="date"
+                      name="returnDepartDate"
+                      value={formData.returnDepartDate}
+                      onChange={onChange}
+                    />
+                    <input
+                      type="time"
+                      name="returnDepartTime"
+                      value={formData.returnDepartTime}
+                      onChange={onChange}
+                      required
+                    />
+                  </div>
                 </label>
                 <label className="field">
                   <span>ពេលវេលា (មកដល់)</span>
-                  <input
-                    type="time"
-                    name="returnArriveTime"
-                    value={formData.returnArriveTime}
-                    onChange={onChange}
-                    required
-                  />
+                  <div className="date-time-wrap">
+                    <input
+                      type="date"
+                      name="returnArriveDate"
+                      value={formData.returnArriveDate}
+                      onChange={onChange}
+                    />
+                    <input
+                      type="time"
+                      name="returnArriveTime"
+                      value={formData.returnArriveTime}
+                      onChange={onChange}
+                      required
+                    />
+                  </div>
                 </label>
                 <label className="field">
                   <span>ស្តានភាព</span>

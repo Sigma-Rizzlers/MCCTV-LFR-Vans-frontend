@@ -55,6 +55,9 @@
 .compact-duration-field .duration-input-wrap { display: flex; align-items: stretch; width: min(100%, 190px); }
 .compact-duration-field .duration-input-wrap input { border-top-right-radius: 0; border-bottom-right-radius: 0; }
 .duration-input-addon { display: inline-flex; align-items: center; justify-content: center; padding: 0 14px; border: 1px solid rgba(92, 53, 6, 0.18); border-left: 0; border-top-right-radius: 12px; border-bottom-right-radius: 12px; background: #f7edd8; color: #5c3506; white-space: nowrap; }
+.date-time-wrap { display: flex; gap: 8px; align-items: stretch; }
+.date-time-wrap input[type="date"] { flex: 1.6; min-width: 0; }
+.date-time-wrap input[type="time"] { flex: 1; min-width: 0; }
 .field-error { margin: 0; font-size: 12px; font-weight: 600; color: #9f2419; }
 .field.full { grid-column: 1 / -1; }
 .meal-phase-card { display: grid; gap: 16px; }

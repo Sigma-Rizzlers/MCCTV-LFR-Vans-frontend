@@ -139,11 +139,6 @@
   gap: 12px;
 }
 
-.mission-panel-file-section {
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: end;
-}
-
 .mission-panel-section-copy {
   min-width: 0;
   gap: 6px;
@@ -161,24 +156,27 @@
   color: #9f2419;
 }
 
+.mission-panel-file-row {
+  display: flex;
+  gap: 10px;
+  align-items: stretch;
+}
+
 .mission-panel-file-name {
+  flex: 1;
+  min-width: 0;
   white-space: normal;
 }
 
-.mission-panel-section-actions {
-  display: flex;
-  align-items: center;
-  justify-content: flex-start;
-}
-
-.mission-panel-section-actions .primary {
-  min-width: 136px;
+.mission-panel-file-btn {
+  flex-shrink: 0;
   padding: 12px 18px;
   border-radius: 14px;
   box-shadow: none;
+  white-space: nowrap;
 }
 
-.mission-panel-section-actions .primary:disabled {
+.mission-panel-file-btn:disabled {
   opacity: 0.65;
   cursor: not-allowed;
 }

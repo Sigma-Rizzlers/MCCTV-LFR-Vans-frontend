@@ -99,8 +99,8 @@ function buildReportSections(report, fileUrls = {}) {
         <h3>ព័ត៌មានការធ្វើដំណើរ</h3>
         <table className="pdf-member-table">
           <tbody>
-            <tr><th>ថ្ងៃចេញដំណើរ</th><td>{formatDate(formData.departDate)}</td></tr>
-            <tr><th>ថ្ងៃដល់</th><td>{formatDate(formData.arriveDate)}</td></tr>
+            <tr><th>ពេលវេលាចេញដំណើរ</th><td>{formatDate(formData.departDate)}{formData.departTime ? ` ម៉ោង ${formData.departTime}` : ""}</td></tr>
+            <tr><th>ពេលវេលាទៅដល់</th><td>{formatDate(formData.arriveDate)}{formData.arriveTime ? ` ម៉ោង ${formData.arriveTime}` : ""}</td></tr>
             <tr><th>ចម្ងាយផ្លូវ (គម)</th><td>{renderValue(formData.routeDistance)}</td></tr>
             <tr><th>រយៈពេលធ្វើដំណើរ (ម៉ោង)</th><td>{renderValue(formData.travelDuration)}</td></tr>
           </tbody>
@@ -113,8 +113,8 @@ function buildReportSections(report, fileUrls = {}) {
           <tbody>
             <tr><th>ចំនួនអ្នកចូលរួម</th><td>{renderValue(formData.meetingParticipantsCount)}</td></tr>
             <tr><th>ចំនួនស្រី</th><td>{renderValue(formData.meetingParticipantsFemale)}</td></tr>
-            <tr><th>ម៉ោងចាប់ផ្ដើម</th><td>{renderValue(formData.meetingStartTime)}</td></tr>
-            <tr><th>ម៉ោងបញ្ចប់</th><td>{renderValue(formData.meetingEndTime)}</td></tr>
+            <tr><th>រយៈពេល (ចាប់ផ្ដើម)</th><td>{formData.meetingStartDate ? `${formatDate(formData.meetingStartDate)} ` : ""}{renderValue(formData.meetingStartTime)}</td></tr>
+            <tr><th>រយៈពេល (បញ្ចប់)</th><td>{formData.meetingEndDate ? `${formatDate(formData.meetingEndDate)} ` : ""}{renderValue(formData.meetingEndTime)}</td></tr>
           </tbody>
         </table>
       </section>
@@ -196,8 +196,8 @@ function buildReportSections(report, fileUrls = {}) {
             <tr><th>ចំនួនផែនការស្រី</th><td>{renderValue(formData.implementationPlanFemale)}</td></tr>
             <tr><th>ចំនួនជាក់ស្តែងសរុប</th><td>{renderValue(formData.implementationActualTotal)}</td></tr>
             <tr><th>ចំនួនជាក់ស្តែងស្រី</th><td>{renderValue(formData.implementationActualFemale)}</td></tr>
-            <tr><th>រយៈពេលត្រួតពិនិត្យ</th><td>{renderValue(formData.implementationDurationCheck)}</td></tr>
-            <tr><th>រយៈពេលគ្រប់គ្រង</th><td>{renderValue(formData.implementationDurationManage)}</td></tr>
+            <tr><th>រយៈពេលត្រួតពិនិត្យ</th><td>{formData.implementationDurationCheckDate ? `${formatDate(formData.implementationDurationCheckDate)} ` : ""}{renderValue(formData.implementationDurationCheck)}</td></tr>
+            <tr><th>រយៈពេលគ្រប់គ្រង</th><td>{formData.implementationDurationManageDate ? `${formatDate(formData.implementationDurationManageDate)} ` : ""}{renderValue(formData.implementationDurationManage)}</td></tr>
           </tbody>
         </table>
         {renderFileAttachment(fileUrls.implementation, "រូបភាពអនុវត្ត")}
@@ -207,8 +207,8 @@ function buildReportSections(report, fileUrls = {}) {
         <h3>ការត្រឡប់មកវិញ</h3>
         <table className="pdf-member-table">
           <tbody>
-            <tr><th>ម៉ោងចេញដំណើរ</th><td>{renderValue(formData.returnDepartTime)}</td></tr>
-            <tr><th>ម៉ោងដល់</th><td>{renderValue(formData.returnArriveTime)}</td></tr>
+            <tr><th>ពេលវេលា (ចេញដំណើរ)</th><td>{formData.returnDepartDate ? `${formatDate(formData.returnDepartDate)} ` : ""}{renderValue(formData.returnDepartTime)}</td></tr>
+            <tr><th>ពេលវេលា (មកដល់)</th><td>{formData.returnArriveDate ? `${formatDate(formData.returnArriveDate)} ` : ""}{renderValue(formData.returnArriveTime)}</td></tr>
             <tr><th>សុវត្ថិភាព</th><td>{renderValue(formData.returnSafetyStatus)}</td></tr>
             <tr><th>បញ្ហាជួបប្រទះ</th><td>{renderValue(formData.returnIssue)}</td></tr>
           </tbody>

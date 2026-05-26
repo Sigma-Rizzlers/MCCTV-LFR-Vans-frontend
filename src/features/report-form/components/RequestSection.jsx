@@ -202,21 +202,21 @@ function MissionPanelCard({ panel, filePreview, onReviewFile }) {
       ) : null}
 
       {hasRequestPlanFile ? (
-        <section className="mission-panel-section mission-panel-file-section">
+        <section className="mission-panel-section">
           <div className="field mission-panel-section-copy">
             <span>ឯកសារស្នើសុំផែនការ កំលាំង និងសម្ភារៈបច្ចេកទេស</span>
-            <div className="mission-panel-section-value mission-panel-file-name">{panel.requestPlanFileName}</div>
+            <div className="mission-panel-file-row">
+              <div className="mission-panel-section-value mission-panel-file-name">{panel.requestPlanFileName}</div>
+              <button
+                className="primary mission-panel-file-btn"
+                type="button"
+                onClick={onReviewFile}
+                disabled={filePreview.loading || !filePreview.url}
+              >
+                {filePreview.loading ? "កំពុងរៀបចំ..." : "ពិនិត្យឯកសារ"}
+              </button>
+            </div>
             <p className={`mission-panel-section-note${filePreview.error ? " error" : ""}`}>{fileStatusText}</p>
-          </div>
-          <div className="mission-panel-section-actions">
-            <button
-              className="primary"
-              type="button"
-              onClick={onReviewFile}
-              disabled={filePreview.loading || !filePreview.url}
-            >
-              {filePreview.loading ? "កំពុងរៀបចំ..." : "ពិនិត្យឯកសារ"}
-            </button>
           </div>
         </section>
       ) : null}

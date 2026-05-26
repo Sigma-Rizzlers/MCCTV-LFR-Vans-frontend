@@ -28,15 +28,18 @@
     grid-template-columns: 1fr;
   }
 
-  .mission-panel-file-section,
   .file-review-header {
     grid-template-columns: 1fr;
   }
 
-  .mission-panel-section-actions,
+  .mission-panel-file-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .mission-panel-file-btn,
   .file-review-actions {
     width: 100%;
-    justify-content: flex-start;
   }
 
   .field-grid {
