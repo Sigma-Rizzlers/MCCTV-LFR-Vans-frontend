@@ -309,6 +309,9 @@ export default function SuperAdminDashboardPage({ onBackToMain, onLogout }) {
       if (g.program.toLowerCase().includes(q)) return true;
       if (g.location.toLowerCase().includes(q)) return true;
       if (g.duration.toLowerCase().includes(q)) return true;
+      if (String(g.unitCount).includes(q)) return true;
+      if (g.date && g.date.toLowerCase().includes(q)) return true;
+      if (formatDate(g.date).toLowerCase().includes(q)) return true;
       return g.reports.some((r) => {
         if (r.requestId.toLowerCase().includes(q)) return true;
         const username = toText(r.submitterUsername).toLowerCase();
