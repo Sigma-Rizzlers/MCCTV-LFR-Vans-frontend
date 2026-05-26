@@ -636,7 +636,7 @@ export default function SuperAdminDashboardPage({ onBackToMain, onLogout }) {
                       <th>លេខកូដ</th>
                       <th>កម្មវិធី</th>
                       <th>ទីតាំង</th>
-                      <th>ចំនួនអង្គភាពចូលរួម</th>
+                      <th>ចំនួនអង្គភាពចូលរួម សរុប</th>
                       <th>កាលបរិចេ្ចក</th>
                       <th>រយៈពេល</th>
                       <th>សកម្មភាព</th>
