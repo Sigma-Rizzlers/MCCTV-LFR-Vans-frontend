@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import ChangePasswordModal from "../../../components/ChangePasswordModal";
 import { initialReportForm, initialStatusText, reportNavItems } from "../constants/reportFormConfig";
 import ReportHeader from "../components/ReportHeader";
 import RequestSection from "../components/RequestSection";
@@ -191,6 +192,7 @@ export default function ReportFormPage({
   onAdminLogout,
   onOpenAdminDashboard
 }) {
+  const [showChangePassword, setShowChangePassword] = useState(false);
   const [initialUserState] = useState(getInitialUserState);
   const [activeSection, setActiveSection] = useState("request");
   const [savedProfile, setSavedProfile] = useState(initialUserState.savedProfile);
@@ -759,16 +761,12 @@ export default function ReportFormPage({
             </div>
           </div>
           <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
-            <button
-              type="button"
-              className="ghost"
-              style={{ fontSize: 14 }}
-              onClick={onAdminLogout}
-            >
-              ចាកចេញ
-            </button>
+            <button type="button" className="ghost" style={{ fontSize: 14 }} onClick={() => setShowChangePassword(true)}>លេខសម្ងាត់</button>
+            <button type="button" className="ghost" style={{ fontSize: 14 }} onClick={onAdminLogout}>ចាកចេញ</button>
           </div>
         </div>
+
+        {showChangePassword && <ChangePasswordModal onClose={() => setShowChangePassword(false)} />}
 
         <div className="sys-manager-body">
           <aside className="sys-manager-sidebar">

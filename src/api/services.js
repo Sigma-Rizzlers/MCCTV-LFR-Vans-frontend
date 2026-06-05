@@ -237,6 +237,8 @@ export const uploadReportFile = (id, slot, file) => {
 // ─── Users ────────────────────────────────────────────────────────────────────
 
 export const getMe = () => api.get("/api/v1/users/me/");
+export const changePassword = (currentPassword, newPassword) =>
+  api.post("/api/v1/users/me/change-password/", { currentPassword, newPassword });
 export const getUsers = (params = {}) => api.get("/api/v1/users/", { params });
 /**
  * @unused — backend endpoint exists and is ready.

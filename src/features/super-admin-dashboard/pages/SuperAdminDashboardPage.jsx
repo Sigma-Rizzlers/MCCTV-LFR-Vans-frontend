@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import ChangePasswordModal from "../../../components/ChangePasswordModal";
 import "../../report-form/styles/layout.css";
 import "../../report-form/styles/request.css";
 import "../../report-form/styles/form.css";
@@ -180,6 +181,7 @@ function emptyMigrationState() {
 }
 
 export default function SuperAdminDashboardPage({ onBackToMain, onLogout }) {
+  const [showChangePassword, setShowChangePassword] = useState(false);
   const [activeSection, setActiveSection] = useState("missions");
   const [refreshKey, setRefreshKey] = useState(0);
   const [selectedReports, setSelectedReports] = useState(null);
@@ -504,9 +506,12 @@ export default function SuperAdminDashboardPage({ onBackToMain, onLogout }) {
           {onBackToMain ? (
             <button type="button" className="ghost" onClick={onBackToMain}>ទំព័រដើម</button>
           ) : null}
+          <button type="button" className="ghost" onClick={() => setShowChangePassword(true)}>លេខសម្ងាត់</button>
           <button type="button" className="ghost" onClick={onLogout}>ចាកចេញ</button>
         </div>
       </header>
+
+      {showChangePassword && <ChangePasswordModal onClose={() => setShowChangePassword(false)} />}
 
       <div className="sys-manager-body">
         <aside className="sys-manager-sidebar">

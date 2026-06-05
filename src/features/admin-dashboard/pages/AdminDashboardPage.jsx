@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import ChangePasswordModal from "../../../components/ChangePasswordModal";
 import "../../report-form/styles/layout.css";
 import "../../report-form/styles/request.css";
 import "../../report-form/styles/form.css";
@@ -92,6 +93,7 @@ function matchesHistorySearch(panel, query) {
 }
 
 export default function AdminDashboardPage({ onBackToMain, onLogout }) {
+  const [showChangePassword, setShowChangePassword] = useState(false);
   const [activePage, setActivePage] = useState("info");
   const [missionData, setMissionData] = useState(initialMissionData);
   const [savedPanel, setSavedPanel] = useState(() => loadAdminMissionPanel());
@@ -405,9 +407,12 @@ export default function AdminDashboardPage({ onBackToMain, onLogout }) {
           {onBackToMain ? (
             <button type="button" className="ghost" onClick={onBackToMain}>ទំព័រដើម</button>
           ) : null}
+          <button type="button" className="ghost" onClick={() => setShowChangePassword(true)}>លេខសម្ងាត់</button>
           <button type="button" className="ghost" onClick={onLogout}>ចាកចេញ</button>
         </div>
       </header>
+
+      {showChangePassword && <ChangePasswordModal onClose={() => setShowChangePassword(false)} />}
 
       <div className="sys-manager-body">
         <aside className="sys-manager-sidebar">

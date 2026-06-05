@@ -1,4 +1,5 @@
 import { Fragment, useEffect, useMemo, useState } from "react";
+import ChangePasswordModal from "../../../components/ChangePasswordModal";
 import { loadAccounts, createAccount, updateAccount, deleteAccount, getLastLogin } from "../../../utils/accountStorage";
 import { loadAdminMissionPanel, backfillMissionCodes } from "../../../utils/adminMissionPanel";
 import { addSysManagerAuditLog, loadSysManagerAuditLog, readLocalAuditLog } from "../../../utils/sysManagerAuditLog";
@@ -155,6 +156,7 @@ function mapApiUser(user) {
 }
 
 export default function SysManagerDashboardPage({ onLogout }) {
+  const [showChangePassword, setShowChangePassword] = useState(false);
   const [activeMenu, setActiveMenu] = useState("overview");
   const [searchQuery, setSearchQuery] = useState("");
   const [accounts, setAccounts] = useState(() => loadAccounts());
@@ -516,10 +518,13 @@ export default function SysManagerDashboardPage({ onLogout }) {
             <div className="sys-manager-brand-sub">MINISTRY OF INTERIOR</div>
           </div>
         </div>
-        <button className="ghost" type="button" onClick={onLogout}>
-          ចាកចេញ
-        </button>
+        <div style={{ display: "flex", gap: "10px" }}>
+          <button className="ghost" type="button" onClick={() => setShowChangePassword(true)}>លេខសម្ងាត់</button>
+          <button className="ghost" type="button" onClick={onLogout}>ចាកចេញ</button>
+        </div>
       </header>
+
+      {showChangePassword && <ChangePasswordModal onClose={() => setShowChangePassword(false)} />}
 
       <div className="sys-manager-body">
         <aside className="sys-manager-sidebar">
